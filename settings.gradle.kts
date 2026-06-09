@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "akouo"
 include(":app")
+include(":core:model")
