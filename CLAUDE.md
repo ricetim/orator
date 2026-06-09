@@ -4,14 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-**Greenfield — no code exists yet.** As of this writing the repository contains only
-`initial_plan.md` and this file. There is no source code, no build system, and it is
-**not yet a git repository**. The plan calls for all files to live in a GitHub repo, so
-initialize git (and create the remote) before substantial work.
+Baseline scaffold is in place: Kotlin + Jetpack Compose single-module Android app, building
+successfully. GitHub repo: https://github.com/ricetim/akouo
 
-Per the plan, the **first task is to set up the Android development environment**. Once a
-build system exists, replace the "Build / test / run" section below with the real commands
-(how to build a debug/release APK, run lint, and run a single test).
+Next step is architectural planning before any feature work begins.
 
 ## What this is
 
@@ -32,17 +28,46 @@ and easy to iterate on — so don't over-invest in UI before the core playback/d
 
 ## Build / test / run
 
-Not defined yet — Android tooling (Gradle, etc.) has not been set up. **Update this section
-with actual commands once the project is scaffolded.**
+Always use the Gradle wrapper (`./gradlew`), never the system `gradle` binary.
+
+```bash
+# Debug APK
+./gradlew assembleDebug
+
+# Release APK (requires signing config)
+./gradlew assembleRelease
+
+# Run unit tests
+./gradlew test
+
+# Run a single test class
+./gradlew :app:testDebugUnitTest --tests "com.akouo.app.ExampleUnitTest"
+
+# Lint
+./gradlew lint
+
+# Install on connected device/emulator
+./gradlew installDebug
+```
+
+`ANDROID_HOME` must be set to `~/Android/Sdk`. Add to your shell profile:
+```bash
+export ANDROID_HOME=~/Android/Sdk
+export PATH=$PATH:$ANDROID_HOME/platform-tools
+```
+
+## Stack decisions made
+
+- **Language / UI:** Kotlin + Jetpack Compose
+- **Min SDK:** 26 (Android 8.0), **Target/Compile SDK:** 35 (Android 15)
+- **Build:** Gradle 8.11.1 via wrapper, AGP 8.7.3, Kotlin 2.1.0
 
 ## Open decisions (not yet made — do not assume)
 
-The plan does not specify these. Confirm with the user rather than assuming a default:
+Confirm with the user before proceeding:
 
-- Language / UI toolkit (e.g. Kotlin + Jetpack Compose vs. alternatives)
 - Media playback library (e.g. Media3/ExoPlayer)
 - Local persistence (database vs. files) and the "human-readable" storage format for podcasts
-- Minimum/target SDK versions
 - Module boundaries and how paywall gating is implemented
 
 ## Feature scope (from `initial_plan.md`)
