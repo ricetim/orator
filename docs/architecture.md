@@ -329,8 +329,18 @@ This little resolver lives in `core-playback` and is pure/unit-testable.
 
 **Room** is the source of truth for *metadata and state*; the **filesystem** holds *bytes*
 (audio, artwork, show-notes HTML) at human-readable paths (P1 from the plan: "human readable
-formats"), e.g. `…/akouo/Podcasts/<Show>/<Episode>.mp3`. Room stores the path; the file is
+formats"), e.g. `Akouo/Podcasts/<Show>/<Episode>/`. Room stores the path; the file is
 findable by a human with a file browser. **DataStore** holds preferences.
+
+**Storage location (decided 2026-06-09): a user-visible shared folder** chosen via the Storage
+Access Framework (tree URI), *not* app-private storage. Files survive uninstall and are
+browsable/back-up-able by the user. The data layer works in `DocumentFile`/SAF URIs rather than
+raw `File` paths.
+
+**Caching policy (decided 2026-06-09): aggressive.** Everything *except* the audio file — show
+notes, artwork, transcripts, chapter JSON — is cached locally in the per-show/per-episode
+directory tree at subscribe/refresh time. The library UI **never waits on the network**;
+discovery/search is the only inherently-online interaction.
 
 ```mermaid
 erDiagram
@@ -424,6 +434,10 @@ a single playlist hold an episode followed by an audiobook chapter. The reposito
 
 ### 7.1 Podcasts (`feature-podcasts` + `core-network`)
 
+- **Discovery / search (decided 2026-06-09).** Browse-for-new-podcasts uses the
+  **Podcast Index API** (free key, open directory) as primary and the **iTunes Search API**
+  (no key) as fallback. Discovery is fully decoupled: it only *yields a feed URL* into the
+  normal RSS subscribe flow below, so it can be removed or swapped without touching anything.
 - **Subscribe via RSS.** A focused parser built on Android's `XmlPullParser` (no heavyweight RSS
   library — P1) handling RSS 2.0 + the `itunes:`, `content:encoded`, and **Podcasting 2.0
   (`podcast:`)** namespaces. The `podcast:` namespace matters: it carries `<podcast:transcript>`
@@ -438,11 +452,13 @@ a single playlist hold an episode followed by an audiobook chapter. The reposito
 
 ### 7.2 Audiobooks (`feature-audiobooks`)
 
-- **Local files**: read tags, duration, embedded cover, and chapters via `MediaMetadataRetriever`
+- **Local files**: the user picks a directory via SAF (tree URI); the importer scans it and
+  reads tags, duration, embedded cover, and chapters via `MediaMetadataRetriever`
   (m4b chapters: see the spike flag in §5). An mp3-collection book = ordered files → `CHAPTER` rows.
 - **audiobookshelf**: `core-network` client logs in, lists libraries/items, fetches covers, and
   **syncs progress both ways** (ABS has a progress API) so position is consistent across devices.
   A `BookSource` abstraction (`LOCAL` | `ABS`) keeps the feature UI identical regardless of origin.
+  **ABS is a launch feature, not a fast-follow** (decided 2026-06-09).
 - **Bookmarks**: a `BOOKMARK` row at a position with an optional note; listed for review and
   tappable to seek.
 
@@ -462,8 +478,13 @@ default sleep timer, theme, download-on-wifi-only, storage location. Thin UI ove
 
 ## 8. Paywall & entitlement architecture (P3)
 
-The plan calls for a **freemium single app** ("paywalling features"), *not* a separate paid APK.
-The mechanism is **Google Play Billing** + a one-stop entitlement check.
+**Confirmed (2026-06-09): one app with unlockable features** (freemium IAP), *not* a separate
+paid APK. The mechanism is **Google Play Billing** + a one-stop entitlement check.
+
+> **Status note (2026-06-09):** the *mechanism* below is settled, but the premium feature **set
+> is undecided** — the two original candidates both changed (transcription is download-only for
+> v1, ad removal is postponed entirely). The set must be chosen before the billing phase; the
+> gate design below is deliberately indifferent to *which* features it guards.
 
 ```mermaid
 flowchart TD
@@ -473,8 +494,8 @@ flowchart TD
     ENT --> GATE{"Feature gate"}
     GATE -->|unlocked| REAL["Real feature UI/logic"]
     GATE -->|locked| UPSELL["Upsell / paywall screen"]
-    FT["feature-transcripts"] --> GATE
-    FA["feature-adremoval"] --> GATE
+    FT["feature-⟨premium A⟩"] --> GATE
+    FA["feature-⟨premium B⟩"] --> GATE
 ```
 
 - `PremiumFeature` is an enum (`TRANSCRIPTION`, `AD_REMOVAL`, …).
@@ -568,22 +589,21 @@ Registration itself is an ops workstream that can run in parallel with Phase 1�
 | Persistence | Room (state) + filesystem (bytes, readable paths) + DataStore (prefs) | High |
 | Networking | OkHttp + kotlinx.serialization; hand-rolled `XmlPullParser` RSS | High |
 | Modularity | Feature modules + `FeatureEntry` registry via DI multibindings | High |
-| DI | **Hilt** (Koin as lightweight fallback) | Medium — confirm |
-| Paywall | Freemium IAP via Play Billing + `EntitlementRepository` | High |
-| Transcription | Tier 1: download existing (Podcasting 2.0) transcripts; Tier 2 (paid): on-device generation — *spike first* | Low — needs research |
-| Ad removal | Tier 1: chapter/marker-based skipping; ML detection is a research spike, highest risk | Low — needs research |
+| DI | **Hilt** | ✅ Decided (2026-06-09), implemented in Phase 1 |
+| Paywall | Freemium IAP via Play Billing + `EntitlementRepository`; premium feature *set* TBD | Mechanism decided; set open |
+| Discovery | Podcast Index API (primary) + iTunes Search API (fallback), decoupled from subscribe flow | ✅ Decided (2026-06-09) |
+| Storage | User-visible shared folder via SAF; cache everything but audio locally | ✅ Decided (2026-06-09) |
+| Transcription | v1 = download existing (Podcasting 2.0) transcripts only; on-device generation ignored for now | ✅ Decided (2026-06-09) |
+| Ad removal | **Postponed entirely** | ✅ Decided (2026-06-09) |
 
-### On the two "research" features
+### On the two "research" features *(resolved 2026-06-09)*
 
-- **Transcripts:** a large fraction of podcasts *already ship* transcripts via the Podcasting 2.0
-  `<podcast:transcript>` tag. Downloading those is free and easy and should be the first
-  increment. *Generating* transcripts for content that lacks them (on-device Whisper-class model)
-  is the genuinely hard, compute-heavy part — and therefore the natural **paid** capability. We
-  validate feasibility with a spike before committing.
-- **Ad removal:** deterministic skipping of *marked* segments (chapters/known markers) is
-  tractable now. Automatic *detection* of unmarked ads is an open research problem on-device;
-  treat it as a spike with a real chance of "not viable for v1," and don't let the rest of the
-  app depend on it.
+- **Transcripts:** v1 ships **download-only** — a large fraction of podcasts already carry
+  Podcasting 2.0 `<podcast:transcript>`, and fetching those is just another cached asset.
+  On-device *generation* is **ignored for now**; if it returns, it returns as a premium-set
+  candidate with its own spike.
+- **Ad removal:** **postponed entirely.** Nothing in the architecture depends on it; if revived,
+  it slots back in as a feature module behind the entitlement gate.
 
 ---
 
@@ -595,51 +615,47 @@ network or billing).
 
 ```mermaid
 flowchart LR
-    P0["✅ P0<br/>Scaffold + build"] --> P1["P1<br/>Foundation +<br/>play a local file"]
+    P0["✅ P0<br/>Scaffold + build"] --> P1["✅ P1<br/>Foundation +<br/>play a local file"]
     P1 --> P2["P2<br/>Local audiobooks"]
     P2 --> P3["P3<br/>Player UX +<br/>speed/silence/boost/timer"]
-    P3 --> P4["P4<br/>Podcasts +<br/>downloads + show notes"]
+    P3 --> P4["P4<br/>Podcasts + discovery +<br/>downloads + show notes"]
     P4 --> P5["P5<br/>Playlists +<br/>auto-insert"]
     P5 --> P6["P6<br/>audiobookshelf"]
     P6 --> P7["P7<br/>Billing +<br/>entitlements"]
-    P7 --> P8["P8<br/>Transcripts +<br/>ad removal (spikes)"]
+    P7 --> P8["P8<br/>Premium set<br/>(TBD)"]
     P8 --> P9["P9<br/>Polish, profiles,<br/>Play release"]
 ```
 
 | Phase | Goal | Exit criteria | New modules |
 |-------|------|---------------|-------------|
 | **0** ✅ | Scaffold | `assembleDebug` produces an APK | `app` |
-| **1** | Foundation: convention plugins, DI, nav + registry, Room, design system, **playback service** | App plays a hardcoded local audio file in the background with notification controls | `build-logic`, `core-*`, `core-playback` |
-| **2** | Local audiobooks | Import a local m4b/mp3 book, see cover + chapters, play & resume, set a bookmark | `feature-audiobooks` |
-| **3** | Player experience | Now-Playing screen; speed (global/type/item), silence-trim, volume boost, sleep timer, play history all working | `feature-player` |
-| **4** | Podcasts | Subscribe to a feed, download episodes to readable paths, read show notes, tap a timestamp to seek | `feature-podcasts`, `core-network` |
+| **1** ✅ | Foundation: DI (Hilt), nav + registry, design system, **playback service** | App plays a local audio file in the background with notification controls — *verified on device 2026-06-09* | `core-*`, `feature-player` |
+| **2** | Local audiobooks | Import a SAF-picked local m4b/mp3 book, see cover + chapters, play & resume, set a bookmark | `feature-audiobooks` (introduces Room) |
+| **3** | Player experience | Now-Playing screen; speed (global/type/item), silence-trim, volume boost, sleep timer, play history all working | (extends `feature-player`) |
+| **4** | Podcasts | Discover via Podcast Index/iTunes, subscribe to a feed, download episodes + cache all metadata to readable paths, read show notes, tap a timestamp to seek | `feature-podcasts`, `core-network` |
 | **5** | Playlists | Mixed playlist; new episodes auto-insert per rule | `feature-playlists` |
-| **6** | audiobookshelf | Add ABS server; browse + play + two-way progress sync | (extends `core-network`/`feature-audiobooks`) |
+| **6** | audiobookshelf | Add ABS server; browse + play + two-way progress sync (launch feature) | (extends `core-network`/`feature-audiobooks`) |
 | **7** | Paywall plumbing | Billing wired; `EntitlementRepository` gates a dummy premium toggle end-to-end | `core-billing` |
-| **8** | Premium features | Transcripts (download tier shipping; generation spike concluded); ad-removal (marker tier; detection spike concluded) | `feature-transcripts`, `feature-adremoval` |
+| **8** | Premium features | The premium set (TBD) shipping behind the gate | (depends on the chosen set) |
 | **9** | Launch readiness | Baseline profiles, R8 tuned, store listing + data-safety, signed release | — |
 
-**Recommended next step after this plan is approved:** start **Phase 1**, and within it do the
-two early spikes (m4b chapters; confirm Hilt-vs-Koin) so the foundational choices are validated
-before features pile on top.
+**Status:** Phase 1 is complete (branch `phase-1-foundation`, PR #1). UI/design iteration is
+deliberately deferred until backend functionality is complete, so Phases 2–6 ship with
+minimal placeholder UI. **Next: Phase 2 (local audiobooks).**
 
 ---
 
-## 16. Open questions for you
+## 16. Open questions — resolved 2026-06-09
 
-These are the decisions where your input changes the plan. None block starting Phase 1, but
-answers sharpen it:
+All six original questions are answered; the decisions are reflected throughout this document:
 
-1. **DI: Hilt or Koin?** Hilt = best ecosystem fit + compile-time safety; Koin = lighter, faster
-   builds. I lean Hilt. _(Default if you don't care: Hilt.)_
-2. **Premium model:** confirm freemium-with-IAP (one app, unlock features) vs. a separate paid
-   app. The architecture assumes the former.
-3. **audiobookshelf priority:** is ABS a launch feature or a fast-follow? It's sequenced at P6;
-   moving it earlier is cheap if it's your primary library.
-4. **Transcription ambition:** is "download existing transcripts" enough for v1, with on-device
-   *generation* as a later paid add-on? Or is generation a must-have (bigger, riskier spike)?
-5. **Minimum Android version:** minSdk is 26 (Android 8, ~99% of devices). Comfortable, or do you
-   need older?
-6. **Storage location:** app-private external storage (no permission, auto-cleaned on uninstall)
-   vs. a user-visible shared folder (survives uninstall, needs more permission handling). Affects
-   the "human-readable files" experience.
+1. **DI:** Hilt. *(Implemented in Phase 1.)*
+2. **Premium model:** one app with unlockable features (freemium IAP).
+3. **audiobookshelf priority:** launch feature, alongside SAF-picked local directories.
+4. **Transcription ambition:** download existing transcripts only for v1; ignore generation.
+5. **Minimum Android version:** minSdk 26 confirmed.
+6. **Storage location:** user-visible shared folder via SAF.
+
+**The one remaining open product question:** which features form the **premium set** (§8).
+Both original candidates changed (transcription → download-only/free, ad removal → postponed),
+so the set must be re-chosen before Phase 7 (billing).
