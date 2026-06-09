@@ -17,3 +17,6 @@ dependencyResolutionManagement {
 rootProject.name = "akouo"
 include(":app")
 include(":core:model")
+include(":core:designsystem")
+include(":core:navigation")
+include(":feature:player")
