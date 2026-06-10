@@ -50,8 +50,8 @@ auto-download rules, playlists, Podcasting-2.0 chapters, artwork display in UI
 | `RssParser` | XmlPullParser; tolerant: skips items missing title or enclosure, never aborts a feed for one bad item. Extracts show title/author/description/artwork and per-item guid, title, pubDate, `itunes:duration`, enclosure URL + length, description (show notes HTML). |
 | `OpmlParser` | XmlPullParser; yields the list of `xmlUrl` feed URLs (with titles). |
 | `PodcastRepository` | subscribe(feedUrl), importOpml(uri), refreshAll(), refresh(podcastId); conditional GETs, upsert-by-GUID (positions/download state survive refresh), per-feed failure isolation (one bad feed bumps an error count, others proceed). |
-| `EpisodeCacheWriter` | Writes/updates the human-readable SAF tree (below). DB write succeeds even if tree write fails (tree is a mirror, not the source of truth). |
-| `EpisodeDownloader` | Explicit per-episode download, sequential (one at a time); OkHttp stream → `audio.partial` → rename on completion; progress as `StateFlow<Map<episodeId, Float>>`; cancel supported; orphaned partials removed on next refresh; delete-download clears file + `audioPath`. |
+| `EpisodeCacheWriter` | Writes/updates the human-readable SAF tree (below): show.json + cover always; episode dirs for latest 20 per show + downloaded episodes. DB write succeeds even if tree write fails (tree is a mirror, not the source of truth). |
+| `EpisodeDownloader` | Explicit per-episode download, sequential (one at a time); OkHttp stream → `audio.partial` → rename on completion; progress as `StateFlow<Map<episodeId, Float>>`; cancel supported; stale partials are replaced at the next download attempt; delete-download clears file + `audioPath`. |
 | `EpisodeQueueBuilder` | Episode → `PlayRequest` (details under Playback). |
 | `PodcastPositionListener` | `PlaybackPositionListener` impl (`@IntoSet`); parses `podcast:` mediaIds; persists clip-relative `positionMs` + `lastPlayedAtMs`. |
 | `EpisodeSpeedOverrideListener` | `SpeedOverrideListener` impl; persists override **per show** on `PodcastEntity`. |
@@ -66,7 +66,8 @@ auto-download rules, playlists, Podcasting-2.0 chapters, artwork display in UI
 - `EpisodeEntity`: id = hash(podcastId + guid) — GUIDs are only unique within a feed
   (fallback: hash(podcastId + enclosureUrl)), podcastId, title, pubDateUtc,
   durationMs (0 = unknown; always the **original unclipped** timeline), enclosureUrl,
-  showNotesPath (file pointer, not the blob), audioPath: String? = null, positionMs = 0,
+  showNotesHtml (stored in the DB so the UI never touches network or SAF — see
+  amendment below), audioPath: String? = null, positionMs = 0,
   lastPlayedAtMs = 0. No `completed` field — `HistoryEntity` already records completion;
   add an episode-level flag only when a real consumer appears (YAGNI).
 - Room is the single source of truth for all UI; screens never wait on network or
@@ -94,6 +95,14 @@ Rationale: pretty-printed JSON is greppable, dependency-free, and round-trips; s
 stay raw HTML because that is what feeds contain; date-prefixed episode dirs sort
 chronologically in any file manager. Artwork is downloaded into the tree (aggressive
 caching of everything except audio) but not yet rendered in the placeholder UI.
+
+**Amendment (planning-time, 2026-06-10):** SAF file operations cost ~10–50 ms each; a
+43-feed OPML import can expand to thousands of episodes, so writing a tree dir per
+episode at import would take minutes. Therefore: episode **show notes are stored in the
+DB** (`showNotesHtml` column — the UI reads Room only, never SAF), and the tree writes
+episode dirs only for the **latest 20 episodes per show plus every downloaded episode**.
+`show.json` and the show cover are always written. The tree remains a human-readable
+mirror; the DB remains the single source of truth.
 
 ## Playback integration (reuses Phase 3 wholesale)
 
