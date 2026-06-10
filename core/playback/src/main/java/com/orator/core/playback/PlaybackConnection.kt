@@ -6,7 +6,6 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
-import androidx.media3.datasource.RawResourceDataSource
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.orator.core.model.MediaType
@@ -178,24 +177,5 @@ class PlaybackConnection @Inject constructor(
     fun seekWithinCurrent(positionMs: Long) {
         val c = controller ?: return
         c.seekTo(positionMs.coerceAtLeast(0))
-    }
-
-    /**
-     * Phase 1 smoke-test entry point: loads the bundled sample clip and starts playback.
-     * Superseded in Phase 2 when media comes from the library/repository.
-     */
-    fun playBundledSample() {
-        val c = controller ?: return
-        val uri = RawResourceDataSource.buildRawResourceUri(R.raw.sample)
-        val item = MediaItem.Builder()
-            .setUri(uri)
-            .setMediaMetadata(MediaMetadata.Builder().setTitle("Sample clip").build())
-            .build()
-        c.setMediaItem(item)
-        c.prepare()
-        c.setPlaybackSpeed(
-            SpeedResolver.resolve(SpeedPreferences(), MediaType.PODCAST, itemOverride = null),
-        )
-        c.play()
     }
 }

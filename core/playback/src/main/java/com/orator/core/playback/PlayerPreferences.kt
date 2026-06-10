@@ -77,23 +77,29 @@ class PlayerPreferences @Inject constructor(
         )
     }
 
-    suspend fun setGlobalSpeed(speed: Float) =
+    suspend fun setGlobalSpeed(speed: Float) {
         dataStore.edit { it[KEY_GLOBAL_SPEED] = speed }
+    }
 
-    suspend fun setTypeSpeed(type: MediaType, speed: Float?) =
+    suspend fun setTypeSpeed(type: MediaType, speed: Float?) {
         dataStore.edit {
             if (speed == null) it.remove(speedKey(type)) else it[speedKey(type)] = speed
         }
+    }
 
-    suspend fun setSilenceTrim(enabled: Boolean) =
+    suspend fun setSilenceTrim(enabled: Boolean) {
         dataStore.edit { it[KEY_SILENCE_TRIM] = enabled }
+    }
 
-    suspend fun setBoostMb(mb: Int) =
+    suspend fun setBoostMb(mb: Int) {
         dataStore.edit { it[KEY_BOOST_MB] = mb }
+    }
 
-    suspend fun setSmartRewind(type: MediaType, enabled: Boolean) =
+    suspend fun setSmartRewind(type: MediaType, enabled: Boolean) {
         dataStore.edit { it[rewindKey(type)] = enabled }
+    }
 
-    suspend fun setDefaultSleepMinutes(minutes: Int) =
+    suspend fun setDefaultSleepMinutes(minutes: Int) {
         dataStore.edit { it[KEY_SLEEP_MINUTES] = minutes }
+    }
 }
