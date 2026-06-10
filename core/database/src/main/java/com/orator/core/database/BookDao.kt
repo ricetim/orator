@@ -22,8 +22,11 @@ interface BookDao {
     @Query("SELECT id FROM books")
     suspend fun getAllIds(): List<String>
 
-    @Query("UPDATE books SET positionMs = :positionMs WHERE id = :id")
-    suspend fun updatePosition(id: String, positionMs: Long)
+    @Query("UPDATE books SET positionMs = :positionMs, lastPlayedAtMs = :lastPlayedAtMs WHERE id = :id")
+    suspend fun updateProgress(id: String, positionMs: Long, lastPlayedAtMs: Long)
+
+    @Query("UPDATE books SET speedOverride = :speed WHERE id = :id")
+    suspend fun updateSpeedOverride(id: String, speed: Float?)
 
     @Query("DELETE FROM books WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<String>)

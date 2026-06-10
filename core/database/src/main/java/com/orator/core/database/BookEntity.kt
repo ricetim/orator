@@ -22,4 +22,8 @@ data class BookEntity(
     val durationMs: Long,
     val positionMs: Long = 0,
     val addedAtUtc: Long,
+    /** Wall-clock of the last position ping; drives cold-start smart rewind. */
+    val lastPlayedAtMs: Long = 0,
+    /** Per-book speed; null = fall back to per-type/global defaults. */
+    val speedOverride: Float? = null,
 )
