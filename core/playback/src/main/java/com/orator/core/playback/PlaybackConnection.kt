@@ -19,8 +19,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,6 +38,9 @@ import javax.inject.Singleton
 @Singleton
 class PlaybackConnection @Inject constructor(
     @ApplicationContext private val context: Context,
+    playerPreferences: PlayerPreferences,
+    private val activeQueueInfo: ActiveQueueInfo,
+    private val speedOverrideListeners: Set<@JvmSuppressWildcards SpeedOverrideListener>,
 ) {
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
@@ -45,6 +50,13 @@ class PlaybackConnection @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var positionTicker: Job? = null
+
+    /** Prefs snapshot, always current; Eagerly because play() reads .value synchronously. */
+    private val prefs: StateFlow<PlayerPrefs> =
+        playerPreferences.flow.stateIn(scope, SharingStarted.Eagerly, PlayerPrefs())
+
+    private var currentMediaType: MediaType? = null
+    private var currentOverride: Float? = null
 
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -75,6 +87,9 @@ class PlaybackConnection @Inject constructor(
 
     init {
         connect()
+        scope.launch {
+            prefs.collect { applySpeed() } // live re-apply when settings change
+        }
     }
 
     private fun connect() {
@@ -101,6 +116,7 @@ class PlaybackConnection @Inject constructor(
             currentIndex = c.currentMediaItemIndex,
             positionMs = c.currentPosition.coerceAtLeast(0),
             durationMs = c.duration.takeIf { it != C.TIME_UNSET } ?: 0,
+            speed = c.playbackParameters.speed,
         )
     }
 
@@ -118,26 +134,50 @@ class PlaybackConnection @Inject constructor(
     /** Loads a feature-built queue and starts playing from the requested spot. */
     fun play(request: PlayRequest) {
         val c = controller ?: return
-        val items = request.items.map { item ->
-            MediaItem.Builder()
-                .setMediaId(item.mediaId)
-                .setUri(item.uri)
-                .setMediaMetadata(
-                    MediaMetadata.Builder().setTitle(item.title).setArtist(item.artist).build(),
-                )
-                .build()
-        }
+        currentMediaType = request.mediaType
+        currentOverride = request.speedOverride
+        activeQueueInfo.onNewQueue(request.chapterBoundariesMs)
+        val items = request.items.map { MediaItemFactory.from(it, request.mediaType) }
         c.setMediaItems(items, request.startIndex, request.startPositionMs)
         c.prepare()
-        c.setPlaybackSpeed(
-            SpeedResolver.resolve(SpeedPreferences(), request.mediaType, itemOverride = null),
-        )
+        applySpeed()
         c.play()
+    }
+
+    private fun applySpeed() {
+        val c = controller ?: return
+        val type = currentMediaType ?: return
+        c.setPlaybackSpeed(
+            SpeedResolver.resolve(prefs.value.toSpeedPreferences(), type, currentOverride),
+        )
+    }
+
+    /** Sets/clears the per-item speed override; features persist it via SpeedOverrideListener. */
+    fun setSpeedOverride(speed: Float?) {
+        currentOverride = speed
+        applySpeed()
+        val mediaId = controller?.currentMediaItem?.mediaId ?: return
+        scope.launch {
+            speedOverrideListeners.forEach { it.onSpeedOverrideChanged(mediaId, speed) }
+        }
     }
 
     /** Jumps to a queue item + offset (chapter taps, bookmark taps). */
     fun seekTo(index: Int, positionMs: Long) {
         controller?.seekTo(index, positionMs)
+    }
+
+    /** Skip ±N within the current item, clamped to [0, duration]. */
+    fun seekBy(deltaMs: Long) {
+        val c = controller ?: return
+        val duration = c.duration.takeIf { it != C.TIME_UNSET } ?: Long.MAX_VALUE
+        c.seekTo((c.currentPosition + deltaMs).coerceIn(0, duration))
+    }
+
+    /** Absolute seek within the current item (slider drags). */
+    fun seekWithinCurrent(positionMs: Long) {
+        val c = controller ?: return
+        c.seekTo(positionMs.coerceAtLeast(0))
     }
 
     /**
