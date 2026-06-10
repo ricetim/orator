@@ -41,6 +41,7 @@ android {
 
 dependencies {
     implementation(project(":feature:player"))
+    implementation(project(":feature:audiobooks"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:navigation"))
 

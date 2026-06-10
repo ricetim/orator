@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import com.akouo.core.navigation.FeatureEntry
-import com.akouo.feature.player.PlayerRoute
+import com.akouo.feature.audiobooks.AudiobooksRoute
 
 /**
  * Builds the navigation graph by asking every registered feature to add its destinations.
@@ -15,7 +15,7 @@ fun AkouoNavHost(
     featureEntries: Set<@JvmSuppressWildcards FeatureEntry>,
     navController: NavHostController,
 ) {
-    NavHost(navController = navController, startDestination = PlayerRoute) {
+    NavHost(navController = navController, startDestination = AudiobooksRoute) {
         featureEntries.forEach { entry ->
             entry.register(this, navController)
         }
