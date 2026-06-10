@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.akouo.feature.audiobooks"
+    namespace = "com.orator.feature.audiobooks"
     compileSdk = 35
 
     defaultConfig {

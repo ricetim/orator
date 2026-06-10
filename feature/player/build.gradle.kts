@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.akouo.feature.player"
+    namespace = "com.orator.feature.player"
     compileSdk = 35
 
     defaultConfig {

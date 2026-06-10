@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "akouo"
+rootProject.name = "orator"
 include(":app")
 include(":core:model")
 include(":core:designsystem")

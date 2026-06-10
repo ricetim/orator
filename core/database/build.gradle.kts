@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.akouo.core.database"
+    namespace = "com.orator.core.database"
     compileSdk = 35
 
     defaultConfig {
@@ -30,7 +30,7 @@ android {
 }
 
 dependencies {
-    // api, not implementation: AkouoDatabase extends RoomDatabase, so consumers (and their
+    // api, not implementation: OratorDatabase extends RoomDatabase, so consumers (and their
     // Robolectric tests, which call Room.inMemoryDatabaseBuilder) need Room on their compile
     // classpath too.
     api(libs.room.runtime)
