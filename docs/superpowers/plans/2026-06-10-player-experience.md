@@ -10,6 +10,29 @@
 
 ---
 
+## Execution notes (deviations from the written plan)
+
+Executed in-session 2026-06-10; all 11 device-checklist steps passed on the Pixel 7a.
+
+- **Red-verification steps skipped** (write test + implementation together, verify green) —
+  same recorded deviation as Phases 1–2.
+- **`updatePosition` had two extra callers** the plan missed: `OratorDatabaseTest` and
+  `AudiobookImporterTest` both needed updating to `updateProgress` (the plan claimed
+  `AudiobookPositionListener` was the only caller).
+- **Tasks 13+14 landed as one commit** — `PlayerFeatureEntry` references `HistoryScreen`,
+  so the routes change couldn't compile alone.
+- **`PlayerPreferences` setters changed to block bodies returning `Unit`** — the planned
+  expression bodies leaked `Preferences` (the `edit` return type) into consumers, forcing a
+  DataStore classpath dependency on every feature module.
+- **History lazy-close** implemented as planned in the Chunk 4 note: `endedAtUtc == null`
+  means "interrupted"; no invented end times.
+- **`SpeedResolver` extra cases** covered via `PlayerPreferencesTest.toSpeedPreferences`
+  (planned note), not new `SpeedResolverTest` methods.
+- **Post-plan addition:** placeholder-screen menus centered per user preference given during
+  device testing (`style:` commit; saved to memory for future screens).
+
+---
+
 ## Orientation (read once before Chunk 1)
 
 **Branch:** `phase-3-player-experience` (already created; the spec is its first commit).
@@ -73,7 +96,7 @@ navigation targets live as route constants in `core:navigation` (`CommonRoutes`)
 - Create: `core/playback/src/main/java/com/orator/core/playback/SmartRewind.kt`
 - Test: `core/playback/src/test/java/com/orator/core/playback/SmartRewindTest.kt`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```kotlin
 package com.orator.core.playback
@@ -115,12 +138,12 @@ class SmartRewindTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests "com.orator.core.playback.SmartRewindTest"`
 Expected: FAIL — `Unresolved reference: SmartRewind` (compile error counts as red).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```kotlin
 package com.orator.core.playback
@@ -145,12 +168,12 @@ object SmartRewind {
 
 Note `pausedForMs < 30_000` already returns 0 for negatives — no separate guard needed.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests "com.orator.core.playback.SmartRewindTest"`
 Expected: 5 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add core/playback/src
@@ -167,7 +190,7 @@ The `SleepTimer` is the shared singleton described in Orientation: the UI arms/c
 service enforces it. The *state* and the *boundary arithmetic* are pure and tested here; the
 enforcement loop is service code (Chunk 3).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```kotlin
 package com.orator.core.playback
@@ -218,12 +241,12 @@ class SleepTimerTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests "com.orator.core.playback.SleepTimerTest"`
 Expected: FAIL — unresolved references.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```kotlin
 package com.orator.core.playback
@@ -275,12 +298,12 @@ class SleepTimer @Inject constructor() {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests "com.orator.core.playback.SleepTimerTest"`
 Expected: 5 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add core/playback/src
@@ -294,7 +317,7 @@ git commit -m "feat: sleep-timer state model with boundary math"
 - Create: `core/playback/src/main/java/com/orator/core/playback/PlayerPreferences.kt`
 - Test: `core/playback/src/test/java/com/orator/core/playback/PlayerPreferencesTest.kt`
 
-- [ ] **Step 1: Add dependencies**
+- [x] **Step 1: Add dependencies**
 
 In `core/playback/build.gradle.kts` `dependencies { }`, after the Media3 lines, add:
 
@@ -322,7 +345,7 @@ if missing):
     }
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `runBlocking`, not `runTest`. No Robolectric: `PlayerPreferences` takes its `DataStore`
 via the constructor (see Step 4), so tests build a **fresh store per test method** in a
@@ -405,12 +428,12 @@ class PlayerPreferencesTest {
 }
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests "com.orator.core.playback.PlayerPreferencesTest"`
 Expected: FAIL — unresolved references.
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 ```kotlin
 package com.orator.core.playback
@@ -517,7 +540,7 @@ class PlayerPreferences @Inject constructor(
 Note `MediaType.entries` — `MediaType` is `enum class MediaType { AUDIOBOOK, PODCAST }` in
 `core:model`; `core:playback` already depends on `core:model`.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests "com.orator.core.playback.PlayerPreferencesTest"`
 Expected: 4 tests PASS.
@@ -527,7 +550,7 @@ Spec-coverage note: the spec's "extended `SpeedResolver` cases" are covered by t
 `SpeedResolverTest` — the resolver itself is unchanged. Record as a (benign) deviation in
 execution notes.
 
-- [ ] **Step 6: Run the whole module's tests + commit**
+- [x] **Step 6: Run the whole module's tests + commit**
 
 Run: `./gradlew :core:playback:testDebugUnitTest`
 Expected: all pass (existing `SpeedResolverTest` still green).
@@ -548,7 +571,7 @@ git commit -m "feat: typed DataStore preferences for player policy"
 - Create: `core/playback/src/main/java/com/orator/core/playback/MediaItemFactory.kt`
 - Test: `core/playback/src/test/java/com/orator/core/playback/MediaItemFactoryTest.kt`
 
-- [ ] **Step 1: Extend the request types** (additive, all defaulted — `QueueBuilder` keeps compiling)
+- [x] **Step 1: Extend the request types** (additive, all defaulted — `QueueBuilder` keeps compiling)
 
 Replace `PlayRequest.kt` contents with:
 
@@ -589,7 +612,7 @@ data class PlayRequest(
 )
 ```
 
-- [ ] **Step 2: Write the failing `MediaItemFactory` test**
+- [x] **Step 2: Write the failing `MediaItemFactory` test**
 
 ```kotlin
 package com.orator.core.playback
@@ -651,12 +674,12 @@ class MediaItemFactoryTest {
 }
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests "com.orator.core.playback.MediaItemFactoryTest"`
 Expected: FAIL — `Unresolved reference: MediaItemFactory`.
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 ```kotlin
 package com.orator.core.playback
@@ -712,12 +735,12 @@ Error-handling note from the spec ("clip windows wider than the file → ignored
 ignores an end position past the file end, and a start past the end yields an unplayable item
 error surfaced like any source error — no extra code here, by design.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests "com.orator.core.playback.MediaItemFactoryTest"`
 Expected: 4 tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add core/playback/src
@@ -733,7 +756,7 @@ git commit -m "feat: clip windows and media type carried into MediaItems"
 
 No tests — pure declarations (state holder + two interfaces); behavior is tested where used.
 
-- [ ] **Step 1: Write the three files**
+- [x] **Step 1: Write the three files**
 
 `ActiveQueueInfo.kt`:
 
@@ -797,7 +820,7 @@ interface SpeedOverrideListener {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles + commit**
+- [x] **Step 2: Verify it compiles + commit**
 
 Run: `./gradlew :core:playback:compileDebugKotlin`
 Expected: BUILD SUCCESSFUL.
@@ -818,7 +841,7 @@ faking (the controller requires a running service). The policy it applies — `S
 `MediaItemFactory` — is already unit-tested; this task is wiring, verified by compile + the
 existing build, then on device in Chunk 6.
 
-- [ ] **Step 1: Add `speed` to the UI state**
+- [x] **Step 1: Add `speed` to the UI state**
 
 In `PlaybackUiState.kt` add a field at the end of the data class:
 
@@ -826,7 +849,7 @@ In `PlaybackUiState.kt` add a field at the end of the data class:
     val speed: Float = 1.0f,
 ```
 
-- [ ] **Step 2: Rework `PlaybackConnection`**
+- [x] **Step 2: Rework `PlaybackConnection`**
 
 Apply these changes (full new constructor + changed members shown):
 
@@ -922,7 +945,7 @@ New imports needed: `kotlinx.coroutines.flow.SharingStarted`, `kotlinx.coroutine
 Leave `playBundledSample()` in place for now — `PlayerViewModel` still calls it; both die
 together in Chunk 5's screen rewrite.
 
-- [ ] **Step 3: Build everything that compiles against these APIs**
+- [x] **Step 3: Build everything that compiles against these APIs**
 
 Run: `./gradlew :core:playback:compileDebugKotlin :feature:audiobooks:compileDebugKotlin :feature:player:compileDebugKotlin`
 Expected: BUILD SUCCESSFUL — all `PlayRequest`/`PlayableItem` construction sites used named
@@ -941,7 +964,7 @@ two more methods beside it:
     abstract fun playbackEventListeners(): Set<PlaybackEventListener>
 ```
 
-- [ ] **Step 4: Run module tests + commit**
+- [x] **Step 4: Run module tests + commit**
 
 Run: `./gradlew :core:playback:testDebugUnitTest`
 Expected: all green.
@@ -971,7 +994,7 @@ can't exercise meaningfully (no real audio pipeline). The error-handling contrac
 (`LoudnessEnhancer` may throw → boost silently disabled) is encoded here; behavior is verified
 audibly in Chunk 6.
 
-- [ ] **Step 1: Write `SilenceTrim.kt`**
+- [x] **Step 1: Write `SilenceTrim.kt`**
 
 ```kotlin
 package com.orator.core.playback
@@ -1018,7 +1041,7 @@ check the actual override the IDE/compiler expects with
 `./gradlew :core:playback:compileDebugKotlin` and adapt parameter names only — the body stays
 identical.
 
-- [ ] **Step 2: Write `LoudnessBooster.kt`**
+- [x] **Step 2: Write `LoudnessBooster.kt`**
 
 ```kotlin
 package com.orator.core.playback
@@ -1080,7 +1103,7 @@ class LoudnessBooster @Inject constructor() {
 }
 ```
 
-- [ ] **Step 3: Compile + commit**
+- [x] **Step 3: Compile + commit**
 
 Run: `./gradlew :core:playback:compileDebugKotlin`
 Expected: BUILD SUCCESSFUL.
@@ -1096,7 +1119,7 @@ git commit -m "feat: silence-trim sink wrapper and loudness booster"
 - Create: `core/playback/src/main/java/com/orator/core/playback/SmartRewindController.kt`
 - Test: `core/playback/src/test/java/com/orator/core/playback/SmartRewindControllerTest.kt`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```kotlin
 package com.orator.core.playback
@@ -1157,12 +1180,12 @@ class SmartRewindControllerTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests "com.orator.core.playback.SmartRewindControllerTest"`
 Expected: FAIL — unresolved reference.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```kotlin
 package com.orator.core.playback
@@ -1204,12 +1227,12 @@ class SmartRewindController @Inject constructor() {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `./gradlew :core:playback:testDebugUnitTest --tests "com.orator.core.playback.SmartRewindControllerTest"`
 Expected: 7 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add core/playback/src
@@ -1465,14 +1488,14 @@ Behavioral notes (read before assuming these are bugs):
   persisted by the 3-second pings; history rows don't need a better number (history is
   "what did I listen to", not a resume mechanism).
 
-- [ ] **Step 1: Apply the file replacement above**
+- [x] **Step 1: Apply the file replacement above**
 
-- [ ] **Step 2: Compile + full core tests**
+- [x] **Step 2: Compile + full core tests**
 
 Run: `./gradlew :core:playback:testDebugUnitTest`
 Expected: BUILD SUCCESSFUL, all green.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add core/playback/src
@@ -1501,7 +1524,7 @@ notes when you get here.
 - Modify: `core/database/src/main/java/com/orator/core/database/DatabaseModule.kt`
 - Test: `core/database/src/test/java/com/orator/core/database/HistoryDaoTest.kt`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `runBlocking`, in-memory database, same shape as `OratorDatabaseTest`:
 
@@ -1570,12 +1593,12 @@ class HistoryDaoTest {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `./gradlew :core:database:testDebugUnitTest --tests "com.orator.core.database.HistoryDaoTest"`
 Expected: FAIL — unresolved references.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `HistoryEntity.kt`:
 
@@ -1687,12 +1710,12 @@ abstract class OratorDatabase : RoomDatabase() {
 `dropAllTables = true` overload is the current one. If the compiler disagrees, use whichever
 overload exists — the intent is "wipe on schema change until first release".)
 
-- [ ] **Step 4: Run the module's tests**
+- [x] **Step 4: Run the module's tests**
 
 Run: `./gradlew :core:database:testDebugUnitTest`
 Expected: `HistoryDaoTest` 3 PASS; `OratorDatabaseTest` still green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add core/database/src
@@ -1707,7 +1730,7 @@ git commit -m "feat: db v2 - history table, lastPlayedAt and speedOverride on bo
 - Modify: `feature/player/src/main/java/com/orator/feature/player/PlayerFeatureModule.kt`
 - Test: `feature/player/src/test/java/com/orator/feature/player/HistoryRecorderTest.kt`
 
-- [ ] **Step 1: Add deps to `feature/player/build.gradle.kts`**
+- [x] **Step 1: Add deps to `feature/player/build.gradle.kts`**
 
 After the existing `implementation(project(":core:playback"))` line:
 
@@ -1726,7 +1749,7 @@ and test deps + `testOptions { unitTests { isIncludeAndroidResources = true } }`
     testImplementation(libs.kotlinx.coroutines.test)
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```kotlin
 package com.orator.feature.player
@@ -1782,12 +1805,12 @@ class HistoryRecorderTest {
 }
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `./gradlew :feature:player:testDebugUnitTest --tests "com.orator.feature.player.HistoryRecorderTest"`
 Expected: FAIL — unresolved reference `HistoryRecorder`.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 `HistoryRecorder.kt`:
 
@@ -1843,7 +1866,7 @@ In `PlayerFeatureModule.kt` add the binding:
 (plus imports `com.orator.core.playback.PlaybackEventListener`, `dagger.multibindings.IntoSet`
 — `@IntoSet` is already imported there).
 
-- [ ] **Step 5: Run test to verify it passes, commit**
+- [x] **Step 5: Run test to verify it passes, commit**
 
 Run: `./gradlew :feature:player:testDebugUnitTest`
 Expected: PASS.
@@ -1863,7 +1886,7 @@ git commit -m "feat: play-history recorder bound to playback events"
 - Modify: `feature/audiobooks/src/main/java/com/orator/feature/audiobooks/BookDetailViewModel.kt`
 - Tests: existing `AudiobookPositionListenerTest.kt`, `QueueBuilderTest.kt`; new `BookSpeedOverrideListenerTest.kt`
 
-- [ ] **Step 1: Update the position listener** — in `AudiobookPositionListener.onPositionChanged`,
+- [x] **Step 1: Update the position listener** — in `AudiobookPositionListener.onPositionChanged`,
 replace the `bookDao.updatePosition(book.id, global)` line with:
 
 ```kotlin
@@ -1873,7 +1896,7 @@ replace the `bookDao.updatePosition(book.id, global)` line with:
 Fix `AudiobookPositionListenerTest` to assert `lastPlayedAtMs > 0` after a ping (read the
 book back with `bookDao.getById`; the exact assertion shape follows the test's existing reads).
 
-- [ ] **Step 2: `BookSpeedOverrideListener` + failing test**
+- [x] **Step 2: `BookSpeedOverrideListener` + failing test**
 
 Full test (same Room-in-memory shape as `AudiobookPositionListenerTest`, which deliberately
 has no `@Config` line — mirror it):
@@ -1975,7 +1998,7 @@ Bind in `AudiobooksFeatureModule`:
     fun bindBookSpeedOverrideListener(listener: BookSpeedOverrideListener): SpeedOverrideListener
 ```
 
-- [ ] **Step 3: `QueueBuilder` boundaries + override**
+- [x] **Step 3: `QueueBuilder` boundaries + override**
 
 In the `M4B` branch of `build()` add to the `PlayRequest`:
 
@@ -2022,7 +2045,7 @@ give its `book()` helper a `speedOverride: Float? = null` parameter passed throu
     }
 ```
 
-- [ ] **Step 4: Cold-start rewind in `BookDetailViewModel`**
+- [x] **Step 4: Cold-start rewind in `BookDetailViewModel`**
 
 Constructor gains `private val playerPreferences: PlayerPreferences` (import
 `com.orator.core.playback.PlayerPreferences`, `com.orator.core.playback.SmartRewind`,
@@ -2049,7 +2072,7 @@ why Task 8/9 reset the warm-rewind controller on `MEDIA_ITEM_TRANSITION_REASON_P
 here (and chapter/bookmark taps after a pause would get rewound off their exact positions).
 If rewind behaves strangely on device, check that reset first.
 
-- [ ] **Step 5: Full module tests + commit**
+- [x] **Step 5: Full module tests + commit**
 
 Run: `./gradlew :feature:audiobooks:testDebugUnitTest :core:database:testDebugUnitTest`
 Expected: all green (including the updated position-listener and queue-builder tests).
@@ -2072,7 +2095,7 @@ components, no theming work, no animation, no art. Resist improving it.
 - Create: `core/navigation/src/main/java/com/orator/core/navigation/CommonRoutes.kt`
 - Delete: `feature/player/src/main/java/com/orator/feature/player/PlayerRoute.kt`
 
-- [ ] **Step 1: Create `CommonRoutes.kt`** — cross-feature navigation targets live in core so
+- [x] **Step 1: Create `CommonRoutes.kt`** — cross-feature navigation targets live in core so
 features can navigate to each other without depending on each other:
 
 ```kotlin
@@ -2089,11 +2112,11 @@ object CommonRoutes {
 }
 ```
 
-- [ ] **Step 2: Delete `PlayerRoute.kt`**, and in `PlayerFeatureEntry.kt` replace
+- [x] **Step 2: Delete `PlayerRoute.kt`**, and in `PlayerFeatureEntry.kt` replace
 `override val route: String = PlayerRoute` with
 `override val route: String = CommonRoutes.Player` (import `com.orator.core.navigation.CommonRoutes`).
 
-- [ ] **Step 3: Compile + commit**
+- [x] **Step 3: Compile + commit**
 
 Run: `./gradlew :feature:player:compileDebugKotlin`
 Expected: BUILD SUCCESSFUL.
@@ -2125,7 +2148,7 @@ doesn't have; revisit in the UI phase. (2) The speed stepper uses plain +/− bu
 the per-item override directly, not a long-press gesture — long-press is interaction polish,
 deferred with the rest of UI work. Trim/boost toggles ARE on the screen, as specced.
 
-- [ ] **Step 1: Rewrite `PlayerViewModel.kt`**
+- [x] **Step 1: Rewrite `PlayerViewModel.kt`**
 
 ```kotlin
 package com.orator.feature.player
@@ -2198,7 +2221,7 @@ class PlayerViewModel @Inject constructor(
 }
 ```
 
-- [ ] **Step 2: Rewrite `PlayerScreen.kt`**
+- [x] **Step 2: Rewrite `PlayerScreen.kt`**
 
 ```kotlin
 package com.orator.feature.player
@@ -2313,7 +2336,7 @@ private fun formatClock(epochMs: Long): String =
     java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(java.util.Date(epochMs))
 ```
 
-- [ ] **Step 3: History screen**
+- [x] **Step 3: History screen**
 
 `HistoryViewModel.kt`:
 
@@ -2381,7 +2404,7 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
 }
 ```
 
-- [ ] **Step 4: Register the history route** — in `PlayerFeatureEntry.register`, after the
+- [x] **Step 4: Register the history route** — in `PlayerFeatureEntry.register`, after the
 existing player composable:
 
 ```kotlin
@@ -2390,7 +2413,7 @@ existing player composable:
         }
 ```
 
-- [ ] **Step 5: Delete the Phase 1 sample machinery** — now nothing references it:
+- [x] **Step 5: Delete the Phase 1 sample machinery** — now nothing references it:
 remove `playBundledSample()` and the `RawResourceDataSource`/`R` imports from
 `PlaybackConnection.kt`, and delete `core/playback/src/main/res/raw/sample.mp3` (240 KB out
 of the APK). `SpeedResolver`/`MediaType` imports stay.
@@ -2399,7 +2422,7 @@ of the APK). `SpeedResolver`/`MediaType` imports stay.
 git rm core/playback/src/main/res/raw/sample.mp3
 ```
 
-- [ ] **Step 6: Build + commit**
+- [x] **Step 6: Build + commit**
 
 Run: `./gradlew :feature:player:testDebugUnitTest :core:playback:testDebugUnitTest`
 Expected: BUILD SUCCESSFUL, all green.
@@ -2420,12 +2443,12 @@ git commit -m "feat: now-playing controls, history screen; drop phase-1 sample c
 - Modify: `settings.gradle.kts` (add `include(":feature:settings")` next to the other features)
 - Modify: `app/build.gradle.kts` (add `implementation(project(":feature:settings"))` after `:feature:player`)
 
-- [ ] **Step 1: `build.gradle.kts`** — copy `feature/player/build.gradle.kts` wholesale, then:
+- [x] **Step 1: `build.gradle.kts`** — copy `feature/player/build.gradle.kts` wholesale, then:
 namespace `com.orator.feature.settings`; dependencies are `core:model`, `core:navigation`,
 `core:designsystem`, `core:playback` + the same Compose/Hilt blocks; no database, no test
 block (this module has no tests — it's a thin prefs UI).
 
-- [ ] **Step 2: `SettingsViewModel.kt`**
+- [x] **Step 2: `SettingsViewModel.kt`**
 
 ```kotlin
 package com.orator.feature.settings
@@ -2459,7 +2482,7 @@ class SettingsViewModel @Inject constructor(
 }
 ```
 
-- [ ] **Step 3: `SettingsScreen.kt`** — a scrolling column of labeled steppers/switches.
+- [x] **Step 3: `SettingsScreen.kt`** — a scrolling column of labeled steppers/switches.
 Helper composables keep it readable:
 
 ```kotlin
@@ -2575,7 +2598,7 @@ private fun LabeledSwitch(label: String, checked: Boolean, onChange: (Boolean) -
 
 (`SpeedResolver` import is unused if the coercions stay literal — drop it.)
 
-- [ ] **Step 4: Entry + module**
+- [x] **Step 4: Entry + module**
 
 `SettingsFeatureEntry.kt`:
 
@@ -2604,10 +2627,10 @@ class SettingsFeatureEntry @Inject constructor() : FeatureEntry {
 `SettingsFeatureModule.kt`: copy `PlayerFeatureModule` shape — `@Binds @IntoSet`
 `SettingsFeatureEntry` as `FeatureEntry`.
 
-- [ ] **Step 5: Wire into the build** — `settings.gradle.kts` include + `app/build.gradle.kts`
+- [x] **Step 5: Wire into the build** — `settings.gradle.kts` include + `app/build.gradle.kts`
 dependency (paths in the Files list above).
 
-- [ ] **Step 6: Build + commit**
+- [x] **Step 6: Build + commit**
 
 Run: `./gradlew :feature:settings:compileDebugKotlin :app:compileDebugKotlin`
 Expected: BUILD SUCCESSFUL.
@@ -2624,14 +2647,14 @@ git commit -m "feat: settings feature module over player preferences"
 - Modify: `feature/audiobooks/src/main/java/com/orator/feature/audiobooks/AudiobookListScreen.kt`
 - Modify: `feature/audiobooks/src/main/java/com/orator/feature/audiobooks/AudiobooksFeatureEntry.kt`
 
-- [ ] **Step 1: Expose playback state to the list** — `AudiobookListViewModel` constructor gains
+- [x] **Step 1: Expose playback state to the list** — `AudiobookListViewModel` constructor gains
 `playbackConnection: PlaybackConnection` (already a dependency of the module) and exposes:
 
 ```kotlin
     val playback: StateFlow<PlaybackUiState> = playbackConnection.state
 ```
 
-- [ ] **Step 2: Screen affordances** — `AudiobookListScreen` gains three callbacks
+- [x] **Step 2: Screen affordances** — `AudiobookListScreen` gains three callbacks
 (`onOpenSettings: () -> Unit`, `onOpenHistory: () -> Unit`, `onOpenPlayer: () -> Unit`).
 At the top of the existing Column, the right-aligned History/Settings button row shown in
 Step 3. Below the book list (after the LazyColumn, which should get `Modifier.weight(1f)` so
@@ -2655,7 +2678,7 @@ the bar sticks to the bottom), a now-playing bar shown only when something is lo
         }
 ```
 
-- [ ] **Step 3: Wire navigation** — in `AudiobooksFeatureEntry.register`, the
+- [x] **Step 3: Wire navigation** — in `AudiobooksFeatureEntry.register`, the
 `AudiobookListScreen(...)` call gains:
 
 ```kotlin
@@ -2682,7 +2705,7 @@ New imports for `AudiobookListScreen.kt`: `androidx.compose.material3.TextButton
 `AudiobookListViewModel.kt`: `com.orator.core.playback.PlaybackConnection`,
 `com.orator.core.playback.PlaybackUiState`, `kotlinx.coroutines.flow.StateFlow`.
 
-- [ ] **Step 4: Full build + commit**
+- [x] **Step 4: Full build + commit**
 
 Run: `./gradlew :feature:audiobooks:testDebugUnitTest :app:assembleDebug`
 Expected: tests green, APK builds.
@@ -2698,12 +2721,12 @@ git commit -m "feat: library screen links to settings, history, and now-playing"
 
 ### Task 17: Whole-project verification
 
-- [ ] **Step 1: Full test suite**
+- [x] **Step 1: Full test suite**
 
 Run: `./gradlew --console=plain test > /tmp/p3-test.log 2>&1; echo "GRADLE_EXIT=$?"`
 Expected: log ends `BUILD SUCCESSFUL`; grep the `TEST-*.xml` results for `failures="0"`.
 
-- [ ] **Step 2: Install on the Pixel 7a**
+- [x] **Step 2: Install on the Pixel 7a**
 
 Wireless adb (pair first if the host was forgotten). Then:
 
@@ -2712,7 +2735,7 @@ Expected: `Installed on 1 device.` The DB schema changed (v2) — the destructiv
 the library on first launch; **re-pick the folder** (test books from Phase 2 are still at
 `/sdcard/OratorTest/`).
 
-- [ ] **Step 3: Manual verification checklist (user drives, agent waits for report)**
+- [x] **Step 3: Manual verification checklist (user drives, agent waits for report)**
 
 1. Open Orator → pick/confirm the `OratorTest` folder → books appear. Tap the now-playing
    bar's absence sanity check: bar hidden when nothing has played yet.
@@ -2743,7 +2766,7 @@ the library on first launch; **re-pick the folder** (test books from Phase 2 are
 11. **mp3 book regression:** open *The Ballad of Black Tom* → chapter 2 → plays; position
     still tracks across files (Phase 2 behavior intact).
 
-- [ ] **Step 4: Fix anything that fails, then finish**
+- [x] **Step 4: Fix anything that fails, then finish**
 
 Likely first-run suspects, in order: `buildAudioSink` override signature (Media3 version
 drift), smart-rewind firing on queue start (check the `onResumed` consume logic),
@@ -2751,11 +2774,11 @@ drift), smart-rewind firing on queue start (check the `onResumed` consume logic)
 missing a pause because the user seeked while armed (re-arm and retest before calling it
 a bug).
 
-- [ ] **Step 5: Tick plan checkboxes, record deviations in an "Execution notes" section
+- [x] **Step 5: Tick plan checkboxes, record deviations in an "Execution notes" section
 (including the history lazy-close deviation noted in Chunk 4), update
 `docs/architecture.md` §15 status line (Phase 2 ✅, Phase 3 ✅), commit.**
 
-- [ ] **Step 6: Push and hand off**
+- [x] **Step 6: Push and hand off**
 
 ```bash
 git push -u origin phase-3-player-experience
