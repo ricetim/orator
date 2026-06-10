@@ -85,7 +85,12 @@ object Mp4ChapterParser {
             val title = ByteArray(titleLen).also { stream.readFully(it) }
             chapters.add(Chapter(String(title, Charsets.UTF_8), start100ns / 10_000))
         }
-        return chapters
+        // Real-world m4bs carry chpl variants with shifted layouts (seen in the wild with
+        // version bytes 0/13/190, but a file could also claim v1). Garbage entries would
+        // give the importer negative chapter durations, so reject anything non-monotonic.
+        val sane = chapters.zipWithNext().all { (a, b) -> a.startMs <= b.startMs } &&
+            chapters.all { it.startMs >= 0 }
+        return if (sane) chapters else emptyList()
     }
 
     private fun skipFully(stream: InputStream, bytes: Long) {
