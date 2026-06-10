@@ -630,8 +630,8 @@ flowchart LR
 |-------|------|---------------|-------------|
 | **0** ✅ | Scaffold | `assembleDebug` produces an APK | `app` |
 | **1** ✅ | Foundation: DI (Hilt), nav + registry, design system, **playback service** | App plays a local audio file in the background with notification controls — *verified on device 2026-06-09* | `core-*`, `feature-player` |
-| **2** | Local audiobooks | Import a SAF-picked local m4b/mp3 book, see cover + chapters, play & resume, set a bookmark | `feature-audiobooks` (introduces Room) |
-| **3** | Player experience | Now-Playing screen; speed (global/type/item), silence-trim, volume boost, sleep timer, play history all working | (extends `feature-player`) |
+| **2** ✅ | Local audiobooks | Import a SAF-picked local m4b/mp3 book, see cover + chapters, play & resume, set a bookmark — *verified on device 2026-06-10* | `feature-audiobooks` (introduces Room) |
+| **3** ✅ | Player experience | Now-Playing screen; speed (global/type/item), silence-trim, volume boost, sleep timer, play history all working — plus smart rewind on resume and the intro/outro clip mechanism; *verified on device 2026-06-10* | `feature-settings` (extends `feature-player`) |
 | **4** | Podcasts | Discover via Podcast Index/iTunes, subscribe to a feed, download episodes + cache all metadata to readable paths, read show notes, tap a timestamp to seek | `feature-podcasts`, `core-network` |
 | **5** | Playlists | Mixed playlist; new episodes auto-insert per rule | `feature-playlists` |
 | **6** | audiobookshelf | Add ABS server; browse + play + two-way progress sync (launch feature) | (extends `core-network`/`feature-audiobooks`) |
@@ -639,9 +639,9 @@ flowchart LR
 | **8** | Premium features | The premium set (TBD) shipping behind the gate | (depends on the chosen set) |
 | **9** | Launch readiness | Baseline profiles, R8 tuned, store listing + data-safety, signed release | — |
 
-**Status:** Phase 1 is complete (branch `phase-1-foundation`, PR #1). UI/design iteration is
-deliberately deferred until backend functionality is complete, so Phases 2–6 ship with
-minimal placeholder UI. **Next: Phase 2 (local audiobooks).**
+**Status:** Phases 1–3 are complete and merged/PR'd (PR #1, #3, and the phase-3 PR). UI/design
+iteration is deliberately deferred until backend functionality is complete, so Phases 2–6 ship
+with minimal placeholder UI. **Next: Phase 4 (podcasts).**
 
 ---
 

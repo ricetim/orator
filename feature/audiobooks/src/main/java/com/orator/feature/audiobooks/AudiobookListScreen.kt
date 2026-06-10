@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -26,10 +29,14 @@ import com.orator.core.database.BookEntity
 @Composable
 fun AudiobookListScreen(
     onBookClick: (String) -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenPlayer: () -> Unit,
     viewModel: AudiobookListViewModel = hiltViewModel(),
 ) {
     val books by viewModel.books.collectAsStateWithLifecycle()
     val hasFolder by viewModel.hasFolder.collectAsStateWithLifecycle()
+    val playback by viewModel.playback.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val pickFolder = rememberLauncherForActivityResult(
@@ -45,7 +52,15 @@ fun AudiobookListScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        // Menus sit centered (user preference for test UIs); the book list still fills width.
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(horizontalArrangement = Arrangement.Center) {
+            TextButton(onClick = onOpenHistory) { Text("History") }
+            TextButton(onClick = onOpenSettings) { Text("Settings") }
+        }
         Text(text = "Audiobooks")
         Row {
             Button(onClick = { pickFolder.launch(null) }) {
@@ -55,7 +70,7 @@ fun AudiobookListScreen(
                 OutlinedButton(onClick = viewModel::onRescan) { Text("Rescan") }
             }
         }
-        LazyColumn {
+        LazyColumn(modifier = Modifier.weight(1f)) {
             items(books, key = BookEntity::id) { book ->
                 Column(
                     modifier = Modifier
@@ -66,6 +81,20 @@ fun AudiobookListScreen(
                     Text(text = book.title)
                     Text(text = book.author ?: "Unknown author")
                 }
+            }
+        }
+        if (playback.title.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenPlayer)
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = (if (playback.isPlaying) "▶ " else "⏸ ") + playback.title,
+                    maxLines = 1,
+                )
             }
         }
     }

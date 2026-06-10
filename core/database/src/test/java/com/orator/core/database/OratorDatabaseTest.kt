@@ -55,10 +55,11 @@ class OratorDatabaseTest {
     fun `book roundtrip and position update`() = runBlocking {
         db.bookDao().upsert(listOf(book()))
 
-        db.bookDao().updatePosition("b1", 42_000)
+        db.bookDao().updateProgress("b1", 42_000, lastPlayedAtMs = 777)
 
         val loaded = db.bookDao().getById("b1")!!
         assertEquals(42_000, loaded.positionMs)
+        assertEquals(777, loaded.lastPlayedAtMs)
         assertEquals("A Book", loaded.title)
         assertEquals(SourceKind.M4B, loaded.sourceKind)
     }

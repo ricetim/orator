@@ -9,7 +9,7 @@ import org.junit.Test
 
 class QueueBuilderTest {
 
-    private fun book(kind: SourceKind) = BookEntity(
+    private fun book(kind: SourceKind, speedOverride: Float? = null) = BookEntity(
         id = "b1",
         title = "Book",
         author = null,
@@ -19,6 +19,7 @@ class QueueBuilderTest {
         durationMs = 60_000,
         positionMs = 0,
         addedAtUtc = 0,
+        speedOverride = speedOverride,
     )
 
     private fun chapter(index: Int, fileUri: String, startMs: Long, durationMs: Long) = ChapterEntity(
@@ -57,6 +58,32 @@ class QueueBuilderTest {
         )
         assertEquals(1, request.startIndex)
         assertEquals(12_000, request.startPositionMs)
+    }
+
+    @Test
+    fun `m4b carries chapter boundaries (excluding zero) and the speed override`() {
+        val chapters = listOf(chapter(0, "uri://book", 0, 30_000), chapter(1, "uri://book", 30_000, 30_000))
+
+        val request = QueueBuilder.build(
+            book(SourceKind.M4B, speedOverride = 1.3f), chapters, startAtMs = 0,
+        )
+
+        // startMs == 0 must NOT appear: "pause at the next boundary" from position 0
+        // would otherwise stop instantly.
+        assertEquals(listOf(30_000L), request.chapterBoundariesMs)
+        assertEquals(1.3f, request.speedOverride)
+    }
+
+    @Test
+    fun `mp3 collection has no in-item boundaries but keeps the override`() {
+        val chapters = listOf(chapter(0, "uri://f1", 0, 30_000), chapter(1, "uri://f2", 0, 30_000))
+
+        val request = QueueBuilder.build(
+            book(SourceKind.MP3_DIR, speedOverride = 0.9f), chapters, startAtMs = 0,
+        )
+
+        assertEquals(emptyList<Long>(), request.chapterBoundariesMs)
+        assertEquals(0.9f, request.speedOverride)
     }
 
     @Test

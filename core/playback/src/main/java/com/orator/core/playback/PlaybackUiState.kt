@@ -8,4 +8,5 @@ data class PlaybackUiState(
     val currentIndex: Int = 0,
     val positionMs: Long = 0,
     val durationMs: Long = 0,
+    val speed: Float = 1.0f,
 )

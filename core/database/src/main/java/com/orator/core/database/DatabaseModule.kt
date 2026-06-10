@@ -16,7 +16,13 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): OratorDatabase =
-        Room.databaseBuilder(context, OratorDatabase::class.java, "orator.db").build()
+        Room.databaseBuilder(context, OratorDatabase::class.java, "orator.db")
+            // Pre-release: schema may change freely; replaced by real migrations in Phase 9.
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
+
+    @Provides
+    fun provideHistoryDao(db: OratorDatabase): HistoryDao = db.historyDao()
 
     @Provides
     fun provideBookDao(db: OratorDatabase): BookDao = db.bookDao()

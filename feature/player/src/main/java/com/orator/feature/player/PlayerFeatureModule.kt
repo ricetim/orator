@@ -1,6 +1,7 @@
 package com.orator.feature.player
 
 import com.orator.core.navigation.FeatureEntry
+import com.orator.core.playback.PlaybackEventListener
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -18,4 +19,8 @@ interface PlayerFeatureModule {
     @Binds
     @IntoSet
     fun bindPlayerFeatureEntry(entry: PlayerFeatureEntry): FeatureEntry
+
+    @Binds
+    @IntoSet
+    fun bindHistoryRecorder(recorder: HistoryRecorder): PlaybackEventListener
 }

@@ -7,8 +7,11 @@ import com.orator.core.database.BookEntity
 import com.orator.core.database.BookmarkEntity
 import com.orator.core.database.ChapterEntity
 import com.orator.core.database.SourceKind
+import com.orator.core.model.MediaType
 import com.orator.core.playback.PlaybackConnection
 import com.orator.core.playback.PlaybackUiState
+import com.orator.core.playback.PlayerPreferences
+import com.orator.core.playback.SmartRewind
 import com.orator.feature.audiobooks.data.AudiobookMediaId
 import com.orator.feature.audiobooks.data.AudiobookRepository
 import com.orator.feature.audiobooks.data.PositionMapper
@@ -26,6 +29,7 @@ class BookDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: AudiobookRepository,
     private val playbackConnection: PlaybackConnection,
+    private val playerPreferences: PlayerPreferences,
 ) : ViewModel() {
 
     private val bookId: String = checkNotNull(savedStateHandle["bookId"])
@@ -48,7 +52,16 @@ class BookDetailViewModel @Inject constructor(
     fun onPlayResume() {
         viewModelScope.launch {
             val b = repository.observeBook(bookId).first() ?: return@launch
-            playFrom(b.positionMs)
+            // Cold-start smart rewind: same tiers as the service's warm path, computed from
+            // the last position ping. The service resets its warm state on queue load, so
+            // the two can never stack.
+            val prefs = playerPreferences.flow.first()
+            val rewind = if (prefs.smartRewind[MediaType.AUDIOBOOK] == true && b.lastPlayedAtMs > 0) {
+                SmartRewind.rewindMs(System.currentTimeMillis() - b.lastPlayedAtMs)
+            } else {
+                0
+            }
+            playFrom((b.positionMs - rewind).coerceAtLeast(0))
         }
     }
 

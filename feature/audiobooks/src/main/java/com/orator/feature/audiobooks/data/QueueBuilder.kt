@@ -28,6 +28,8 @@ object QueueBuilder {
                 startIndex = 0,
                 startPositionMs = startAtMs,
                 mediaType = MediaType.AUDIOBOOK,
+                chapterBoundariesMs = chapters.map { it.startMs }.filter { it > 0 },
+                speedOverride = book.speedOverride,
             )
 
             SourceKind.MP3_DIR -> {
@@ -44,6 +46,7 @@ object QueueBuilder {
                     startIndex = start.fileIndex,
                     startPositionMs = start.offsetMs,
                     mediaType = MediaType.AUDIOBOOK,
+                    speedOverride = book.speedOverride,
                 )
             }
         }

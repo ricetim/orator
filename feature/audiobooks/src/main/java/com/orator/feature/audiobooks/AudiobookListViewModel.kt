@@ -3,6 +3,8 @@ package com.orator.feature.audiobooks
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.orator.core.database.BookEntity
+import com.orator.core.playback.PlaybackConnection
+import com.orator.core.playback.PlaybackUiState
 import com.orator.feature.audiobooks.data.AudiobookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,10 +17,14 @@ import javax.inject.Inject
 @HiltViewModel
 class AudiobookListViewModel @Inject constructor(
     private val repository: AudiobookRepository,
+    playbackConnection: PlaybackConnection,
 ) : ViewModel() {
 
     val books: StateFlow<List<BookEntity>> = repository.observeBooks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Drives the bottom now-playing bar. */
+    val playback: StateFlow<PlaybackUiState> = playbackConnection.state
 
     val hasFolder: StateFlow<Boolean> = repository.treeUri
         .map { it != null }

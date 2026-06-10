@@ -11,4 +11,10 @@ abstract class PlaybackModule {
     /** Declares the set so it exists (empty) even before any feature contributes a listener. */
     @Multibinds
     abstract fun positionListeners(): Set<PlaybackPositionListener>
+
+    @Multibinds
+    abstract fun speedOverrideListeners(): Set<SpeedOverrideListener>
+
+    @Multibinds
+    abstract fun playbackEventListeners(): Set<PlaybackEventListener>
 }
