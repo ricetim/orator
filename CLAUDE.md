@@ -5,13 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project status
 
 Baseline scaffold is in place: Kotlin + Jetpack Compose single-module Android app, building
-successfully. GitHub repo: https://github.com/ricetim/akouo
+successfully. GitHub repo: https://github.com/ricetim/orator
 
 Next step is architectural planning before any feature work begins.
 
 ## What this is
 
-**akouo** (Greek *ἀκούω*, "I hear / I listen") is an **Android-only** app that plays both
+**Orator** (formerly *akouo*) is an **Android-only** app that plays both
 **podcasts** and **audiobooks**. Two principles from the plan are hard constraints that
 should drive most decisions:
 
@@ -41,7 +41,7 @@ Always use the Gradle wrapper (`./gradlew`), never the system `gradle` binary.
 ./gradlew test
 
 # Run a single test class
-./gradlew :app:testDebugUnitTest --tests "com.akouo.app.ExampleUnitTest"
+./gradlew :app:testDebugUnitTest --tests "com.orator.app.ExampleUnitTest"
 
 # Lint
 ./gradlew lint

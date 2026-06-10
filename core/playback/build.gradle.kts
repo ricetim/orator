@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.akouo.core.playback"
+    namespace = "com.orator.core.playback"
     compileSdk = 35
 
     defaultConfig {

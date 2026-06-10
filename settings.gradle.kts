@@ -14,10 +14,12 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "akouo"
+rootProject.name = "orator"
 include(":app")
 include(":core:model")
 include(":core:designsystem")
 include(":core:navigation")
 include(":core:playback")
+include(":core:database")
 include(":feature:player")
+include(":feature:audiobooks")

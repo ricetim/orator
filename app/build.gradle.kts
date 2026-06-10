@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.akouo.app"
+    namespace = "com.orator.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.akouo.app"
+        applicationId = "com.orator.app"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -41,6 +41,7 @@ android {
 
 dependencies {
     implementation(project(":feature:player"))
+    implementation(project(":feature:audiobooks"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:navigation"))
 

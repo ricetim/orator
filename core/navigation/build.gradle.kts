@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.akouo.core.navigation"
+    namespace = "com.orator.core.navigation"
     compileSdk = 35
 
     defaultConfig {

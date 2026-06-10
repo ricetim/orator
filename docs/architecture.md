@@ -1,4 +1,4 @@
-# akouo — Architecture Plan
+# Orator — Architecture Plan
 
 > A lightweight, modular Android player for **podcasts** and **audiobooks**.
 > This document is the architectural blueprint to review *before* feature work begins.
@@ -30,7 +30,7 @@ there's something worth selling.
 
 ## 2. High-level architecture
 
-akouo uses the **official Android app architecture** (UI → Domain → Data) with **unidirectional
+Orator uses the **official Android app architecture** (UI → Domain → Data) with **unidirectional
 data flow**, expressed across a **multi-module** graph. It is deliberately *pragmatic* Clean
 Architecture: layered and testable, but without ceremony (no use-case class for a one-line
 pass-through).
@@ -230,7 +230,7 @@ object PodcastsFeatureModule {
 
 // in app — knows nothing about any specific feature
 @Composable
-fun AkouoNavHost(entries: Set<@JvmSuppressWildcards FeatureEntry>) {
+fun OratorNavHost(entries: Set<@JvmSuppressWildcards FeatureEntry>) {
     NavHost(navController, startDestination = Home.route) {
         entries.forEach { with(it) { register(navController) } }
     }
@@ -329,7 +329,7 @@ This little resolver lives in `core-playback` and is pure/unit-testable.
 
 **Room** is the source of truth for *metadata and state*; the **filesystem** holds *bytes*
 (audio, artwork, show-notes HTML) at human-readable paths (P1 from the plan: "human readable
-formats"), e.g. `Akouo/Podcasts/<Show>/<Episode>/`. Room stores the path; the file is
+formats"), e.g. `Orator/Podcasts/<Show>/<Episode>/`. Room stores the path; the file is
 findable by a human with a file browser. **DataStore** holds preferences.
 
 **Storage location (decided 2026-06-09): a user-visible shared folder** chosen via the Storage
@@ -545,7 +545,7 @@ needed. Those are the tests we run on every change.
 
 - **Gradle convention plugins** in a `build-logic` included build encapsulate the shared
   Android/Kotlin/Compose configuration. A new module's build file becomes ~3 lines
-  (`plugins { id("akouo.android.feature") }`) instead of 40 copied ones — this is what keeps
+  (`plugins { id("orator.android.feature") }`) instead of 40 copied ones — this is what keeps
   a growing module graph from becoming a P1 liability.
 - **Version catalog** (`gradle/libs.versions.toml`, already present) is the single place versions
   live.
@@ -570,7 +570,7 @@ The plan asks to *begin* Play registration. Architecture-relevant pieces to set 
 
 - **Signing**: generate an upload keystore; wire a `release` signing config sourced from a
   *gitignored* `keystore.properties` (never commit keys).
-- **App identity**: `applicationId = com.akouo.app` (set), versioning scheme, adaptive icon.
+- **App identity**: `applicationId = com.orator.app` (set), versioning scheme, adaptive icon.
 - **Compliance**: privacy policy (we touch network + storage), Play **Data safety** form, and a
   **Billing**-ready account for the premium features.
 - Optional **product flavors** (`dev`/`prod`) only if we need distinct endpoints/config — *not*

@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.akouo.core.designsystem"
+    namespace = "com.orator.core.designsystem"
     compileSdk = 35
 
     defaultConfig {
