@@ -1,5 +1,6 @@
 # Gradle
 .gradle/
+.kotlin/
 build/
 **/build/
 *.apk
@@ -22,3 +23,7 @@ captures/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated docs (rendered from sources; regenerate with docs/render.py)
+docs/architecture.html
+docs/snapshots/
