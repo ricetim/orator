@@ -30,7 +30,7 @@ class AudiobookPositionListener @Inject constructor(
                     positionMs,
                 )
             }
-            bookDao.updatePosition(book.id, global)
+            bookDao.updateProgress(book.id, global, System.currentTimeMillis())
         }
     }
 }

@@ -113,7 +113,7 @@ class AudiobookImporterTest {
     fun `rescan keeps existing books and their positions`() = runBlocking {
         importer.import(listOf(ScannedBook.M4b("Book", "uri://book1")))
         val id = db.bookDao().observeAll().first().single().id
-        db.bookDao().updatePosition(id, 42_000)
+        db.bookDao().updateProgress(id, 42_000, lastPlayedAtMs = 1)
 
         importer.import(listOf(ScannedBook.M4b("Book", "uri://book1")))
 

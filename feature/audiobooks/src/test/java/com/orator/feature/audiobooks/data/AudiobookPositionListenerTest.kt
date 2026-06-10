@@ -58,7 +58,9 @@ class AudiobookPositionListenerTest {
 
         listener.onPositionChanged(AudiobookMediaId.encode("b1", 0), 42_000, 60_000)
 
-        assertEquals(42_000, db.bookDao().getById("b1")!!.positionMs)
+        val book = db.bookDao().getById("b1")!!
+        assertEquals(42_000, book.positionMs)
+        assertEquals(true, book.lastPlayedAtMs > 0) // ping also stamps the wall clock
     }
 
     @Test
