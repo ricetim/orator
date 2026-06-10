@@ -7,6 +7,9 @@ build/
 *.aab
 local.properties
 
+# Personal data that must never reach the public repo (private feed tokens etc.)
+local/
+
 # Android Studio / IntelliJ
 .idea/
 *.iml

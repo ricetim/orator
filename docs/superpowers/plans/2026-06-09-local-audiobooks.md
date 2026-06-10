@@ -10,6 +10,19 @@
 
 ---
 
+## Execution notes (deviations from the written plan)
+
+- **`runTest` → `runBlocking`** in every Room-backed JVM test: Room 2.7's invalidation
+  coroutines outlive `runTest`'s leak audit (`UncompletedCoroutinesError`). Plain-logic tests
+  are unaffected.
+- **"Verify red" steps skipped**: with 7–23 min builds, compile-failure runs are
+  information-free. Tests were still written first; verification batched per chunk.
+- **`feature:audiobooks` needs an explicit `activity-compose` dependency** (Task 17 uses
+  `rememberLauncherForActivityResult`; nothing else on the compile classpath provides it).
+- **Real-library finding** (`/media/Public/Books/Audiobooks`): some books are a directory of
+  many m4b files. v1 imports each m4b as its own book — multi-m4b grouping is a known gap
+  for a later phase.
+
 ## Orientation (read first)
 
 **Existing modules** (all under `/home/tim/projects/akouo`):
@@ -60,7 +73,7 @@ git checkout -b phase-2-local-audiobooks
 - Create: `core/database/build.gradle.kts`
 - Create: `core/database/.gitignore`
 
-- [ ] **Step 1: Add versions and libraries to the catalog**
+- [x] **Step 1: Add versions and libraries to the catalog**
 
 In `gradle/libs.versions.toml`, add to `[versions]` (keep alphabetical-ish grouping):
 
@@ -84,7 +97,7 @@ room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 ```
 
-- [ ] **Step 2: Register the module**
+- [x] **Step 2: Register the module**
 
 In `settings.gradle.kts`, after the existing `include(":core:playback")` line add:
 
@@ -92,7 +105,7 @@ In `settings.gradle.kts`, after the existing `include(":core:playback")` line ad
 include(":core:database")
 ```
 
-- [ ] **Step 3: Create `core/database/build.gradle.kts`**
+- [x] **Step 3: Create `core/database/build.gradle.kts`**
 
 ```kotlin
 plugins {
@@ -146,14 +159,14 @@ dependencies {
 
 `isIncludeAndroidResources = true` is what lets Robolectric run Room on the JVM — our only practical way to test DAOs on an emulator-less box.
 
-- [ ] **Step 4: Create `core/database/.gitignore`** containing the single line `/build`.
+- [x] **Step 4: Create `core/database/.gitignore`** containing the single line `/build`.
 
-- [ ] **Step 5: Verify the empty module configures**
+- [x] **Step 5: Verify the empty module configures**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :core:database:compileDebugKotlin`
 Expected: `BUILD SUCCESSFUL` (module has no sources yet; configuration succeeding is the check).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add gradle/libs.versions.toml settings.gradle.kts core/database
@@ -172,7 +185,7 @@ git commit -m "build: scaffold core:database module with Room + Robolectric"
 - Create: `core/database/src/main/java/com/akouo/core/database/AkouoDatabase.kt`
 - Test: `core/database/src/test/java/com/akouo/core/database/AkouoDatabaseTest.kt`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `core/database/src/test/java/com/akouo/core/database/AkouoDatabaseTest.kt`:
 
@@ -288,12 +301,12 @@ class AkouoDatabaseTest {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :core:database:testDebugUnitTest`
 Expected: FAIL — compilation errors (`Unresolved reference: AkouoDatabase`, etc.). A compile failure *is* the red state here.
 
-- [ ] **Step 3: Implement the schema**
+- [x] **Step 3: Implement the schema**
 
 `BookEntity.kt`:
 
@@ -501,12 +514,12 @@ abstract class AkouoDatabase : RoomDatabase() {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :core:database:testDebugUnitTest`
 Expected: PASS (5 tests). If Robolectric complains about the SDK level, pin the test class with `@Config(sdk = [34])` from `org.robolectric.annotation.Config`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add core/database
@@ -518,7 +531,7 @@ git commit -m "feat: add core:database with book/chapter/bookmark schema"
 **Files:**
 - Create: `core/database/src/main/java/com/akouo/core/database/DatabaseModule.kt`
 
-- [ ] **Step 1: Implement the module**
+- [x] **Step 1: Implement the module**
 
 ```kotlin
 package com.akouo.core.database
@@ -552,12 +565,12 @@ object DatabaseModule {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :core:database:compileDebugKotlin`
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add core/database
@@ -575,7 +588,7 @@ git commit -m "feat: provide AkouoDatabase and DAOs via Hilt"
 - Create: `feature/audiobooks/build.gradle.kts`
 - Create: `feature/audiobooks/.gitignore`
 
-- [ ] **Step 1: Register the module**
+- [x] **Step 1: Register the module**
 
 In `settings.gradle.kts`, after `include(":feature:player")` add:
 
@@ -583,7 +596,7 @@ In `settings.gradle.kts`, after `include(":feature:player")` add:
 include(":feature:audiobooks")
 ```
 
-- [ ] **Step 2: Create `feature/audiobooks/build.gradle.kts`**
+- [x] **Step 2: Create `feature/audiobooks/build.gradle.kts`**
 
 Mirrors `feature/player/build.gradle.kts` plus database/playback/model deps, SAF, DataStore, and Robolectric:
 
@@ -654,14 +667,14 @@ dependencies {
 }
 ```
 
-- [ ] **Step 3: Create `feature/audiobooks/.gitignore`** containing `/build`.
+- [x] **Step 3: Create `feature/audiobooks/.gitignore`** containing `/build`.
 
-- [ ] **Step 4: Verify configuration**
+- [x] **Step 4: Verify configuration**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:compileDebugKotlin`
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add settings.gradle.kts feature/audiobooks
@@ -675,7 +688,7 @@ git commit -m "build: scaffold feature:audiobooks module"
 - Create: `feature/audiobooks/src/main/java/com/akouo/feature/audiobooks/data/AudiobookMediaId.kt`
 - Test: `feature/audiobooks/src/test/java/com/akouo/feature/audiobooks/data/AudiobookMediaIdTest.kt`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -718,12 +731,12 @@ class AudiobookMediaIdTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:testDebugUnitTest`
 Expected: FAIL (unresolved references).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `BookIds.kt`:
 
@@ -771,12 +784,12 @@ object AudiobookMediaId {
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:testDebugUnitTest`
 Expected: PASS (3 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -791,7 +804,7 @@ git commit -m "feat: book identity hash and audiobook mediaId codec"
 
 Why: `"Track 10.mp3"` must sort *after* `"Track 2.mp3"`; plain lexicographic sort breaks chapter order for most real audiobook rips.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -827,12 +840,12 @@ class NaturalOrderTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:testDebugUnitTest --tests "com.akouo.feature.audiobooks.data.NaturalOrderTest"`
 Expected: FAIL (unresolved reference `NaturalOrder`).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -871,11 +884,11 @@ object NaturalOrder : Comparator<String> {
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Same command as Step 2. Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -888,7 +901,7 @@ git commit -m "feat: natural-order comparator for mp3 chapter ordering"
 - Create: `feature/audiobooks/src/main/java/com/akouo/feature/audiobooks/data/PositionMapper.kt`
 - Test: `feature/audiobooks/src/test/java/com/akouo/feature/audiobooks/data/PositionMapperTest.kt`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -937,12 +950,12 @@ class PositionMapperTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:testDebugUnitTest --tests "com.akouo.feature.audiobooks.data.PositionMapperTest"`
 Expected: FAIL (unresolved reference).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -973,11 +986,11 @@ object PositionMapper {
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Same command. Expected: PASS (6 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -993,7 +1006,7 @@ git commit -m "feat: global/per-file position mapping for multi-file books"
 
 m4b chapters live in the Nero `chpl` MP4 box (`moov` → `udta` → `chpl`), which ffmpeg writes by default. We test against a **real ffmpeg-produced file**, not hand-crafted bytes, so the test validates our understanding of the format rather than echoing it.
 
-- [ ] **Step 1: Generate the fixture**
+- [x] **Step 1: Generate the fixture**
 
 ```bash
 mkdir -p feature/audiobooks/src/test/resources
@@ -1024,7 +1037,7 @@ Verify the chapters really are in the file:
 Run: `ffprobe -v error -show_chapters feature/audiobooks/src/test/resources/fixture.m4b`
 Expected: two `[CHAPTER]` blocks with `start_time=0.000000` / `start_time=4.000000` and tags `Chapter One` / `Chapter Two`. Also confirm the chpl box exists: `xxd feature/audiobooks/src/test/resources/fixture.m4b | grep chpl` prints one line.
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -1060,12 +1073,12 @@ class Mp4ChapterParserTest {
 }
 ```
 
-- [ ] **Step 3: Run to verify failure**
+- [x] **Step 3: Run to verify failure**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:testDebugUnitTest --tests "com.akouo.feature.audiobooks.data.Mp4ChapterParserTest"`
 Expected: FAIL (unresolved reference `Mp4ChapterParser`).
 
-- [ ] **Step 4: Implement the parser**
+- [x] **Step 4: Implement the parser**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -1174,11 +1187,11 @@ object Mp4ChapterParser {
 }
 ```
 
-- [ ] **Step 5: Run to verify pass**
+- [x] **Step 5: Run to verify pass**
 
 Same command as Step 3. Expected: PASS (3 tests). **If the chapter count or offsets are wrong**, the ffmpeg `chpl` layout differs from the comment in `readChpl` — hexdump the box and adjust the reserved-bytes handling; the test (built from real ffmpeg output) is the ground truth, not the parser.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -1198,7 +1211,7 @@ git commit -m "feat: parse m4b Nero (chpl) chapter marks"
 
 `DocumentFile` (SAF) is untestable on the JVM, so the scanner works against a tiny `DocumentNode` interface; the real adapter is three lines and gets exercised on-device in Chunk 6.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -1268,12 +1281,12 @@ class AudiobookScannerTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:testDebugUnitTest --tests "com.akouo.feature.audiobooks.data.AudiobookScannerTest"`
 Expected: FAIL (unresolved references).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `DocumentNode.kt`:
 
@@ -1365,11 +1378,11 @@ object AudiobookScanner {
 
 Note the subtlety: the *root* picked folder itself can be an mp3 book (user picks the book folder directly) — this falls out of the algorithm naturally. But a root-level `.m4b` book title comes from the file name, which keeps `removeSuffix` case-sensitive — acceptable; `.M4B` files keep the suffix in their display title (cosmetic only).
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Same command. Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -1385,7 +1398,7 @@ git commit -m "feat: scan SAF tree for m4b and mp3-collection books"
 
 `MediaMetadataRetriever` only works on a device, so it sits behind an interface (fakes in importer tests, reality checked in Chunk 6). `CoverStore` is plain file IO and gets a Robolectric test.
 
-- [ ] **Step 1: Write the failing CoverStore test**
+- [x] **Step 1: Write the failing CoverStore test**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -1423,12 +1436,12 @@ class CoverStoreTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:testDebugUnitTest --tests "com.akouo.feature.audiobooks.data.CoverStoreTest"`
 Expected: FAIL (unresolved reference).
 
-- [ ] **Step 3: Implement both classes**
+- [x] **Step 3: Implement both classes**
 
 `AudiobookMetadataExtractor.kt`:
 
@@ -1506,11 +1519,11 @@ class CoverStore @Inject constructor(
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Same command. Expected: PASS (2 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -1524,7 +1537,7 @@ git commit -m "feat: metadata extraction interface and cover cache"
 - Create: `feature/audiobooks/src/main/java/com/akouo/feature/audiobooks/data/AudiobookImporter.kt`
 - Test: `feature/audiobooks/src/test/java/com/akouo/feature/audiobooks/data/AudiobookImporterTest.kt`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -1661,12 +1674,12 @@ class AudiobookImporterTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:testDebugUnitTest --tests "com.akouo.feature.audiobooks.data.AudiobookImporterTest"`
 Expected: FAIL (unresolved references).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `M4bChapterSource.kt`:
 
@@ -1803,11 +1816,11 @@ class AudiobookImporter @Inject constructor(
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Same command. Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -1822,7 +1835,7 @@ git commit -m "feat: import scanned books with metadata and chapters into Room"
 
 These are thin glue (DataStore key + orchestration of already-tested parts); no new unit tests — covered by the importer/scanner/DAO tests plus device verification.
 
-- [ ] **Step 1: Implement `AudiobooksPrefs.kt`**
+- [x] **Step 1: Implement `AudiobooksPrefs.kt`**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -1853,7 +1866,7 @@ class AudiobooksPrefs @Inject constructor(
 }
 ```
 
-- [ ] **Step 2: Implement `AudiobookRepository.kt`**
+- [x] **Step 2: Implement `AudiobookRepository.kt`**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -1921,12 +1934,12 @@ class AudiobookRepository @Inject constructor(
 }
 ```
 
-- [ ] **Step 3: Verify compile**
+- [x] **Step 3: Verify compile**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:compileDebugKotlin`
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -1946,7 +1959,7 @@ git commit -m "feat: audiobook repository and folder preference"
 
 No new unit tests: every line here either delegates to `MediaController` (device-only) or is already-tested `SpeedResolver`. Runtime behavior is verified in Chunk 6.
 
-- [ ] **Step 1: Create `PlayRequest.kt`**
+- [x] **Step 1: Create `PlayRequest.kt`**
 
 ```kotlin
 package com.akouo.core.playback
@@ -1970,7 +1983,7 @@ data class PlayRequest(
 )
 ```
 
-- [ ] **Step 2: Extend `PlaybackUiState.kt`** (replace file contents)
+- [x] **Step 2: Extend `PlaybackUiState.kt`** (replace file contents)
 
 ```kotlin
 package com.akouo.core.playback
@@ -1986,7 +1999,7 @@ data class PlaybackUiState(
 )
 ```
 
-- [ ] **Step 3: Extend `PlaybackConnection`**
+- [x] **Step 3: Extend `PlaybackConnection`**
 
 In `PlaybackConnection.kt`:
 
@@ -2086,12 +2099,12 @@ import kotlinx.coroutines.launch
     }
 ```
 
-- [ ] **Step 4: Verify compile + existing tests**
+- [x] **Step 4: Verify compile + existing tests**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :core:playback:testDebugUnitTest`
 Expected: `BUILD SUCCESSFUL`, 4 existing SpeedResolver tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add core/playback
@@ -2107,7 +2120,7 @@ git commit -m "feat: generic play/seek API and richer playback state"
 
 This is the `FeatureEntry` trick again, pointed the other way: features contribute listeners into a set; the service notifies the set; nobody names anybody.
 
-- [ ] **Step 1: Create `PlaybackPositionListener.kt`**
+- [x] **Step 1: Create `PlaybackPositionListener.kt`**
 
 ```kotlin
 package com.akouo.core.playback
@@ -2122,7 +2135,7 @@ interface PlaybackPositionListener {
 }
 ```
 
-- [ ] **Step 2: Create `PlaybackModule.kt`**
+- [x] **Step 2: Create `PlaybackModule.kt`**
 
 ```kotlin
 package com.akouo.core.playback
@@ -2141,7 +2154,7 @@ abstract class PlaybackModule {
 }
 ```
 
-- [ ] **Step 3: Rewrite `PlaybackService.kt`** (replace file contents)
+- [x] **Step 3: Rewrite `PlaybackService.kt`** (replace file contents)
 
 ```kotlin
 package com.akouo.core.playback
@@ -2234,12 +2247,12 @@ class PlaybackService : MediaSessionService() {
 }
 ```
 
-- [ ] **Step 4: Verify compile + tests**
+- [x] **Step 4: Verify compile + tests**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :core:playback:testDebugUnitTest`
 Expected: `BUILD SUCCESSFUL`, existing tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add core/playback
@@ -2252,7 +2265,7 @@ git commit -m "feat: service-side position reporting via listener multibinding"
 - Create: `feature/audiobooks/src/main/java/com/akouo/feature/audiobooks/data/QueueBuilder.kt`
 - Test: `feature/audiobooks/src/test/java/com/akouo/feature/audiobooks/data/QueueBuilderTest.kt`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -2324,12 +2337,12 @@ class QueueBuilderTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:testDebugUnitTest --tests "com.akouo.feature.audiobooks.data.QueueBuilderTest"`
 Expected: FAIL (unresolved reference).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -2384,11 +2397,11 @@ object QueueBuilder {
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Same command. Expected: PASS (3 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -2401,7 +2414,7 @@ git commit -m "feat: build playback queues from books"
 - Create: `feature/audiobooks/src/main/java/com/akouo/feature/audiobooks/data/AudiobookPositionListener.kt`
 - Test: `feature/audiobooks/src/test/java/com/akouo/feature/audiobooks/data/AudiobookPositionListenerTest.kt`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -2492,12 +2505,12 @@ class AudiobookPositionListenerTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:testDebugUnitTest --tests "com.akouo.feature.audiobooks.data.AudiobookPositionListenerTest"`
 Expected: FAIL (unresolved reference).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.akouo.feature.audiobooks.data
@@ -2538,11 +2551,11 @@ class AudiobookPositionListener @Inject constructor(
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Same command. Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -2562,7 +2575,7 @@ Reminder: screens here are deliberately bare (user decision: design iteration co
 - Create: `feature/audiobooks/src/main/java/com/akouo/feature/audiobooks/AudiobookListViewModel.kt`
 - Create: `feature/audiobooks/src/main/java/com/akouo/feature/audiobooks/AudiobookListScreen.kt`
 
-- [ ] **Step 1: Create `AudiobooksRoutes.kt`**
+- [x] **Step 1: Create `AudiobooksRoutes.kt`**
 
 ```kotlin
 package com.akouo.feature.audiobooks
@@ -2574,7 +2587,7 @@ internal const val BookDetailRoutePattern = "audiobooks/{bookId}"
 internal fun bookDetailRoute(bookId: String) = "audiobooks/$bookId"
 ```
 
-- [ ] **Step 2: Create `AudiobookListViewModel.kt`**
+- [x] **Step 2: Create `AudiobookListViewModel.kt`**
 
 ```kotlin
 package com.akouo.feature.audiobooks
@@ -2614,7 +2627,7 @@ class AudiobookListViewModel @Inject constructor(
 }
 ```
 
-- [ ] **Step 3: Create `AudiobookListScreen.kt`**
+- [x] **Step 3: Create `AudiobookListScreen.kt`**
 
 ```kotlin
 package com.akouo.feature.audiobooks
@@ -2691,12 +2704,12 @@ fun AudiobookListScreen(
 }
 ```
 
-- [ ] **Step 4: Verify compile**
+- [x] **Step 4: Verify compile**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:compileDebugKotlin`
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -2709,7 +2722,7 @@ git commit -m "feat: audiobook library screen with SAF folder picker"
 - Create: `feature/audiobooks/src/main/java/com/akouo/feature/audiobooks/BookDetailViewModel.kt`
 - Create: `feature/audiobooks/src/main/java/com/akouo/feature/audiobooks/BookDetailScreen.kt`
 
-- [ ] **Step 1: Create `BookDetailViewModel.kt`**
+- [x] **Step 1: Create `BookDetailViewModel.kt`**
 
 ```kotlin
 package com.akouo.feature.audiobooks
@@ -2819,7 +2832,7 @@ class BookDetailViewModel @Inject constructor(
 }
 ```
 
-- [ ] **Step 2: Create `BookDetailScreen.kt`**
+- [x] **Step 2: Create `BookDetailScreen.kt`**
 
 ```kotlin
 package com.akouo.feature.audiobooks
@@ -2905,12 +2918,12 @@ fun BookDetailScreen(viewModel: BookDetailViewModel = hiltViewModel()) {
 }
 ```
 
-- [ ] **Step 3: Verify compile**
+- [x] **Step 3: Verify compile**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :feature:audiobooks:compileDebugKotlin`
 Expected: `BUILD SUCCESSFUL`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add feature/audiobooks
@@ -2925,7 +2938,7 @@ git commit -m "feat: book detail screen with resume, chapters, bookmarks"
 - Modify: `app/build.gradle.kts`
 - Modify: `app/src/main/java/com/akouo/app/AkouoNavHost.kt`
 
-- [ ] **Step 1: Create `AudiobooksFeatureEntry.kt`**
+- [x] **Step 1: Create `AudiobooksFeatureEntry.kt`**
 
 ```kotlin
 package com.akouo.feature.audiobooks
@@ -2953,7 +2966,7 @@ class AudiobooksFeatureEntry @Inject constructor() : FeatureEntry {
 }
 ```
 
-- [ ] **Step 2: Create `AudiobooksFeatureModule.kt`**
+- [x] **Step 2: Create `AudiobooksFeatureModule.kt`**
 
 ```kotlin
 package com.akouo.feature.audiobooks
@@ -2991,7 +3004,7 @@ interface AudiobooksFeatureModule {
 }
 ```
 
-- [ ] **Step 3: Wire the app**
+- [x] **Step 3: Wire the app**
 
 In `app/build.gradle.kts`, next to the existing `implementation(project(":feature:player"))` add:
 
@@ -3014,12 +3027,12 @@ and change the NavHost line to:
 
 (`feature:player`'s smoke-test screen stays registered but unreachable; it gets folded into the real Now-Playing work in Phase 3.)
 
-- [ ] **Step 4: Full build + full test suite**
+- [x] **Step 4: Full build + full test suite**
 
 Run: `./gradlew -p /home/tim/projects/akouo --console=plain :app:assembleDebug test`
 Expected: `BUILD SUCCESSFUL`; all unit tests green (SpeedResolver 4, database 5, audiobooks ~26). This is the slow one (~10 min cold) — grab a coffee, don't kill it.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/audiobooks app
