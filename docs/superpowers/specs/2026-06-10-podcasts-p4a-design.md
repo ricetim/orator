@@ -63,10 +63,12 @@ auto-download rules, playlists, Podcasting-2.0 chapters, artwork display in UI
 - `PodcastEntity`: id (feed-URL hash), feedUrl, title, author, description, artworkUrl,
   lastRefreshUtc, etag, lastModified, **clipIntroMs = 0, clipOutroMs = 0**,
   speedOverride: Float? = null.
-- `EpisodeEntity`: id (RSS GUID; fallback enclosure-URL hash), podcastId, title,
-  pubDateUtc, durationMs (0 = unknown), enclosureUrl, showNotesPath (file pointer, not
-  the blob), audioPath: String? = null, positionMs = 0, lastPlayedAtMs = 0,
-  completed = false.
+- `EpisodeEntity`: id = hash(podcastId + guid) — GUIDs are only unique within a feed
+  (fallback: hash(podcastId + enclosureUrl)), podcastId, title, pubDateUtc,
+  durationMs (0 = unknown; always the **original unclipped** timeline), enclosureUrl,
+  showNotesPath (file pointer, not the blob), audioPath: String? = null, positionMs = 0,
+  lastPlayedAtMs = 0. No `completed` field — `HistoryEntity` already records completion;
+  add an episode-level flag only when a real consumer appears (YAGNI).
 - Room is the single source of truth for all UI; screens never wait on network or
   filesystem.
 
@@ -97,11 +99,16 @@ caching of everything except audio) but not yet rendered in the placeholder UI.
 
 - `EpisodeQueueBuilder` produces a single-item `PlayRequest`:
   - mediaId `podcast:<episodeId>`; URI = `audioPath` if downloaded else enclosure URL
-    (ExoPlayer streams HTTP natively; **add the `INTERNET` permission**, currently absent).
+    (ExoPlayer streams HTTP natively; the `INTERNET` permission is already declared in
+    the app manifest).
   - `MediaType.PODCAST`; `clipStartMs = clipIntroMs`;
     `clipEndMs = durationMs − clipOutroMs` **only when durationMs > 0 and clipOutroMs > 0**;
-    no outro clip when duration is unknown. `durationMs` is backfilled from the player
-    once the episode actually plays.
+    no outro clip when duration is unknown.
+  - **Duration backfill rule:** the player reports the *clipped* duration, so backfill
+    **only when `durationMs == 0`** (unknown — in which case no outro clip was applied),
+    storing `playerDuration + clipIntroMs` to recover the original timeline. Never
+    overwrite a known duration; recomputing `clipEndMs` from a clipped duration would
+    shrink the window on every replay.
   - speed = show's speedOverride (resolver falls back to per-type → global as in P3).
 - Positions are **clip-relative** (P3 invariant) and stored as-is.
 - Smart rewind: warm path automatic (service-side); cold path in the episode ViewModel
@@ -149,8 +156,14 @@ caching of everything except audio) but not yet rendered in the placeholder UI.
 ## Plan-level decisions (carried from review discussions)
 
 - Per-show speed override (not per-episode) — podcast analog of per-book.
-- Upsert key is GUID with enclosure-URL-hash fallback; refresh must never reset
+- Upsert key is hash(podcastId + guid), enclosure-URL fallback; refresh must never reset
   positionMs/audioPath for existing rows.
+- Changing `clipIntroMs` after partial play shifts the stored clip-relative position by
+  the delta — **accepted skew**, not a bug; do not add compensation logic.
+- Timestamp taps that land past `clipEndMs` rely on Media3's clamping within the clip
+  window; no explicit clamp beyond `≥ 0`.
+- Cache-tree directory names: sanitized title suffixed with a short id hash on collision
+  (two shows, or two same-day episodes, can sanitize identically).
 - Sequential downloads; no WorkManager; manual refresh only (auto-refresh arrives with
   P5 auto-insert rules).
 - `core:network` carries no parsing or JSON; parsers live in `feature:podcasts`.
