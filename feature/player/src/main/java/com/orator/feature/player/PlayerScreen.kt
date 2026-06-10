@@ -37,7 +37,8 @@ fun PlayerScreen(viewModel: PlayerViewModel = hiltViewModel()) {
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        // Controls live in the middle of the screen (user preference for test UIs).
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
     ) {
         Text(
             text = state.title.ifEmpty { "Nothing playing" },

@@ -52,11 +52,12 @@ fun AudiobookListScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        // Menus sit centered (user preference for test UIs); the book list still fills width.
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(horizontalArrangement = Arrangement.Center) {
             TextButton(onClick = onOpenHistory) { Text("History") }
             TextButton(onClick = onOpenSettings) { Text("Settings") }
         }
