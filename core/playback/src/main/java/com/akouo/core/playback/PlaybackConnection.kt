@@ -2,6 +2,7 @@ package com.akouo.core.playback
 
 import android.content.ComponentName
 import android.content.Context
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -12,9 +13,16 @@ import com.akouo.core.model.MediaType
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,9 +43,34 @@ class PlaybackConnection @Inject constructor(
     private var controller: MediaController? = null
     private var controllerFuture: ListenableFuture<MediaController>? = null
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var positionTicker: Job? = null
+
     private val listener = object : Player.Listener {
-        override fun onIsPlayingChanged(isPlaying: Boolean) = updateState()
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            updateState()
+            if (isPlaying) startPositionTicker() else stopPositionTicker()
+        }
+
         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) = updateState()
+        override fun onPlaybackStateChanged(playbackState: Int) = updateState()
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = updateState()
+    }
+
+    /** currentPosition only changes on events; while playing we sample it for the UI once a second. */
+    private fun startPositionTicker() {
+        positionTicker?.cancel()
+        positionTicker = scope.launch {
+            while (isActive) {
+                updateState()
+                delay(1_000)
+            }
+        }
+    }
+
+    private fun stopPositionTicker() {
+        positionTicker?.cancel()
+        positionTicker = null
     }
 
     init {
@@ -64,6 +97,10 @@ class PlaybackConnection @Inject constructor(
         _state.value = PlaybackUiState(
             isPlaying = c.isPlaying,
             title = c.mediaMetadata.title?.toString().orEmpty(),
+            mediaId = c.currentMediaItem?.mediaId,
+            currentIndex = c.currentMediaItemIndex,
+            positionMs = c.currentPosition.coerceAtLeast(0),
+            durationMs = c.duration.takeIf { it != C.TIME_UNSET } ?: 0,
         )
     }
 
@@ -76,6 +113,31 @@ class PlaybackConnection @Inject constructor(
             if (c.playbackState == Player.STATE_IDLE) c.prepare()
             c.play()
         }
+    }
+
+    /** Loads a feature-built queue and starts playing from the requested spot. */
+    fun play(request: PlayRequest) {
+        val c = controller ?: return
+        val items = request.items.map { item ->
+            MediaItem.Builder()
+                .setMediaId(item.mediaId)
+                .setUri(item.uri)
+                .setMediaMetadata(
+                    MediaMetadata.Builder().setTitle(item.title).setArtist(item.artist).build(),
+                )
+                .build()
+        }
+        c.setMediaItems(items, request.startIndex, request.startPositionMs)
+        c.prepare()
+        c.setPlaybackSpeed(
+            SpeedResolver.resolve(SpeedPreferences(), request.mediaType, itemOverride = null),
+        )
+        c.play()
+    }
+
+    /** Jumps to a queue item + offset (chapter taps, bookmark taps). */
+    fun seekTo(index: Int, positionMs: Long) {
+        controller?.seekTo(index, positionMs)
     }
 
     /**
