@@ -20,6 +20,7 @@ class AudiobooksFeatureEntry @Inject constructor() : FeatureEntry {
                 onOpenSettings = { navController.navigate(CommonRoutes.Settings) },
                 onOpenHistory = { navController.navigate(CommonRoutes.History) },
                 onOpenPlayer = { navController.navigate(CommonRoutes.Player) },
+                onOpenPodcasts = { navController.navigate(CommonRoutes.Podcasts) },
             )
         }
         navGraphBuilder.composable(BookDetailRoutePattern) {
