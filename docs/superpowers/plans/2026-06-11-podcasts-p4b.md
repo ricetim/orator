@@ -53,11 +53,17 @@ feature/podcasts/src/test/...                (one test class per new unit; fixtu
 
 - [ ] **Step 1: Read the file, then apply these changes**
 
-At the very top (above `plugins`):
+At the very top of the file, the import line ONLY:
 
 ```kotlin
 import java.util.Properties
+```
 
+Then **after the `plugins {}` block and before `android {}`** (Gradle KTS forbids any
+statement other than imports/buildscript above `plugins {}` — putting this higher fails
+script compilation):
+
+```kotlin
 // Podcast Index credentials live in gitignored local.properties; blank when absent so
 // the PI provider reports "not configured" and search falls through to iTunes.
 val localProps = Properties().apply {
@@ -326,9 +332,11 @@ class PodcastIndexSearchProviderTest {
         val request = server.takeRequest()
         assertEquals("k", request.getHeader("X-Auth-Key"))
         assertEquals("1780000000", request.getHeader("X-Auth-Date"))
-        // sha1("k" + "s" + "1780000000") — fixed clock makes this deterministic
+        // Literal SHA-1 of the ASCII string "ks1780000000" (printf 'ks1780000000' | sha1sum)
+        // — a hardcoded digest catches a wrong algorithm/hex bug that asserting
+        // sha1Hex-against-itself would miss.
         assertEquals(
-            PodcastIndexSearchProvider.sha1Hex("ks1780000000"),
+            "34c56d23e1f97c9bf0c5124359b44069755fc2a6",
             request.getHeader("Authorization"),
         )
         assertEquals(SEARCH_USER_AGENT, request.getHeader("User-Agent"))
@@ -536,11 +544,16 @@ class CompositeSearchProvider(
     private val primary: SearchProvider,
     private val fallback: SearchProvider,
 ) {
+    // distinctBy: feedUrl is the UI's LazyColumn key, and providers can return duplicate rows.
     suspend fun search(term: String): Result<SearchAnswer> =
         primary.search(term).fold(
-            onSuccess = { Result.success(SearchAnswer(primary.name, it)) },
+            onSuccess = {
+                Result.success(SearchAnswer(primary.name, it.distinctBy(PodcastSearchResult::feedUrl)))
+            },
             onFailure = {
-                fallback.search(term).map { results -> SearchAnswer(fallback.name, results) }
+                fallback.search(term).map { results ->
+                    SearchAnswer(fallback.name, results.distinctBy(PodcastSearchResult::feedUrl))
+                }
             },
         )
 }
