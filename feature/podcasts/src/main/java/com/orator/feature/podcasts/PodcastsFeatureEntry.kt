@@ -25,6 +25,7 @@ class PodcastsFeatureEntry @Inject constructor() : FeatureEntry {
         navGraphBuilder.composable(PodcastDetailRoutePattern) {
             PodcastDetailScreen(
                 onEpisodeClick = { id -> navController.navigate(episodeDetailRoute(id)) },
+                onUnsubscribed = { navController.popBackStack() },
             )
         }
         navGraphBuilder.composable(EpisodeDetailRoutePattern) {

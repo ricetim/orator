@@ -10,6 +10,7 @@ import com.orator.core.database.PodcastEntity
 import com.orator.core.playback.PlaybackConnection
 import com.orator.feature.podcasts.data.EpisodeQueueBuilder
 import com.orator.feature.podcasts.data.PodcastMediaId
+import com.orator.feature.podcasts.data.PodcastRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +24,7 @@ class PodcastDetailViewModel @Inject constructor(
     private val podcastDao: PodcastDao,
     private val episodeDao: EpisodeDao,
     private val playbackConnection: PlaybackConnection,
+    private val repository: PodcastRepository,
 ) : ViewModel() {
 
     private val podcastId: String = checkNotNull(savedStateHandle["podcastId"])
@@ -55,6 +57,13 @@ class PodcastDetailViewModel @Inject constructor(
             } else {
                 podcastDao.updateSpeedOverride(podcastId, rounded)
             }
+        }
+    }
+
+    fun onUnsubscribe(onDone: () -> Unit) {
+        viewModelScope.launch {
+            repository.unsubscribe(podcastId)
+            onDone()
         }
     }
 
