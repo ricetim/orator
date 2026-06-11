@@ -2,6 +2,7 @@ package com.orator.feature.podcasts.data
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.orator.core.database.EpisodeDao
 import com.orator.core.database.PodcastDao
@@ -44,11 +45,24 @@ class EpisodeDownloader @Inject constructor(
     private val _progress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val progress: StateFlow<Map<String, Float>> = _progress.asStateFlow()
 
+    /** Outcome of the most recent download attempt, for the placeholder UI's status line. */
+    private val _lastEvent = MutableStateFlow<String?>(null)
+    val lastEvent: StateFlow<String?> = _lastEvent.asStateFlow()
+
     @Volatile private var cancelled: String? = null
 
     /** Fire-and-forget entry point for the UI; survives the caller's lifecycle. */
     fun enqueue(episodeId: String) {
-        scope.launch { download(episodeId) }
+        scope.launch {
+            _lastEvent.value = null
+            _lastEvent.value = download(episodeId).fold(
+                onSuccess = { "Download complete" },
+                onFailure = { e ->
+                    Log.w(TAG, "download failed for $episodeId", e)
+                    "Download failed: ${e.message}"
+                },
+            )
+        }
     }
 
     fun cancel(episodeId: String) {
@@ -144,6 +158,8 @@ class EpisodeDownloader @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "EpisodeDownloader"
+
         fun audioExt(contentType: String?, url: String): String {
             when {
                 contentType == null -> Unit

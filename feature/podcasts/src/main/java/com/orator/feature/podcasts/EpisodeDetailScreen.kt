@@ -29,6 +29,7 @@ fun EpisodeDetailScreen(viewModel: EpisodeDetailViewModel = hiltViewModel()) {
     val notes by viewModel.notes.collectAsStateWithLifecycle()
     val playback by viewModel.playback.collectAsStateWithLifecycle()
     val downloadProgress by viewModel.downloadProgress.collectAsStateWithLifecycle()
+    val downloadEvent by viewModel.downloadEvent.collectAsStateWithLifecycle()
     val e = episode ?: return
 
     Column(
@@ -61,6 +62,7 @@ fun EpisodeDetailScreen(viewModel: EpisodeDetailViewModel = hiltViewModel()) {
                 else -> OutlinedButton(onClick = viewModel::onDownload) { Text("Download") }
             }
         }
+        downloadEvent?.let { Text(it) }
 
         notes?.let { rendered ->
             val annotated = buildAnnotatedString {

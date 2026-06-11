@@ -50,6 +50,9 @@ class EpisodeDetailViewModel @Inject constructor(
         .map { it[episodeId] }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** "Download complete" / "Download failed: …" from the most recent attempt. */
+    val downloadEvent: StateFlow<String?> = downloader.lastEvent
+
     fun isThisEpisode(state: PlaybackUiState): Boolean =
         state.mediaId?.let(PodcastMediaId::parse) == episodeId
 
