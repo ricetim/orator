@@ -8,6 +8,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.rememberNavController
 import com.orator.core.designsystem.theme.OratorTheme
@@ -31,8 +35,12 @@ class MainActivity : ComponentActivity() {
         maybeRequestNotificationPermission()
         setContent {
             OratorTheme {
-                val navController = rememberNavController()
-                OratorNavHost(featureEntries = featureEntries, navController = navController)
+                // Edge-to-edge is enabled, so the host must keep content out of the status
+                // bar / camera cutout; doing it here covers every feature screen at once.
+                Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+                    val navController = rememberNavController()
+                    OratorNavHost(featureEntries = featureEntries, navController = navController)
+                }
             }
         }
     }
