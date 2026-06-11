@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -6,12 +8,29 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Podcast Index credentials live in gitignored local.properties; blank when absent so
+// the PI provider reports "not configured" and search falls through to iTunes.
+val localProps = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
 android {
     namespace = "com.orator.feature.podcasts"
     compileSdk = 35
 
     defaultConfig {
         minSdk = 26
+        buildConfigField(
+            "String",
+            "PODCASTINDEX_KEY",
+            "\"${localProps.getProperty("podcastindex.apiKey", "")}\"",
+        )
+        buildConfigField(
+            "String",
+            "PODCASTINDEX_SECRET",
+            "\"${localProps.getProperty("podcastindex.apiSecret", "")}\"",
+        )
     }
 
     compileOptions {
@@ -25,6 +44,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
@@ -63,6 +83,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
