@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orator — UI Candidates · Round 2 archive</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #15171c; color: #e8e9ec; min-height: 100vh; padding: 40px 20px;
+  }
+  h1 { font-size: 28px; letter-spacing: .5px; }
+  .sub { color: #9aa0ab; margin: 8px 0 12px; max-width: 760px; line-height: 1.5; }
+  .arch { display:inline-block; margin-bottom: 28px; color:#8ab4f8; text-decoration:none; font-size:14px;
+    border:1px solid #2a2e36; border-radius:999px; padding:7px 16px; }
+  .arch:hover { border-color:#4a5260; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1100px; }
+  a.card { display: block; text-decoration: none; color: inherit; background: #1d2026;
+    border: 1px solid #2a2e36; border-radius: 16px; overflow: hidden; transition: transform .15s, border-color .15s; }
+  a.card:hover { transform: translateY(-3px); border-color: #4a5260; }
+  .swatch { height: 120px; display: flex; align-items: center; justify-content: center;
+    font-size: 40px; font-weight: 800; letter-spacing: 2px; }
+  .f .swatch { background: linear-gradient(120deg,#f7f7f9 55%,#f43e37 55%); color: #f43e37; }
+  .f .swatch span { background:#f7f7f9; padding: 4px 14px; border-radius: 10px; }
+  .g .swatch { background: #050507; color: #2dd4bf; }
+  .h .swatch { background: #f6f3ec; color: #2e7d4f; font-family: Georgia, serif; }
+  .body { padding: 18px 20px 22px; }
+  .name { font-size: 19px; font-weight: 700; margin-bottom: 2px; }
+  .tag { color: #8b93a0; font-size: 13px; margin-bottom: 10px; }
+  .desc { font-size: 14px; line-height: 1.5; color: #c2c7d0; }
+  .pill { display: inline-block; font-size: 11px; background: #2a2e36; border-radius: 999px;
+    padding: 3px 10px; margin: 12px 4px 0 0; color: #aeb5c2; }
+  .notes { max-width: 760px; background:#1a1d22; border:1px solid #262a31; border-radius:12px;
+    padding:14px 18px; margin-bottom:28px; font-size:13.5px; color:#aeb5c2; line-height:1.6; }
+  .notes b { color:#dde0e5; }
+</style>
+</head>
+<body>
+  <h1>Orator — UI candidates · Round 2 (archive)</h1>
+  <p class="sub">Built from your <code>ui_notes.md</code>. All three share the locked-in decisions and differ
+    only where you haven't decided yet: navigation chrome, library organization, and theme.</p>
+  <a class="arch" href="index.html">→ Round 3 (current)</a>
+  <a class="arch" href="round-1.html">→ Round 1 archive (A Shelf · B Cockpit · C Flow · D Ledger · E Boost)</a>
+
+  <div class="notes">
+    Common to all three, per your notes: <b>A-style tile navigation</b> · <b>B-style audiobook player</b>
+    (big pads, chapter + book bars) · <b>E-style podcast player</b> (paged dots, now with chapter + episode bars) ·
+    <b>series-grouped books</b> (stacked tiles → book list) · <b>audiobookshelf browser</b> ·
+    <b>search in the hamburger menu</b> · <b>real swipe gestures</b> — drag queue rows left to remove
+    (default, configurable), drag episode rows right to enqueue / left to delete the download.
+  </div>
+
+  <div class="grid">
+    <a class="card f" href="candidate-f.html">
+      <div class="swatch"><span>F</span></div>
+      <div class="body">
+        <div class="name">Atlas</div>
+        <div class="tag">light · bottom nav · the literal hybrid</div>
+        <div class="desc">Your notes assembled with the fewest liberties: A's light skin and coral accent,
+          three-tab bottom nav (Podcasts / Books / Queue), floating mini-player, drawer on the left with
+          search and audiobookshelf. ABS browser as a grid with ☁/✓ states.</div>
+        <div><span class="pill">3-tab bottom nav</span><span class="pill">floating mini</span><span class="pill">effects sheet</span></div>
+      </div>
+    </a>
+    <a class="card g" href="candidate-g.html">
+      <div class="swatch">G</div>
+      <div class="body">
+        <div class="name">Nocturne</div>
+        <div class="tag">AMOLED dark · one unified library</div>
+        <div class="desc">No bottom nav. One grid holds everything — podcasts, books, series stacks —
+          with POD/BOOK/SERIES badges and working filter chips (All / Podcasts / Books / Series).
+          Slim docked now-playing bar, teal on true black, search inside the drawer.</div>
+        <div><span class="pill">unified grid</span><span class="pill">filter chips</span><span class="pill">true black</span></div>
+      </div>
+    </a>
+    <a class="card h" href="candidate-h.html">
+      <div class="swatch">H</div>
+      <div class="body">
+        <div class="name">Gallery</div>
+        <div class="tag">editorial · serif · two-column</div>
+        <div class="desc">A bookshop take: big two-column cover tiles with serif captions and stat lines,
+          slim italic top tabs, full-width dark docked player. The ABS browser becomes literal shelves —
+          horizontal rows with a shelf line under each.</div>
+        <div><span class="pill">2-col covers</span><span class="pill">serif captions</span><span class="pill">ABS shelves</span></div>
+      </div>
+    </a>
+  </div>
+</body>
+</html>

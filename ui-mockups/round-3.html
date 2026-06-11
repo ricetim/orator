@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orator — UI Candidates · Round 3 archive</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #15171c; color: #e8e9ec; min-height: 100vh; padding: 40px 20px;
+  }
+  h1 { font-size: 28px; letter-spacing: .5px; }
+  .sub { color: #9aa0ab; margin: 8px 0 12px; max-width: 760px; line-height: 1.5; }
+  .arch { display:inline-block; margin: 0 8px 28px 0; color:#8ab4f8; text-decoration:none; font-size:14px;
+    border:1px solid #2a2e36; border-radius:999px; padding:7px 16px; }
+  .arch:hover { border-color:#4a5260; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; max-width: 760px; }
+  a.card { display: block; text-decoration: none; color: inherit; background: #1d2026;
+    border: 1px solid #2a2e36; border-radius: 16px; overflow: hidden; transition: transform .15s, border-color .15s; }
+  a.card:hover { transform: translateY(-3px); border-color: #4a5260; }
+  .swatch { height: 120px; display: flex; align-items: center; justify-content: center;
+    font-size: 40px; font-weight: 800; letter-spacing: 2px; background:#000; color:#2dd4bf; }
+  .body { padding: 18px 20px 22px; }
+  .name { font-size: 19px; font-weight: 700; margin-bottom: 2px; }
+  .tag { color: #8b93a0; font-size: 13px; margin-bottom: 10px; }
+  .desc { font-size: 14px; line-height: 1.5; color: #c2c7d0; }
+  .pill { display: inline-block; font-size: 11px; background: #2a2e36; border-radius: 999px;
+    padding: 3px 10px; margin: 12px 4px 0 0; color: #aeb5c2; }
+  .notes { max-width: 760px; background:#1a1d22; border:1px solid #262a31; border-radius:12px;
+    padding:14px 18px; margin-bottom:22px; font-size:13.5px; color:#aeb5c2; line-height:1.7; }
+  .notes b { color:#dde0e5; }
+</style>
+</head>
+<body>
+  <h1>Orator — UI candidates · Round 3 (archive)</h1>
+  <p class="sub">One consolidated candidate carrying every decision from both rounds of notes.</p>
+  <a class="arch" href="index.html">→ Round 4 (current)</a>
+  <a class="arch" href="round-2.html">→ Round 2 archive (F Atlas · G Nocturne · H Gallery)</a>
+  <a class="arch" href="round-1.html">→ Round 1 archive (A–E)</a>
+
+  <div class="notes">
+    New in this round, from your notes: <b>flush tiles</b> — grids are edge-to-edge with zero gaps,
+    names/badges/progress overlaid on the artwork · <b>OLED true black</b> ·
+    <b>ABS page gets a search bar at the top</b> · podcasts say <b>“downloaded”</b>, not “cached” ·
+    <b>Import OPML moved out of the drawer into Settings</b> (Settings screen included so you can see it) ·
+    <b>queue button at the bottom of both players</b> · <b>mini player on every browsing page</b>
+    (library, series, queue, show, ABS, Settings) · <b>one shared Effects sheet</b> — the ⚡ button
+    in the podcast player and the book player opens the identical editor (speed, trim, boost,
+    intro/outro skip, per-item override).
+  </div>
+
+  <div class="grid">
+    <a class="card" href="candidate-i.html">
+      <div class="swatch">I</div>
+      <div class="body">
+        <div class="name">Onyx</div>
+        <div class="tag">true black · flush tile grids · everything decided so far</div>
+        <div class="desc">A-style tile navigation with separate Podcast and Book screens on a three-tab
+          bottom nav, series stacks (⧉) opening book lists, B-style book player and E-style podcast
+          player — both with dual progress bars, both ending in Sleep / Effects / Queue rows, both
+          sharing one effects sheet. Swipe gestures live on queue and episode lists.</div>
+        <div><span class="pill">edge-to-edge tiles</span><span class="pill">shared effects</span><span class="pill">mini player everywhere</span></div>
+      </div>
+    </a>
+  </div>
+</body>
+</html>

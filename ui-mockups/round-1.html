@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orator — UI Candidates · Round 1 archive</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #15171c; color: #e8e9ec; min-height: 100vh; padding: 40px 20px;
+  }
+  h1 { font-size: 28px; letter-spacing: .5px; }
+  .sub { color: #9aa0ab; margin: 8px 0 32px; max-width: 720px; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; max-width: 1280px; }
+  a.card { display: block; text-decoration: none; color: inherit; background: #1d2026;
+    border: 1px solid #2a2e36; border-radius: 16px; overflow: hidden; transition: transform .15s, border-color .15s; }
+  a.card:hover { transform: translateY(-3px); border-color: #4a5260; }
+  .swatch { height: 120px; display: flex; align-items: center; justify-content: center;
+    font-size: 40px; font-weight: 800; letter-spacing: 2px; }
+  .a .swatch { background: linear-gradient(120deg,#fff 55%,#f43e37 55%); color: #f43e37; }
+  .a .swatch span { background:#fff; padding: 4px 14px; border-radius: 10px; }
+  .b .swatch { background: #23252a; color: #ff9100; }
+  .c .swatch { background: linear-gradient(135deg,#1f1640,#3c2a73); color: #a99bff; }
+  .d .swatch { background: #faf8f4; color: #2e7d4f; font-family: ui-monospace, monospace; }
+  .e .swatch { background: #fff; color: #fc7e0f; }
+  .body { padding: 18px 20px 22px; }
+  .name { font-size: 19px; font-weight: 700; margin-bottom: 2px; }
+  .tag { color: #8b93a0; font-size: 13px; margin-bottom: 10px; }
+  .desc { font-size: 14px; line-height: 1.5; color: #c2c7d0; }
+  .pill { display: inline-block; font-size: 11px; background: #2a2e36; border-radius: 999px;
+    padding: 3px 10px; margin: 12px 4px 0 0; color: #aeb5c2; }
+</style>
+</head>
+<body>
+  <h1>Orator — UI candidates · Round 1 (archive)</h1>
+  <p class="sub"><a href="index.html" style="color:#8ab4f8;text-decoration:none">← Round 2 (current)</a></p>
+  <p class="sub">Five clickable phone-frame prototypes. Everything tappable is wired: grids open shows,
+    episodes open players, mini-players expand, tabs switch. Chips under each phone jump straight to a screen.
+    All content is synthetic.</p>
+  <div class="grid">
+    <a class="card a" href="candidate-a.html">
+      <div class="swatch"><span>A</span></div>
+      <div class="body">
+        <div class="name">Shelf</div>
+        <div class="tag">Pocket Casts lineage · light · artwork-forward</div>
+        <div class="desc">Bottom nav with five tabs, 3-column artwork grid with unplayed badges,
+          floating rounded mini-player, full player with Notes / Transcript / Chapters tabs.
+          The "safe default" — familiar to any podcast-app user.</div>
+        <div><span class="pill">bottom nav</span><span class="pill">artwork grid</span><span class="pill">floating mini-player</span></div>
+      </div>
+    </a>
+    <a class="card b" href="candidate-b.html">
+      <div class="swatch">B</div>
+      <div class="body">
+        <div class="name">Cockpit</div>
+        <div class="tag">Smart AudioBook Player lineage · dark · giant controls</div>
+        <div class="desc">Player <em>is</em> the home screen. Oversized buttons you can hit without looking,
+          chapter + book progress bars, tile shortcuts for speed/sleep/bookmark. Library is one tap away,
+          with big rows and time-remaining.</div>
+        <div><span class="pill">player-first</span><span class="pill">huge targets</span><span class="pill">glance-free use</span></div>
+      </div>
+    </a>
+    <a class="card c" href="candidate-c.html">
+      <div class="swatch">C</div>
+      <div class="body">
+        <div class="name">Flow</div>
+        <div class="tag">Queue-first · dark gradient · mixed-media</div>
+        <div class="desc">Home is your Up Next queue — podcast episodes and audiobook chapters interleaved
+          with type badges, a now-playing hero card on top. Built around Orator's mixed playlists (Phase 5).
+          Modern glass-card look.</div>
+        <div><span class="pill">queue home</span><span class="pill">mixed media</span><span class="pill">hero card</span></div>
+      </div>
+    </a>
+    <a class="card d" href="candidate-d.html">
+      <div class="swatch">D</div>
+      <div class="body">
+        <div class="name">Ledger</div>
+        <div class="tag">Text-forward · paper light · maximum density</div>
+        <div class="desc">No bottom nav — slim top tabs, dense monospace-accented rows, tiny glyphs for
+          state (downloaded, in-progress, transcript). Compact two-line docked player. For power users who
+          want information, not chrome.</div>
+        <div><span class="pill">dense lists</span><span class="pill">top tabs</span><span class="pill">docked player</span></div>
+      </div>
+    </a>
+    <a class="card e" href="candidate-e.html">
+      <div class="swatch">E</div>
+      <div class="body">
+        <div class="name">Boost</div>
+        <div class="tag">Overcast lineage · light · playlist-centric</div>
+        <div class="desc">iOS-style sectioned home: pinned playlists up top (Queue, All New, Favorites,
+          Audiobooks), then podcasts as a list with latest-episode previews. Tinted player with paged
+          dots (art / notes / chapters), chapter ticks on the scrubber, and a bottom Effects sheet —
+          Smart Speed with "time saved", Voice Boost, per-show override toggle.</div>
+        <div><span class="pill">playlist home</span><span class="pill">effects sheet</span><span class="pill">paged player</span></div>
+      </div>
+    </a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Candidate A — Shelf</title>
+<style>
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  body { background:#101216; font-family: system-ui, -apple-system, Roboto, sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 12px; color:#dde0e5; }
+  .title { font-size:15px; color:#9aa0ab; margin-bottom:14px; }
+  .title b { color:#fff; }
+  .title a { color:#f43e37; text-decoration:none; }
+
+  .phone { width:393px; height:830px; background:#f7f7f9; border-radius:32px; border:10px solid #16181c;
+    overflow:hidden; position:relative; box-shadow:0 24px 60px rgba(0,0,0,.5); color:#1b1d22; }
+  .screen { position:absolute; inset:0; display:none; flex-direction:column; background:#f7f7f9; }
+  .screen.on { display:flex; }
+  .content { flex:1; overflow-y:auto; }
+
+  .topbar { display:flex; align-items:center; gap:12px; padding:18px 18px 10px; }
+  .topbar h1 { font-size:24px; font-weight:800; flex:1; }
+  .icnbtn { width:36px; height:36px; border-radius:50%; border:none; background:transparent;
+    font-size:19px; color:#5a5f6b; cursor:pointer; }
+  .back { background:none; border:none; font-size:22px; color:#1b1d22; cursor:pointer; padding:4px 8px; }
+
+  /* bottom nav */
+  .nav { display:flex; border-top:1px solid #e6e6ea; background:#fff; padding:6px 0 14px; }
+  .nav button { flex:1; background:none; border:none; font-size:10.5px; color:#8b8f99; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding-top:6px; }
+  .nav button .g { font-size:20px; line-height:1; }
+  .nav button.sel { color:#f43e37; font-weight:700; }
+
+  /* grid */
+  .pgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; padding:12px 16px 120px; }
+  .tile { position:relative; cursor:pointer; }
+  .art { width:100%; aspect-ratio:1; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:26px; box-shadow:0 3px 10px rgba(0,0,0,.18); letter-spacing:1px; }
+  .badge { position:absolute; top:-6px; right:-6px; background:#f43e37; color:#fff; font-size:11px;
+    font-weight:700; border-radius:999px; min-width:20px; height:20px; display:flex; align-items:center;
+    justify-content:center; padding:0 5px; border:2px solid #f7f7f9; }
+  .pbar { position:absolute; left:6px; right:6px; bottom:6px; height:4px; border-radius:2px; background:rgba(255,255,255,.35); }
+  .pbar i { display:block; height:100%; border-radius:2px; background:#fff; }
+
+  /* mini player */
+  .mini { position:absolute; left:12px; right:12px; bottom:74px; background:#23252c; color:#fff;
+    border-radius:16px; display:flex; align-items:center; gap:12px; padding:10px 14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35); cursor:pointer; z-index:5; }
+  .mini .m-art { width:40px; height:40px; border-radius:8px; flex:none; display:flex; align-items:center;
+    justify-content:center; font-weight:800; color:#fff; font-size:15px; }
+  .mini .m-t { flex:1; min-width:0; }
+  .mini .m-t b { display:block; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mini .m-t span { font-size:11px; color:#a7abb5; }
+  .mini button { background:none; border:none; color:#fff; font-size:21px; cursor:pointer; }
+  .mini .mp { position:absolute; left:14px; right:14px; bottom:4px; height:2px; background:#3a3d46; border-radius:1px; }
+  .mini .mp i { display:block; width:34%; height:100%; background:#f43e37; border-radius:1px; }
+
+  /* show detail */
+  .shead { display:flex; gap:14px; padding:8px 18px 14px; }
+  .shead .art { width:96px; flex:none; font-size:32px; }
+  .shead h2 { font-size:18px; font-weight:800; line-height:1.25; }
+  .shead .auth { font-size:13px; color:#7c818c; margin:3px 0 8px; }
+  .chip { display:inline-block; font-size:12px; font-weight:600; border:1.5px solid #d8d9df; border-radius:999px;
+    padding:5px 12px; margin:0 6px 6px 0; color:#43474f; background:#fff; cursor:pointer; }
+  .chip.hot { background:#f43e37; border-color:#f43e37; color:#fff; }
+  .setrow { padding:0 18px 8px; }
+  .eprow { display:flex; align-items:center; gap:12px; padding:13px 18px; border-top:1px solid #ececf0; cursor:pointer; }
+  .eprow .d { width:44px; flex:none; text-align:center; }
+  .eprow .d b { display:block; font-size:15px; }
+  .eprow .d span { font-size:10.5px; color:#9094a0; text-transform:uppercase; }
+  .eprow .t { flex:1; min-width:0; }
+  .eprow .t b { display:block; font-size:14px; font-weight:650; line-height:1.3; }
+  .eprow .t span { font-size:12px; color:#8b8f99; }
+  .eprow .dl { font-size:17px; color:#9aa0ab; background:none; border:none; cursor:pointer; }
+  .eprow .dl.done { color:#2faa5e; }
+
+  /* player */
+  .player { background:linear-gradient(180deg,#2b2330,#17141c); color:#fff; }
+  .player .content { display:flex; flex-direction:column; padding:10px 22px 20px; overflow-y:auto; }
+  .grab { width:42px; height:5px; background:#4d4656; border-radius:3px; margin:6px auto 14px; flex:none; }
+  .bigart { width:240px; height:240px; border-radius:18px; margin:6px auto 20px; display:flex; align-items:center;
+    justify-content:center; font-size:64px; font-weight:800; color:#fff; box-shadow:0 16px 40px rgba(0,0,0,.45); flex:none; }
+  .ptitle { text-align:center; }
+  .ptitle b { font-size:17px; display:block; }
+  .ptitle span { font-size:13px; color:#b3a9c0; }
+  .scrub { margin:20px 0 4px; }
+  .scrub .bar { height:4px; background:#4d4656; border-radius:2px; position:relative; }
+  .scrub .bar i { display:block; width:34%; height:100%; background:#f43e37; border-radius:2px; }
+  .scrub .bar u { position:absolute; left:34%; top:-5px; width:14px; height:14px; background:#fff; border-radius:50%; }
+  .scrub .tt { display:flex; justify-content:space-between; font-size:11px; color:#9d93ab; margin-top:8px; }
+  .ctr { display:flex; align-items:center; justify-content:center; gap:26px; margin:10px 0 6px; }
+  .ctr button { background:none; border:none; color:#fff; cursor:pointer; }
+  .ctr .skip { font-size:13px; font-weight:700; width:52px; height:52px; border-radius:50%; border:2px solid #564e62; }
+  .ctr .play { width:74px; height:74px; border-radius:50%; background:#f43e37; font-size:30px; }
+  .prow { display:flex; justify-content:center; gap:8px; margin:8px 0 14px; flex-wrap:wrap; }
+  .prow .chip { background:rgba(255,255,255,.08); border-color:transparent; color:#e7e2ee; }
+  .ptabs { display:flex; border-bottom:1px solid #3c3545; margin-bottom:12px; flex:none; }
+  .ptabs button { flex:1; background:none; border:none; color:#9d93ab; font-size:13px; font-weight:700;
+    padding:10px 0; cursor:pointer; border-bottom:2px solid transparent; }
+  .ptabs button.sel { color:#fff; border-bottom-color:#f43e37; }
+  .pane { display:none; font-size:13.5px; line-height:1.6; color:#cfc7da; padding-bottom:30px; }
+  .pane.on { display:block; }
+  .pane a { color:#ff8a85; text-decoration:none; font-weight:600; }
+  .chrow { display:flex; justify-content:space-between; padding:10px 2px; border-bottom:1px solid #332c3e; cursor:pointer; }
+  .chrow.now { color:#fff; font-weight:700; }
+
+  /* up next */
+  .uprow { display:flex; align-items:center; gap:12px; padding:12px 18px; border-bottom:1px solid #ececf0; }
+  .uprow .art { width:46px; flex:none; font-size:16px; border-radius:9px; }
+  .uprow .t { flex:1; min-width:0; }
+  .uprow .t b { display:block; font-size:13.5px; }
+  .uprow .t span { font-size:11.5px; color:#8b8f99; }
+  .uprow .h { color:#c3c6ce; font-size:18px; cursor:grab; }
+  .secl { padding:14px 18px 6px; font-size:12px; font-weight:800; color:#8b8f99; text-transform:uppercase; letter-spacing:.8px; }
+
+  /* discover */
+  .search { margin:6px 18px 10px; background:#ececf0; border-radius:12px; padding:11px 14px; color:#7c818c; font-size:14px; }
+  .cats { display:flex; gap:8px; padding:0 18px 14px; flex-wrap:wrap; }
+
+  .jump { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center; max-width:420px; }
+  .jump button { background:#23252c; color:#aeb5c2; border:1px solid #33363f; border-radius:999px;
+    font-size:12px; padding:6px 12px; cursor:pointer; }
+
+  .c1{background:linear-gradient(135deg,#3d6ef7,#23c4a0)} .c2{background:linear-gradient(135deg,#e85d75,#7b2ff7)}
+  .c3{background:linear-gradient(135deg,#f7971e,#ffd200);color:#5c4500} .c4{background:linear-gradient(135deg,#16a085,#145a32)}
+  .c5{background:linear-gradient(135deg,#5b6573,#2c3e50)} .c6{background:linear-gradient(135deg,#c0392b,#8e44ad)}
+  .c7{background:linear-gradient(135deg,#0f7bb5,#7adcf0);color:#073a55} .c8{background:linear-gradient(135deg,#444,#111)}
+  .c9{background:linear-gradient(135deg,#7d4f2a,#caa472)}
+</style>
+</head>
+<body>
+  <div class="title"><a href="round-1.html">← round 1</a> &nbsp;·&nbsp; <b>Candidate A — “Shelf”</b> · Pocket Casts lineage</div>
+
+  <div class="phone">
+
+    <!-- PODCASTS GRID -->
+    <div class="screen on" id="podcasts">
+      <div class="topbar"><h1>Podcasts</h1><button class="icnbtn">⌕</button><button class="icnbtn">⇅</button></div>
+      <div class="content">
+        <div class="pgrid">
+          <div class="tile" onclick="go('show')"><div class="art c1">DB</div><div class="badge">3</div></div>
+          <div class="tile" onclick="go('show')"><div class="art c2">LM</div><div class="badge">1</div></div>
+          <div class="tile" onclick="go('show')"><div class="art c3">TS</div></div>
+          <div class="tile" onclick="go('show')"><div class="art c4">OM</div><div class="badge">7</div></div>
+          <div class="tile" onclick="go('show')"><div class="art c5">SB</div></div>
+          <div class="tile" onclick="go('show')"><div class="art c6">9V</div><div class="badge">2</div></div>
+          <div class="tile" onclick="go('show')"><div class="art c7">WX</div></div>
+          <div class="tile" onclick="go('show')"><div class="art c8">NF</div></div>
+          <div class="tile" onclick="go('show')"><div class="art c9">HM</div><div class="badge">12</div></div>
+        </div>
+      </div>
+      <div class="mini" onclick="go('player')">
+        <div class="m-art c1">DB</div>
+        <div class="m-t"><b>Ep 214 — The Quiet Merge</b><span>The Daily Brief · 41m left</span></div>
+        <button onclick="event.stopPropagation()">▶</button><button onclick="event.stopPropagation()">↻30</button>
+        <div class="mp"><i></i></div>
+      </div>
+      <div class="nav">
+        <button class="sel"><span class="g">▦</span>Podcasts</button>
+        <button onclick="go('books')"><span class="g">📚</span>Books</button>
+        <button onclick="go('upnext')"><span class="g">☰</span>Up Next</button>
+        <button onclick="go('discover')"><span class="g">⌕</span>Discover</button>
+        <button><span class="g">⚙</span>Settings</button>
+      </div>
+    </div>
+
+    <!-- BOOKS GRID -->
+    <div class="screen" id="books">
+      <div class="topbar"><h1>Audiobooks</h1><button class="icnbtn">⌕</button><button class="icnbtn">⇅</button></div>
+      <div class="content">
+        <div class="pgrid">
+          <div class="tile" onclick="go('player')"><div class="art c9">DR</div><div class="pbar"><i style="width:62%"></i></div></div>
+          <div class="tile" onclick="go('player')"><div class="art c5">OD</div><div class="pbar"><i style="width:14%"></i></div></div>
+          <div class="tile" onclick="go('player')"><div class="art c4">MM</div></div>
+          <div class="tile" onclick="go('player')"><div class="art c6">JE</div><div class="pbar"><i style="width:91%"></i></div></div>
+          <div class="tile" onclick="go('player')"><div class="art c7">TT</div></div>
+          <div class="tile" onclick="go('player')"><div class="art c2">WH</div></div>
+        </div>
+      </div>
+      <div class="mini" onclick="go('player')">
+        <div class="m-art c1">DB</div>
+        <div class="m-t"><b>Ep 214 — The Quiet Merge</b><span>The Daily Brief · 41m left</span></div>
+        <button onclick="event.stopPropagation()">▶</button><button onclick="event.stopPropagation()">↻30</button>
+        <div class="mp"><i></i></div>
+      </div>
+      <div class="nav">
+        <button onclick="go('podcasts')"><span class="g">▦</span>Podcasts</button>
+        <button class="sel"><span class="g">📚</span>Books</button>
+        <button onclick="go('upnext')"><span class="g">☰</span>Up Next</button>
+        <button onclick="go('discover')"><span class="g">⌕</span>Discover</button>
+        <button><span class="g">⚙</span>Settings</button>
+      </div>
+    </div>
+
+    <!-- SHOW DETAIL -->
+    <div class="screen" id="show">
+      <div class="topbar"><button class="back" onclick="go('podcasts')">←</button><h1 style="font-size:17px">The Daily Brief</h1><button class="icnbtn">⋮</button></div>
+      <div class="content">
+        <div class="shead">
+          <div class="art c1">DB</div>
+          <div>
+            <h2>The Daily Brief</h2>
+            <div class="auth">Meridian Audio · 214 episodes</div>
+            <span class="chip hot">✓ Subscribed</span>
+          </div>
+        </div>
+        <div class="setrow">
+          <span class="chip">Speed 1.2×</span><span class="chip">Skip intro 30s</span><span class="chip">Skip outro 90s</span>
+        </div>
+        <div class="eprow" onclick="go('player')">
+          <div class="d"><b>11</b><span>Jun</span></div>
+          <div class="t"><b>Ep 214 — The Quiet Merge</b><span>1h 02m · ▶ 21m played</span></div>
+          <button class="dl done" onclick="event.stopPropagation()">✓</button>
+        </div>
+        <div class="eprow" onclick="go('player')">
+          <div class="d"><b>10</b><span>Jun</span></div>
+          <div class="t"><b>Ep 213 — Margins of Error</b><span>48m</span></div>
+          <button class="dl" onclick="event.stopPropagation()">↓</button>
+        </div>
+        <div class="eprow" onclick="go('player')">
+          <div class="d"><b>9</b><span>Jun</span></div>
+          <div class="t"><b>Ep 212 — Five Hundred Days of Static</b><span>55m</span></div>
+          <button class="dl" onclick="event.stopPropagation()">↓</button>
+        </div>
+        <div class="eprow" onclick="go('player')">
+          <div class="d"><b>8</b><span>Jun</span></div>
+          <div class="t"><b>Ep 211 — Interview: Dr. Sona Patel</b><span>1h 14m · transcript</span></div>
+          <button class="dl" onclick="event.stopPropagation()">↓</button>
+        </div>
+        <div class="eprow" onclick="go('player')">
+          <div class="d"><b>5</b><span>Jun</span></div>
+          <div class="t"><b>Ep 210 — The Long Tail Wags</b><span>39m · played</span></div>
+          <button class="dl" onclick="event.stopPropagation()">↓</button>
+        </div>
+        <div style="height:110px"></div>
+      </div>
+      <div class="mini" onclick="go('player')">
+        <div class="m-art c1">DB</div>
+        <div class="m-t"><b>Ep 214 — The Quiet Merge</b><span>The Daily Brief · 41m left</span></div>
+        <button onclick="event.stopPropagation()">▶</button><button onclick="event.stopPropagation()">↻30</button>
+        <div class="mp"><i></i></div>
+      </div>
+      <div class="nav">
+        <button class="sel"><span class="g">▦</span>Podcasts</button>
+        <button onclick="go('books')"><span class="g">📚</span>Books</button>
+        <button onclick="go('upnext')"><span class="g">☰</span>Up Next</button>
+        <button onclick="go('discover')"><span class="g">⌕</span>Discover</button>
+        <button><span class="g">⚙</span>Settings</button>
+      </div>
+    </div>
+
+    <!-- PLAYER -->
+    <div class="screen player" id="player">
+      <div class="content">
+        <div class="grab" onclick="go('podcasts')"></div>
+        <div class="bigart c1">DB</div>
+        <div class="ptitle"><b>Ep 214 — The Quiet Merge</b><span>The Daily Brief</span></div>
+        <div class="scrub">
+          <div class="bar"><i></i><u></u></div>
+          <div class="tt"><span>21:14</span><span>−41:08</span></div>
+        </div>
+        <div class="ctr">
+          <button class="skip">−15</button>
+          <button class="play">▮▮</button>
+          <button class="skip">+30</button>
+        </div>
+        <div class="prow">
+          <span class="chip">1.2×</span><span class="chip">😴 End of ep</span><span class="chip">🔊 Boost</span><span class="chip">✂ Trim</span>
+        </div>
+        <div class="ptabs">
+          <button class="sel" onclick="tab(this,'notes')">Notes</button>
+          <button onclick="tab(this,'transcript')">Transcript</button>
+          <button onclick="tab(this,'chapters')">Chapters</button>
+        </div>
+        <div class="pane on" id="notes">
+          <p>This week we follow the merge nobody noticed — and what it tells us about how teams
+          actually ship. With guest <b>Dr. Sona Patel</b>.</p><br>
+          <p><a href="#">02:11</a> — Cold open: the Friday deploy<br>
+          <a href="#">14:30</a> — Why review queues stall<br>
+          <a href="#">38:05</a> — Interview begins<br>
+          <a href="#">55:40</a> — Listener mail</p>
+        </div>
+        <div class="pane" id="transcript">
+          <p><b>00:00</b> — Welcome back to The Daily Brief, I'm your host.</p>
+          <p><b>00:08</b> — Today: a merge request that sat for five hundred days, and the team that finally clicked the button.</p>
+          <p><b>00:21</b> — But first, a quick look at the numbers…</p>
+        </div>
+        <div class="pane" id="chapters">
+          <div class="chrow"><span>1 · Cold open</span><span>02:11</span></div>
+          <div class="chrow now"><span>2 · The review queue ▶</span><span>14:30</span></div>
+          <div class="chrow"><span>3 · Interview: Dr. Patel</span><span>38:05</span></div>
+          <div class="chrow"><span>4 · Listener mail</span><span>55:40</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UP NEXT -->
+    <div class="screen" id="upnext">
+      <div class="topbar"><h1>Up Next</h1><button class="icnbtn">⋮</button></div>
+      <div class="content">
+        <div class="secl">Now playing</div>
+        <div class="uprow"><div class="art c1">DB</div><div class="t"><b>Ep 214 — The Quiet Merge</b><span>The Daily Brief · 41m left</span></div><span style="color:#f43e37">▶</span></div>
+        <div class="secl">Next · 4 items</div>
+        <div class="uprow"><div class="art c4">OM</div><div class="t"><b>Launch Windows Explained</b><span>Orbital Mechanics · 52m</span></div><span class="h">≡</span></div>
+        <div class="uprow"><div class="art c9">DR</div><div class="t"><b>Dracula — Chapter 12</b><span>Audiobook · 36m</span></div><span class="h">≡</span></div>
+        <div class="uprow"><div class="art c6">9V</div><div class="t"><b>The Invisible Staircase</b><span>99% Visible · 28m</span></div><span class="h">≡</span></div>
+        <div class="uprow"><div class="art c2">LM</div><div class="t"><b>Dead Languages Live</b><span>Lingua Mortua · 44m</span></div><span class="h">≡</span></div>
+      </div>
+      <div class="nav">
+        <button onclick="go('podcasts')"><span class="g">▦</span>Podcasts</button>
+        <button onclick="go('books')"><span class="g">📚</span>Books</button>
+        <button class="sel"><span class="g">☰</span>Up Next</button>
+        <button onclick="go('discover')"><span class="g">⌕</span>Discover</button>
+        <button><span class="g">⚙</span>Settings</button>
+      </div>
+    </div>
+
+    <!-- DISCOVER -->
+    <div class="screen" id="discover">
+      <div class="topbar"><h1>Discover</h1></div>
+      <div class="content">
+        <div class="search">⌕ &nbsp;Search Podcast Index…</div>
+        <div class="cats">
+          <span class="chip hot">Trending</span><span class="chip">News</span><span class="chip">Tech</span>
+          <span class="chip">History</span><span class="chip">Comedy</span><span class="chip">Science</span>
+        </div>
+        <div class="eprow" onclick="go('show')">
+          <div class="art c7" style="width:50px;font-size:17px">WX</div>
+          <div class="t"><b>Weather or Not</b><span>via Podcast Index</span></div>
+          <span class="chip hot" style="margin:0">＋ Subscribe</span>
+        </div>
+        <div class="eprow" onclick="go('show')">
+          <div class="art c3" style="width:50px;font-size:17px">TS</div>
+          <div class="t"><b>Tales from the Stack</b><span>via Podcast Index</span></div>
+          <span class="chip" style="margin:0">Subscribed ✓</span>
+        </div>
+        <div class="eprow" onclick="go('show')">
+          <div class="art c8" style="width:50px;font-size:17px">NF</div>
+          <div class="t"><b>Night Frequencies</b><span>via iTunes</span></div>
+          <span class="chip hot" style="margin:0">＋ Subscribe</span>
+        </div>
+      </div>
+      <div class="nav">
+        <button onclick="go('podcasts')"><span class="g">▦</span>Podcasts</button>
+        <button onclick="go('books')"><span class="g">📚</span>Books</button>
+        <button onclick="go('upnext')"><span class="g">☰</span>Up Next</button>
+        <button class="sel"><span class="g">⌕</span>Discover</button>
+        <button><span class="g">⚙</span>Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="jump">
+    <button onclick="go('podcasts')">Podcast grid</button>
+    <button onclick="go('books')">Books grid</button>
+    <button onclick="go('show')">Show detail</button>
+    <button onclick="go('player')">Player</button>
+    <button onclick="go('upnext')">Up Next</button>
+    <button onclick="go('discover')">Discover</button>
+  </div>
+
+<script>
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+function tab(btn, id) {
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+</script>
+</body>
+</html>
