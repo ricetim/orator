@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Test Show &amp; Friends</title>
+    <itunes:author>Jane Host</itunes:author>
+    <description>A show about tests.</description>
+    <itunes:image href="https://example.com/cover.jpg"/>
+    <item>
+      <title>Episode Two</title>
+      <guid isPermaLink="false">ep-2</guid>
+      <pubDate>Tue, 09 Jun 2026 08:00:00 +0000</pubDate>
+      <itunes:duration>01:02:03</itunes:duration>
+      <enclosure url="https://example.com/ep2.mp3" length="123" type="audio/mpeg"/>
+      <description>plain notes</description>
+      <content:encoded><![CDATA[<p>Rich notes with a timestamp 12:34 inside.</p>]]></content:encoded>
+    </item>
+    <item>
+      <title>Episode One</title>
+      <guid>ep-1</guid>
+      <pubDate>Mon, 01 Jun 2026 08:00:00 GMT</pubDate>
+      <itunes:duration>1830</itunes:duration>
+      <enclosure url="https://example.com/ep1.mp3" type="audio/mpeg"/>
+      <description><![CDATA[<b>Show notes</b> for one.]]></description>
+    </item>
+  </channel>
+</rss>
