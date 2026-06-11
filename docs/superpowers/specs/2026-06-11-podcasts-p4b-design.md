@@ -5,7 +5,9 @@
 **Builds on:** merged P4a (`core:network` FeedFetcher/OkHttp; `feature:podcasts` repository,
 cache writer, downloader, screens). Approach A: search clients live in `feature/podcasts/data`
 (they need `org.json` parsing, which the P4a plan-level decision keeps out of `core:network`);
-they inject the existing `OkHttpClient`. **Zero new dependencies.**
+they inject the existing `OkHttpClient`. **Zero new artifacts** (MockWebServer, already in the
+version catalog for `core:network` tests, gains a `testImplementation` line in
+`feature:podcasts`).
 
 ## Goals
 
@@ -25,7 +27,7 @@ transcription (premium-phase research).
 |---|---|
 | `PodcastSearchResult` | (title, author, feedUrl, artworkUrl) — the only thing discovery yields; subscribing reuses `PodcastRepository.subscribe(feedUrl)` unchanged. |
 | `SearchProvider` | `suspend fun search(term: String): Result<List<PodcastSearchResult>>`. |
-| `PodcastIndexSearchProvider` | GET `https://api.podcastindex.org/api/1.0/search/byterm?q=…&max=25` with headers `X-Auth-Key`, `X-Auth-Date` (epoch seconds), `Authorization` = SHA-1(key+secret+date) hex, and a `User-Agent` (PI rejects requests without one). Credentials flow `local.properties` → `BuildConfig` fields (gitignored; blank ⇒ provider returns "not configured" failure). **Auth verified live 2026-06-11** (HTTP 200 with the user's key/secret). |
+| `PodcastIndexSearchProvider` | GET `https://api.podcastindex.org/api/1.0/search/byterm?q=…&max=25` with headers `X-Auth-Key`, `X-Auth-Date` (epoch seconds), `Authorization` = SHA-1(key+secret+date) hex, and a `User-Agent` (PI rejects requests without one). Credentials flow `local.properties` → `BuildConfig` fields (gitignored; blank ⇒ provider returns "not configured" failure). **Build plumbing is net-new:** `feature/podcasts/build.gradle.kts` must add `buildFeatures.buildConfig = true` (off by default under AGP 8.7) plus a Properties read of `local.properties` feeding two `buildConfigField`s. **Auth verified live 2026-06-11** (HTTP 200 with the user's key/secret). |
 | `ItunesSearchProvider` | Keyless GET `https://itunes.apple.com/search?media=podcast&term=…&limit=25`; maps `feedUrl`/`collectionName`/`artistName`/`artworkUrl600`; rows without a feedUrl are dropped. |
 | `CompositeSearchProvider` | PI first; on failure (incl. not-configured) falls through to iTunes. Reports which provider answered — shown as a placeholder diagnostic line. |
 | Search screen | Placeholder, centered: text field + Search; result rows (title/author) each with a Subscribe button that flips to "Subscribed". Reached via a Search button on the podcast list screen. Route `podcasts/search`. |
@@ -39,9 +41,18 @@ transcription (premium-phase research).
   → **DB v4, destructive migration** (pre-release policy; device re-imports OPML once).
   Refresh updates transcriptUrl/type via `updateMetadata` without touching `transcriptPath`.
 - `TranscriptFetcher` (feature/podcasts/data): downloads to `transcript.<ext>` in the episode's
-  tree dir (ext from type: vtt/srt/txt/json), writes the file via the cache writer's
-  extension-matched mime rules, stores `transcriptPath`. Invoked (a) automatically after a
-  successful audio download, (b) on demand from the episode screen.
+  tree dir (ext from type: vtt/srt/txt/json), stores `transcriptPath`. Invoked (a) automatically
+  after a successful audio download, (b) on demand from the episode screen.
+  **Cache-writer change required:** `EpisodeCacheWriter.writeBytes` is currently private and its
+  mime map only knows `.jpg`/`.json`/`.html` — add a public
+  `writeEpisodeFile(podcast, episode, name, bytes)` and extend the mime map with
+  `.vtt → text/vtt`, `.srt`/`.txt → text/plain` (or rely on the octet-stream never-renamed
+  fallback for unknowns).
+- **Staleness (accepted):** if a refresh changes `transcriptUrl` after a transcript was fetched,
+  `transcriptPath` stays set and the existing file is kept — no re-fetch. Fine pre-release.
+- **DAO change required:** `EpisodeDao.updateMetadata` (SQL + signature + the
+  `PodcastRepository.upsertEpisodes` call site) gains `transcriptUrl`/`transcriptType` columns;
+  it must NOT touch `transcriptPath`.
 - `TranscriptText`: pure converter → readable plain text. VTT: drop header/cue timing/settings,
   keep cue text, strip `<v>`/`<c>` style tags. SRT: drop indices + timing lines. JSON
   (Podcasting-2.0 segments): concatenate `segments[].body`. Plain: as-is. Unknown: best-effort
