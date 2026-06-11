@@ -67,11 +67,14 @@ fun PodcastListScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("Podcasts")
+        // Two rows: a single Row doesn't wrap, and four buttons overflow a phone screen.
         Row(horizontalArrangement = Arrangement.Center) {
             Button(onClick = { pickFolder.launch(null) }) {
                 Text(if (hasFolder) "Change folder" else "Choose podcast folder")
             }
             OutlinedButton(onClick = { pickOpml.launch(arrayOf("*/*")) }) { Text("Import OPML") }
+        }
+        Row(horizontalArrangement = Arrangement.Center) {
             OutlinedButton(onClick = viewModel::onRefreshAll) { Text("Refresh all") }
             OutlinedButton(onClick = onOpenSearch) { Text("Search") }
         }
