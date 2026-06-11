@@ -13,6 +13,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -23,6 +26,7 @@ import com.orator.core.database.EpisodeEntity
 @Composable
 fun PodcastDetailScreen(
     onEpisodeClick: (String) -> Unit,
+    onUnsubscribed: () -> Unit,
     viewModel: PodcastDetailViewModel = hiltViewModel(),
 ) {
     val podcast by viewModel.podcast.collectAsStateWithLifecycle()
@@ -53,6 +57,20 @@ fun PodcastDetailScreen(
             onPlus = { viewModel.onSpeedOverride((p.speedOverride ?: 1.0f) + 0.1f) },
             extra = { OutlinedButton(onClick = { viewModel.onSpeedOverride(null) }) { Text("Clear") } },
         )
+
+        var confirmingUnsubscribe by remember { mutableStateOf(false) }
+        if (confirmingUnsubscribe) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Really unsubscribe? Deletes downloads.")
+                OutlinedButton(onClick = { viewModel.onUnsubscribe(onUnsubscribed) }) { Text("Yes") }
+                OutlinedButton(onClick = { confirmingUnsubscribe = false }) { Text("No") }
+            }
+        } else {
+            OutlinedButton(onClick = { confirmingUnsubscribe = true }) { Text("Unsubscribe") }
+        }
 
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(episodes, key = EpisodeEntity::id) { episode ->

@@ -23,4 +23,8 @@ data class EpisodeEntity(
     val positionMs: Long = 0,
     /** Wall-clock of the last position ping; drives cold-start smart rewind. */
     val lastPlayedAtMs: Long = 0,
+    /** Podcasting-2.0 transcript: URL+type from the feed; path set once fetched. */
+    val transcriptUrl: String? = null,
+    val transcriptType: String? = null,
+    val transcriptPath: String? = null,
 )

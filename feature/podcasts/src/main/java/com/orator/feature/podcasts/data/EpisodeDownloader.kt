@@ -38,6 +38,7 @@ class EpisodeDownloader @Inject constructor(
     private val podcastDao: PodcastDao,
     private val episodeDao: EpisodeDao,
     private val cacheWriter: EpisodeCacheWriter,
+    private val transcriptFetcher: TranscriptFetcher,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -59,7 +60,13 @@ class EpisodeDownloader @Inject constructor(
         scope.launch {
             _lastEvent.value = null
             _lastEvent.value = download(episodeId).fold(
-                onSuccess = { "Download complete" },
+                onSuccess = {
+                    // Deliberate ordering: "Download complete" publishes only AFTER the
+                    // transcript fetch finishes — transcripts are small and the combined
+                    // "done" is the honest signal.
+                    transcriptFetcher.fetchIfAvailable(episodeId)
+                    "Download complete"
+                },
                 onFailure = { e ->
                     Log.w(TAG, "download failed for $episodeId", e)
                     "Download failed: ${e.message}"

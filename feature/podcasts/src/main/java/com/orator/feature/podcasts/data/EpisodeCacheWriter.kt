@@ -92,6 +92,26 @@ class EpisodeCacheWriter @Inject constructor(
         }
     }
 
+    /** Removes the show's whole tree dir (downloads included). Best-effort like all tree ops. */
+    suspend fun deleteShowDir(podcast: PodcastEntity) = bestEffort {
+        showDir(podcast, create = false)?.delete()
+    }
+
+    /** Writes one extra file into the episode's dir (transcripts); null on any failure. */
+    suspend fun writeEpisodeFile(
+        podcast: PodcastEntity,
+        episode: EpisodeEntity,
+        name: String,
+        bytes: ByteArray,
+    ): DocumentFile? = try {
+        episodeDir(podcast, episode, create = true)?.let { dir ->
+            writeBytes(dir, name, bytes)
+            dir.findFile(name)
+        }
+    } catch (_: Exception) {
+        null
+    }
+
     /** Used by the downloader to place audio files. */
     suspend fun episodeDir(
         podcast: PodcastEntity,
@@ -129,6 +149,9 @@ class EpisodeCacheWriter @Inject constructor(
                 name.endsWith(".jpg") -> "image/jpeg"
                 name.endsWith(".json") -> "application/json"
                 name.endsWith(".html") -> "text/html"
+                name.endsWith(".vtt") -> "text/vtt"
+                name.endsWith(".srt") -> "application/x-subrip"
+                name.endsWith(".txt") -> "text/plain"
                 else -> "application/octet-stream"
             }
             val file = dir.findFile(name) ?: dir.createFile(mime, name) ?: return@withContext

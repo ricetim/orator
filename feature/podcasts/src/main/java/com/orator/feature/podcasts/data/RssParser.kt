@@ -22,6 +22,8 @@ data class ParsedItem(
     val enclosureUrl: String,
     val enclosureType: String?,
     val showNotesHtml: String?,
+    val transcriptUrl: String? = null,
+    val transcriptType: String? = null,
 )
 
 /**
@@ -51,6 +53,7 @@ object RssParser {
         var iEnclosureType: String? = null
         var iDescription: String? = null
         var iContentEncoded: String? = null
+        var iTranscripts = mutableListOf<Pair<String, String?>>()
 
         var event = parser.eventType
         while (event != XmlPullParser.END_DOCUMENT) {
@@ -69,6 +72,9 @@ object RssParser {
                             }
                             "description" -> iDescription = readText(parser)
                             "encoded" -> iContentEncoded = readText(parser)
+                            "transcript" -> parser.getAttributeValue(null, "url")
+                                ?.takeIf { it.isNotBlank() }
+                                ?.let { iTranscripts.add(it to parser.getAttributeValue(null, "type")) }
                         }
                     } else {
                         when (name) {
@@ -77,6 +83,7 @@ object RssParser {
                                 iGuid = null; iTitle = null; iPubDate = 0L; iDuration = 0L
                                 iEnclosureUrl = null; iEnclosureType = null
                                 iDescription = null; iContentEncoded = null
+                                iTranscripts = mutableListOf()
                             }
                             "title" -> if (channelTitle == null) channelTitle = readText(parser)
                             "author" -> if (author == null) author = readText(parser)
@@ -93,6 +100,7 @@ object RssParser {
                         val title = iTitle
                         val enclosure = iEnclosureUrl
                         if (!title.isNullOrBlank() && !enclosure.isNullOrBlank()) {
+                            val transcript = pickTranscript(iTranscripts)
                             items += ParsedItem(
                                 guid = iGuid,
                                 title = title,
@@ -101,6 +109,8 @@ object RssParser {
                                 enclosureUrl = enclosure,
                                 enclosureType = iEnclosureType,
                                 showNotesHtml = iContentEncoded ?: iDescription,
+                                transcriptUrl = transcript?.first,
+                                transcriptType = transcript?.second,
                             )
                         }
                     }
@@ -130,6 +140,16 @@ object RssParser {
         }
         return sb.toString().trim().ifEmpty { null }
     }
+
+    /** Spec order: vtt > srt/subrip > plain > json; unknown types only when nothing better. */
+    private val TRANSCRIPT_PREFERENCE =
+        listOf("text/vtt", "application/srt", "application/x-subrip", "text/plain", "application/json")
+
+    private fun pickTranscript(candidates: List<Pair<String, String?>>): Pair<String, String?>? =
+        candidates.minByOrNull { (_, type) ->
+            TRANSCRIPT_PREFERENCE.indexOf(type.orEmpty())
+                .let { if (it == -1) TRANSCRIPT_PREFERENCE.size else it }
+        }
 
     private val RFC1123 = DateTimeFormatter.RFC_1123_DATE_TIME
     private val RFC1123_LENIENT =

@@ -112,6 +112,14 @@ class PodcastRepository @Inject constructor(
         RefreshSummary(all.size - failed.get(), failed.get())
     }
 
+    /** User decision: deletes everything, downloads included (UI confirms first). */
+    suspend fun unsubscribe(podcastId: String) = withContext(Dispatchers.IO) {
+        val podcast = podcastDao.getById(podcastId) ?: return@withContext
+        episodeDao.deleteForPodcast(podcastId)
+        podcastDao.delete(podcastId)
+        cacheWriter.deleteShowDir(podcast) // after DB: rows must go even if the tree op fails
+    }
+
     private suspend fun refresh(podcast: PodcastEntity): Boolean {
         return when (val result = fetcher.fetch(podcast.feedUrl, podcast.etag, podcast.lastModified)) {
             is FetchResult.NotModified -> {
@@ -149,6 +157,8 @@ class PodcastRepository @Inject constructor(
                 durationMs = item.durationMs,
                 enclosureUrl = item.enclosureUrl,
                 showNotesHtml = item.showNotesHtml,
+                transcriptUrl = item.transcriptUrl,
+                transcriptType = item.transcriptType,
             )
         }
         episodeDao.insertIgnore(entities)
@@ -159,6 +169,8 @@ class PodcastRepository @Inject constructor(
                 pubDateUtc = e.pubDateUtc,
                 enclosureUrl = e.enclosureUrl,
                 showNotesHtml = e.showNotesHtml,
+                transcriptUrl = e.transcriptUrl,
+                transcriptType = e.transcriptType,
                 durationMs = e.durationMs,
             )
         }

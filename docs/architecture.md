@@ -619,7 +619,7 @@ flowchart LR
     P1 --> P2["P2<br/>Local audiobooks"]
     P2 --> P3["P3<br/>Player UX +<br/>speed/silence/boost/timer"]
     P3 --> P4A["✅ P4a<br/>Podcasts: subscribe +<br/>downloads + show notes"]
-    P4A --> P4B["P4b<br/>Discovery +<br/>transcripts"]
+    P4A --> P4B["✅ P4b<br/>Discovery +<br/>transcripts"]
     P4B --> P5["P5<br/>Playlists +<br/>auto-insert"]
     P5 --> P6["P6<br/>audiobookshelf"]
     P6 --> P7["P7<br/>Billing +<br/>entitlements"]
@@ -634,16 +634,16 @@ flowchart LR
 | **2** ✅ | Local audiobooks | Import a SAF-picked local m4b/mp3 book, see cover + chapters, play & resume, set a bookmark — *verified on device 2026-06-10* | `feature-audiobooks` (introduces Room) |
 | **3** ✅ | Player experience | Now-Playing screen; speed (global/type/item), silence-trim, volume boost, sleep timer, play history all working — plus smart rewind on resume and the intro/outro clip mechanism; *verified on device 2026-06-10* | `feature-settings` (extends `feature-player`) |
 | **4a** ✅ | Podcasts: subscribe/cache/play | Subscribe via pasted URL or OPML import, refresh (parallel, conditional GETs), stream + explicit download, human-readable cache tree, show notes with tappable timestamps, per-show intro/outro clips + speed (applied live) — *verified on device 2026-06-10* | `feature-podcasts`, `core-network` |
-| **4b** | Podcasts: discovery + transcripts | Search via Podcast Index (key in local.properties) / iTunes fallback; download `podcast:transcript` files; unsubscribe with tree cleanup | (extends both) |
+| **4b** ✅ | Podcasts: discovery + transcripts | Search via Podcast Index (key in local.properties) / iTunes fallback; subscribe from results; `podcast:transcript` fetch (on demand + with downloads) with plain-text viewer; unsubscribe with tree cleanup — *verified on device 2026-06-11* | (extends both) |
 | **5** | Playlists | Mixed playlist; new episodes auto-insert per rule | `feature-playlists` |
 | **6** | audiobookshelf | Add ABS server; browse + play + two-way progress sync (launch feature) | (extends `core-network`/`feature-audiobooks`) |
 | **7** | Paywall plumbing | Billing wired; `EntitlementRepository` gates a dummy premium toggle end-to-end | `core-billing` |
 | **8** | Premium features | The premium set (TBD) shipping behind the gate | (depends on the chosen set) |
 | **9** | Launch readiness | Baseline profiles, R8 tuned, store listing + data-safety, signed release | — |
 
-**Status:** Phases 1–3 are merged (PR #1, #3, #4); Phase 4a is complete and device-verified.
-UI/design iteration is deliberately deferred until backend functionality is complete, so
-Phases 2–6 ship with minimal placeholder UI. **Next: Phase 4b (discovery + transcripts).**
+**Status:** Phases 1–4a are merged (PR #1, #3, #4, #5); Phase 4b is complete and
+device-verified. UI/design iteration is deliberately deferred until backend functionality is
+complete, so Phases 2–6 ship with minimal placeholder UI. **Next: Phase 5 (playlists).**
 
 ---
 

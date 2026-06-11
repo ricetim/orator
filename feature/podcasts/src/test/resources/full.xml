@@ -12,6 +12,8 @@
       <pubDate>Tue, 09 Jun 2026 08:00:00 +0000</pubDate>
       <itunes:duration>01:02:03</itunes:duration>
       <enclosure url="https://example.com/ep2.mp3" length="123" type="audio/mpeg"/>
+      <podcast:transcript url="https://example.com/ep2.json" type="application/json"/>
+      <podcast:transcript url="https://example.com/ep2.vtt" type="text/vtt"/>
       <description>plain notes</description>
       <content:encoded><![CDATA[<p>Rich notes with a timestamp 12:34 inside.</p>]]></content:encoded>
     </item>

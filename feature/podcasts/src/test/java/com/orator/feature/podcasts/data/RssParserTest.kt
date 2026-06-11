@@ -77,6 +77,24 @@ class RssParserTest {
     }
 
     @Test
+    fun `picks the preferred transcript by type`() {
+        val items = RssParser.parse(load("full.xml"))!!.items
+        assertEquals("https://example.com/ep2.vtt", items[0].transcriptUrl) // vtt beats json
+        assertEquals("text/vtt", items[0].transcriptType)
+        assertNull(items[1].transcriptUrl)
+    }
+
+    @Test
+    fun `keeps an unknown-type transcript when nothing better exists`() {
+        val xml = """<?xml version="1.0"?><rss version="2.0"><channel><title>S</title>
+            <item><title>E</title>
+            <podcast:transcript url="https://x/t.xyz" type="application/x-mystery"/>
+            <enclosure url="https://x/e.mp3" type="audio/mpeg"/></item></channel></rss>"""
+        val item = RssParser.parse(xml)!!.items.single()
+        assertEquals("https://x/t.xyz", item.transcriptUrl)
+    }
+
+    @Test
     fun `garbage input returns null instead of throwing`() {
         assertNull(RssParser.parse("this is not xml at all <<<"))
         assertNull(RssParser.parse("<html><body>404</body></html>"))
