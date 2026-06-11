@@ -61,7 +61,7 @@ feature/audiobooks/.../AudiobookListScreen.kt + AudiobooksFeatureEntry.kt  (modi
 - Create: `core/network/build.gradle.kts`, `core/network/.gitignore`
 - Create: `core/network/src/main/java/com/orator/core/network/NetworkModule.kt`
 
-- [ ] **Step 1: Add catalog entries**
+- [x] **Step 1: Add catalog entries**
 
 In `gradle/libs.versions.toml` add under `[versions]`:
 
@@ -77,7 +77,7 @@ okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver",
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 ```
 
-- [ ] **Step 2: Register the module**
+- [x] **Step 2: Register the module**
 
 In `settings.gradle.kts` add after the `:core:database` include:
 
@@ -85,13 +85,13 @@ In `settings.gradle.kts` add after the `:core:database` include:
 include(":core:network")
 ```
 
-- [ ] **Step 3: Create `core/network/.gitignore`** containing exactly:
+- [x] **Step 3: Create `core/network/.gitignore`** containing exactly:
 
 ```
 /build
 ```
 
-- [ ] **Step 4: Create `core/network/build.gradle.kts`**
+- [x] **Step 4: Create `core/network/build.gradle.kts`**
 
 ```kotlin
 plugins {
@@ -132,7 +132,7 @@ dependencies {
 }
 ```
 
-- [ ] **Step 5: Create `NetworkModule.kt`**
+- [x] **Step 5: Create `NetworkModule.kt`**
 
 ```kotlin
 package com.orator.core.network
@@ -160,12 +160,12 @@ object NetworkModule {
 }
 ```
 
-- [ ] **Step 6: Verify it builds**
+- [x] **Step 6: Verify it builds**
 
 Run: `./gradlew :core:network:assembleDebug`
 Expected: BUILD SUCCESSFUL
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add gradle/libs.versions.toml settings.gradle.kts core/network
@@ -178,7 +178,7 @@ git commit -m "feat: core:network module with OkHttp singleton (only new P4a dep
 - Create: `core/network/src/main/java/com/orator/core/network/FeedFetcher.kt`
 - Test: `core/network/src/test/java/com/orator/core/network/FeedFetcherTest.kt`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```kotlin
 package com.orator.core.network
@@ -271,12 +271,12 @@ class FeedFetcherTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `./gradlew :core:network:testDebugUnitTest --tests "com.orator.core.network.FeedFetcherTest"`
 Expected: FAIL — `Unresolved reference: FeedFetcher`
 
-- [ ] **Step 3: Implement `FeedFetcher.kt`**
+- [x] **Step 3: Implement `FeedFetcher.kt`**
 
 ```kotlin
 package com.orator.core.network
@@ -334,12 +334,12 @@ class FeedFetcher @Inject constructor(private val client: OkHttpClient) {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `./gradlew :core:network:testDebugUnitTest --tests "com.orator.core.network.FeedFetcherTest"`
 Expected: 5 tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add core/network/src
@@ -354,7 +354,7 @@ git commit -m "feat: FeedFetcher with conditional GET and failure mapping"
 - Modify: `core/database/src/main/java/com/orator/core/database/DatabaseModule.kt`
 - Test: `core/database/src/test/java/com/orator/core/database/PodcastDaoTest.kt`, `EpisodeDaoTest.kt`
 
-- [ ] **Step 1: Create `PodcastEntity.kt`**
+- [x] **Step 1: Create `PodcastEntity.kt`**
 
 ```kotlin
 package com.orator.core.database
@@ -385,7 +385,7 @@ data class PodcastEntity(
 )
 ```
 
-- [ ] **Step 2: Create `EpisodeEntity.kt`**
+- [x] **Step 2: Create `EpisodeEntity.kt`**
 
 ```kotlin
 package com.orator.core.database
@@ -416,7 +416,7 @@ data class EpisodeEntity(
 )
 ```
 
-- [ ] **Step 3: Create `PodcastDao.kt`**
+- [x] **Step 3: Create `PodcastDao.kt`**
 
 ```kotlin
 package com.orator.core.database
@@ -475,7 +475,7 @@ interface PodcastDao {
 }
 ```
 
-- [ ] **Step 4: Create `EpisodeDao.kt`**
+- [x] **Step 4: Create `EpisodeDao.kt`**
 
 ```kotlin
 package com.orator.core.database
@@ -538,7 +538,7 @@ interface EpisodeDao {
 }
 ```
 
-- [ ] **Step 5: Bump `OratorDatabase.kt` to v3**
+- [x] **Step 5: Bump `OratorDatabase.kt` to v3**
 
 Add both entities to the `entities` array, set `version = 3`, and add:
 
@@ -547,7 +547,7 @@ Add both entities to the `entities` array, set `version = 3`, and add:
     abstract fun episodeDao(): EpisodeDao
 ```
 
-- [ ] **Step 6: Add providers in `DatabaseModule.kt`**
+- [x] **Step 6: Add providers in `DatabaseModule.kt`**
 
 ```kotlin
     @Provides
@@ -557,7 +557,7 @@ Add both entities to the `entities` array, set `version = 3`, and add:
     fun provideEpisodeDao(db: OratorDatabase): EpisodeDao = db.episodeDao()
 ```
 
-- [ ] **Step 7: Write DAO tests** (mirror `HistoryDaoTest`: Robolectric, in-memory DB, `runBlocking`)
+- [x] **Step 7: Write DAO tests** (mirror `HistoryDaoTest`: Robolectric, in-memory DB, `runBlocking`)
 
 `PodcastDaoTest.kt`: `insertIgnore` returns -1 on duplicate id and leaves the original row intact; `updateClips` round-trips; `updateSpeedOverride` sets and clears.
 
@@ -581,12 +581,12 @@ private fun episode(id: String, podcastId: String = "p1", pubDate: Long = 0) = E
 )
 ```
 
-- [ ] **Step 8: Run the database tests**
+- [x] **Step 8: Run the database tests**
 
 Run: `./gradlew :core:database:testDebugUnitTest`
 Expected: all PASS (new tests + existing ones — v3 bump must not break them)
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add core/database/src
@@ -605,17 +605,17 @@ git commit -m "feat: Room v3 with podcast + episode tables, refresh-safe upsert 
 - Modify: `settings.gradle.kts`, `app/build.gradle.kts`
 - Modify: `core/navigation/src/main/java/com/orator/core/navigation/CommonRoutes.kt`
 
-- [ ] **Step 1: `settings.gradle.kts`** — add `include(":feature:podcasts")` after the `:feature:settings` line.
+- [x] **Step 1: `settings.gradle.kts`** — add `include(":feature:podcasts")` after the `:feature:settings` line.
 
-- [ ] **Step 2: `app/build.gradle.kts`** — add `implementation(project(":feature:podcasts"))` next to the other feature deps.
+- [x] **Step 2: `app/build.gradle.kts`** — add `implementation(project(":feature:podcasts"))` next to the other feature deps.
 
-- [ ] **Step 3: `feature/podcasts/.gitignore`** containing `/build`.
+- [x] **Step 3: `feature/podcasts/.gitignore`** containing `/build`.
 
-- [ ] **Step 4: `feature/podcasts/build.gradle.kts`** — copy of `feature/audiobooks/build.gradle.kts` with `namespace = "com.orator.feature.podcasts"` and two extra dependency lines: `implementation(project(":core:network"))` and `implementation(libs.okhttp)` (OkHttp is `implementation`, not `api`, in core:network — and the repository/downloader reference `OkHttpClient` directly). Keep the test deps (junit, robolectric, test.core, coroutines-test) and `isIncludeAndroidResources = true`.
+- [x] **Step 4: `feature/podcasts/build.gradle.kts`** — copy of `feature/audiobooks/build.gradle.kts` with `namespace = "com.orator.feature.podcasts"` and two extra dependency lines: `implementation(project(":core:network"))` and `implementation(libs.okhttp)` (OkHttp is `implementation`, not `api`, in core:network — and the repository/downloader reference `OkHttpClient` directly). Keep the test deps (junit, robolectric, test.core, coroutines-test) and `isIncludeAndroidResources = true`.
 
-- [ ] **Step 5: `CommonRoutes.kt`** — add `const val Podcasts = "podcasts"` to the object (read the file first; it has Player/Settings/History).
+- [x] **Step 5: `CommonRoutes.kt`** — add `const val Podcasts = "podcasts"` to the object (read the file first; it has Player/Settings/History).
 
-- [ ] **Step 6: `PodcastsRoutes.kt`**
+- [x] **Step 6: `PodcastsRoutes.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -631,7 +631,7 @@ internal const val EpisodeDetailRoutePattern = "podcasts/episode/{episodeId}"
 internal fun episodeDetailRoute(episodeId: String) = "podcasts/episode/$episodeId"
 ```
 
-- [ ] **Step 7: `PodcastsFeatureEntry.kt`** — registers the list route with a temporary `Text("Podcasts")` composable (real screens land in Chunk 5; the entry exists now so the module participates in DI/nav from day one):
+- [x] **Step 7: `PodcastsFeatureEntry.kt`** — registers the list route with a temporary `Text("Podcasts")` composable (real screens land in Chunk 5; the entry exists now so the module participates in DI/nav from day one):
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -655,7 +655,7 @@ class PodcastsFeatureEntry @Inject constructor() : FeatureEntry {
 }
 ```
 
-- [ ] **Step 8: `PodcastsFeatureModule.kt`**
+- [x] **Step 8: `PodcastsFeatureModule.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -677,9 +677,9 @@ interface PodcastsFeatureModule {
 }
 ```
 
-- [ ] **Step 9: Verify** — Run: `./gradlew assembleDebug` — Expected: BUILD SUCCESSFUL.
+- [x] **Step 9: Verify** — Run: `./gradlew assembleDebug` — Expected: BUILD SUCCESSFUL.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add settings.gradle.kts app/build.gradle.kts feature/podcasts core/navigation
@@ -693,7 +693,7 @@ git commit -m "feat: register feature:podcasts module with stub navigation entry
 - Create fixtures: `feature/podcasts/src/test/resources/full.xml`, `minimal.xml`, `broken-items.xml`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/RssParserTest.kt`
 
-- [ ] **Step 1: Write the fixtures** (synthetic — resemblance to real feeds is in structure only)
+- [x] **Step 1: Write the fixtures** (synthetic — resemblance to real feeds is in structure only)
 
 `full.xml` — exercises everything:
 
@@ -766,7 +766,7 @@ git commit -m "feat: register feature:podcasts module with stub navigation entry
 </rss>
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -847,12 +847,12 @@ class RssParserTest {
 }
 ```
 
-- [ ] **Step 3: Run to verify failure**
+- [x] **Step 3: Run to verify failure**
 
 Run: `./gradlew :feature:podcasts:testDebugUnitTest --tests "com.orator.feature.podcasts.data.RssParserTest"`
 Expected: FAIL — `Unresolved reference: RssParser`
 
-- [ ] **Step 4: Implement `RssParser.kt`**
+- [x] **Step 4: Implement `RssParser.kt`**
 
 Notes for the implementer: namespaces are NOT processed (`FEATURE_PROCESS_NAMESPACES` stays false) — tag names arrive qualified like `itunes:duration`, and we match on the local part after `:` so any prefix works. `readText()` must tolerate nested markup inside description tags by concatenating TEXT/CDSECT events until the matching END_TAG. XmlPullParser on the JVM (unit tests) uses the kxml2 implementation bundled with Robolectric/Android — add `testImplementation(libs.robolectric)` is already present; the parser itself uses `org.xmlpull.v1.XmlPullParserFactory` which resolves on both JVM and device.
 
@@ -1022,12 +1022,12 @@ object RssParser {
 }
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `./gradlew :feature:podcasts:testDebugUnitTest --tests "com.orator.feature.podcasts.data.RssParserTest"`
 Expected: 7 tests PASS (under Robolectric — see the annotation comment in the test; without it, `XmlPullParserFactory.newInstance()` throws "Method not mocked" at runtime, which the parser's catch-all turns into confusing NPEs on `!!`).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -1041,7 +1041,7 @@ git commit -m "feat: tolerant hand-rolled RSS parser with synthetic fixtures"
 - Create fixture: `feature/podcasts/src/test/resources/feeds.opml`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/OpmlParserTest.kt`
 
-- [ ] **Step 1: Fixture `feeds.opml`** (synthetic; includes nesting and a non-feed outline):
+- [x] **Step 1: Fixture `feeds.opml`** (synthetic; includes nesting and a non-feed outline):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -1058,7 +1058,7 @@ git commit -m "feat: tolerant hand-rolled RSS parser with synthetic fixtures"
 </opml>
 ```
 
-- [ ] **Step 2: Failing tests**
+- [x] **Step 2: Failing tests**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -1095,9 +1095,9 @@ class OpmlParserTest {
 }
 ```
 
-- [ ] **Step 3: Run to verify failure** — same gradle command pattern, expect `Unresolved reference: OpmlParser`.
+- [x] **Step 3: Run to verify failure** — same gradle command pattern, expect `Unresolved reference: OpmlParser`.
 
-- [ ] **Step 4: Implement `OpmlParser.kt`**
+- [x] **Step 4: Implement `OpmlParser.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -1134,9 +1134,9 @@ object OpmlParser {
 }
 ```
 
-- [ ] **Step 5: Run tests** — expect 2 PASS.
+- [x] **Step 5: Run tests** — expect 2 PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -1149,7 +1149,7 @@ git commit -m "feat: OPML parser extracting feeds at any nesting depth"
 - Create: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/PodcastIds.kt`, `PodcastMediaId.kt`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/PodcastIdsTest.kt`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -1192,9 +1192,9 @@ class PodcastIdsTest {
 
 (Add `import org.junit.Assert.assertTrue`.)
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `PodcastIds.kt`:
 
@@ -1240,9 +1240,9 @@ object PodcastMediaId {
 }
 ```
 
-- [ ] **Step 4: Run tests** — expect 4 PASS.
+- [x] **Step 4: Run tests** — expect 4 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -1259,7 +1259,7 @@ git commit -m "feat: namespaced podcast/episode ids and mediaId codec"
 - Create: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/CacheNames.kt`, `CacheJson.kt`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/CacheNamesTest.kt`, `CacheJsonTest.kt`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 `CacheNamesTest.kt` (plain JUnit, no Robolectric):
 
@@ -1355,9 +1355,9 @@ class CacheJsonTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `CacheNames.kt`:
 
@@ -1421,9 +1421,9 @@ object CacheJson {
 }
 ```
 
-- [ ] **Step 4: Run both test classes** — expect 8 PASS total.
+- [x] **Step 4: Run both test classes** — expect 8 PASS total.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -1439,7 +1439,7 @@ The writer is thin SAF I/O around the pure helpers from Task 8; its logic was te
 the tree itself is device-verified in Chunk 6. No unit tests for this task (DocumentFile against
 a real tree URI cannot be exercised meaningfully on the JVM).
 
-- [ ] **Step 1: `PodcastsFolderStore.kt`** (clone of `AudiobooksPrefs`, different store name)
+- [x] **Step 1: `PodcastsFolderStore.kt`** (clone of `AudiobooksPrefs`, different store name)
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -1470,7 +1470,7 @@ class PodcastsFolderStore @Inject constructor(
 }
 ```
 
-- [ ] **Step 2: `EpisodeCacheWriter.kt`**
+- [x] **Step 2: `EpisodeCacheWriter.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -1611,9 +1611,9 @@ checklist shows mangled names, switch `mime` per extension: `.json` → `applica
 `.html` → `text/html`, and keep the requested display name. Do NOT spend time on this before
 device verification.
 
-- [ ] **Step 3: Compile check** — Run: `./gradlew :feature:podcasts:assembleDebug` — BUILD SUCCESSFUL.
+- [x] **Step 3: Compile check** — Run: `./gradlew :feature:podcasts:assembleDebug` — BUILD SUCCESSFUL.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -1626,7 +1626,7 @@ git commit -m "feat: SAF folder store and best-effort cache tree writer"
 - Create: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/PodcastRepository.kt`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/PodcastRepositoryTest.kt`
 
-- [ ] **Step 1: Failing tests** (Robolectric + in-memory Room + fake fetcher; `runBlocking` — NOT `runTest`)
+- [x] **Step 1: Failing tests** (Robolectric + in-memory Room + fake fetcher; `runBlocking` — NOT `runTest`)
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -1804,9 +1804,9 @@ NOTE: faking `FeedFetcher` by subclassing requires it to be `open` with an `open
 Make that change in `core/network` as part of this task (document why: "open for test fakes —
 no interface ceremony for a single-method class").
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement `PodcastRepository.kt`**
+- [x] **Step 3: Implement `PodcastRepository.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -1976,17 +1976,17 @@ class PodcastRepository @Inject constructor(
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `./gradlew :feature:podcasts:testDebugUnitTest --tests "com.orator.feature.podcasts.data.PodcastRepositoryTest"`
 Expected: 8 tests PASS
 
-- [ ] **Step 5: Run the whole module + core:network + core:database to catch regressions**
+- [x] **Step 5: Run the whole module + core:network + core:database to catch regressions**
 
 Run: `./gradlew :feature:podcasts:testDebugUnitTest :core:network:testDebugUnitTest :core:database:testDebugUnitTest`
 Expected: all PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add feature/podcasts/src core/network/src
@@ -2003,7 +2003,7 @@ git commit -m "feat: podcast repository — subscribe, OPML import, refresh with
 - Create: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/EpisodeQueueBuilder.kt`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/EpisodeQueueBuilderTest.kt`
 
-- [ ] **Step 1: Failing tests** (plain JUnit; PlayRequest is a plain data class)
+- [x] **Step 1: Failing tests** (plain JUnit; PlayRequest is a plain data class)
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -2081,9 +2081,9 @@ class EpisodeQueueBuilderTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -2126,9 +2126,9 @@ object EpisodeQueueBuilder {
 }
 ```
 
-- [ ] **Step 4: Run tests** — 6 PASS.
+- [x] **Step 4: Run tests** — 6 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -2142,7 +2142,7 @@ git commit -m "feat: episode queue builder with per-show clip windows"
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/PodcastPositionListenerTest.kt`
 - Modify: `PodcastsFeatureModule.kt` (bind `@IntoSet`)
 
-- [ ] **Step 1: Failing tests** (Robolectric + in-memory Room + `runBlocking`, mirroring `AudiobookPositionListenerTest`)
+- [x] **Step 1: Failing tests** (Robolectric + in-memory Room + `runBlocking`, mirroring `AudiobookPositionListenerTest`)
 
 Test cases:
 - `persists clip-relative position and lastPlayedAt` — insert podcast+episode, call `onPositionChanged("podcast/<id>", 5000, 0)`, assert positionMs == 5000 and lastPlayedAtMs > 0.
@@ -2151,9 +2151,9 @@ Test cases:
 - `never overwrites a known duration` — episode durationMs = 600_000; call with durationMs = 1; assert still 600_000.
 - `no backfill when player duration unknown` — call with durationMs = 0 (Media3 reports C.TIME_UNSET → service passes 0); assert durationMs stays 0.
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -2200,9 +2200,9 @@ Bind it in `PodcastsFeatureModule`:
 
 (plus imports `com.orator.core.playback.PlaybackPositionListener`, `PodcastPositionListener`)
 
-- [ ] **Step 4: Run tests** — 5 PASS.
+- [x] **Step 4: Run tests** — 5 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -2216,11 +2216,11 @@ git commit -m "feat: podcast position listener with original-timeline duration b
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/EpisodeSpeedOverrideListenerTest.kt`
 - Modify: `PodcastsFeatureModule.kt`
 
-- [ ] **Step 1: Failing tests** (Robolectric + in-memory Room, mirror `BookSpeedOverrideListenerTest`): sets the override on the episode's SHOW; clears with null; ignores non-podcast ids; ignores unknown episode ids.
+- [x] **Step 1: Failing tests** (Robolectric + in-memory Room, mirror `BookSpeedOverrideListenerTest`): sets the override on the episode's SHOW; clears with null; ignores non-podcast ids; ignores unknown episode ids.
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -2256,9 +2256,9 @@ Bind in `PodcastsFeatureModule`:
     fun bindSpeedOverrideListener(listener: EpisodeSpeedOverrideListener): SpeedOverrideListener
 ```
 
-- [ ] **Step 4: Run tests** — 4 PASS.
+- [x] **Step 4: Run tests** — 4 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -2274,7 +2274,7 @@ git commit -m "feat: per-show speed override listener for podcasts"
 The streaming-to-SAF path is device-verified (Chunk 6); the testable pure logic is extension
 mapping.
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -2299,9 +2299,9 @@ NOTE: the enclosure mime type isn't stored on `EpisodeEntity` — the downloader
 response `Content-Type` header at download time, with the URL extension as fallback. The test
 exercises the same function.
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -2470,9 +2470,9 @@ reference still works, but the stale-partial `findFile("audio.partial")` cleanup
 it. Same class of issue as the cache-writer mime note (Task 9); let device verification
 decide whether per-extension mimes are needed.
 
-- [ ] **Step 4: Run tests** — AudioExtTest PASS; module compiles.
+- [x] **Step 4: Run tests** — AudioExtTest PASS; module compiles.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -2489,7 +2489,7 @@ git commit -m "feat: sequential episode downloader with partial-file safety"
 - Create: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/ShowNotes.kt`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/ShowNotesTest.kt`
 
-- [ ] **Step 1: Failing tests** (Robolectric — `HtmlCompat` needs Android; `@Config(sdk = [34])`)
+- [x] **Step 1: Failing tests** (Robolectric — `HtmlCompat` needs Android; `@Config(sdk = [34])`)
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -2540,9 +2540,9 @@ class ShowNotesTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -2586,9 +2586,9 @@ decimals like `12:34.5` while still matching a timestamp followed by a sentence-
 style wall-clock times in notes produce false links, accept it — placeholder UI, seeks are
 clamped, no harm.
 
-- [ ] **Step 4: Run tests** — 5 PASS.
+- [x] **Step 4: Run tests** — 5 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -2603,7 +2603,7 @@ git commit -m "feat: show-notes renderer with tappable timestamp extraction"
 ViewModels are thin glue over already-tested units (repository, queue builder, ShowNotes,
 downloader, prefs); they get no dedicated unit tests — same call as P2/P3 placeholder VMs.
 
-- [ ] **Step 1: `PodcastListViewModel.kt`**
+- [x] **Step 1: `PodcastListViewModel.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -2696,7 +2696,7 @@ class PodcastListViewModel @Inject constructor(
 }
 ```
 
-- [ ] **Step 2: `PodcastDetailViewModel.kt`**
+- [x] **Step 2: `PodcastDetailViewModel.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -2748,7 +2748,7 @@ class PodcastDetailViewModel @Inject constructor(
 }
 ```
 
-- [ ] **Step 3: `EpisodeDetailViewModel.kt`**
+- [x] **Step 3: `EpisodeDetailViewModel.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -2856,9 +2856,9 @@ class EpisodeDetailViewModel @Inject constructor(
 }
 ```
 
-- [ ] **Step 4: Compile** — `./gradlew :feature:podcasts:assembleDebug` — BUILD SUCCESSFUL.
+- [x] **Step 4: Compile** — `./gradlew :feature:podcasts:assembleDebug` — BUILD SUCCESSFUL.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -2875,7 +2875,7 @@ git commit -m "feat: podcast list/detail/episode view models"
 
 All screens follow the placeholder style: `Column(Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally)`, menus centered (user preference), `collectAsStateWithLifecycle`.
 
-- [ ] **Step 1: `PodcastListScreen.kt`**
+- [x] **Step 1: `PodcastListScreen.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -2994,7 +2994,7 @@ fun PodcastListScreen(
 }
 ```
 
-- [ ] **Step 2: `PodcastDetailScreen.kt`**
+- [x] **Step 2: `PodcastDetailScreen.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -3090,7 +3090,7 @@ private fun SettingRow(
 }
 ```
 
-- [ ] **Step 3: `EpisodeDetailScreen.kt`**
+- [x] **Step 3: `EpisodeDetailScreen.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -3187,7 +3187,7 @@ fun EpisodeDetailScreen(viewModel: EpisodeDetailViewModel = hiltViewModel()) {
 (`ClickableText` is deprecated in newer Compose but present and fine in BOM 2024.12.01 —
 placeholder UI; replace during the UI phase.)
 
-- [ ] **Step 4: Replace the stub in `PodcastsFeatureEntry.kt`**
+- [x] **Step 4: Replace the stub in `PodcastsFeatureEntry.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -3222,7 +3222,7 @@ class PodcastsFeatureEntry @Inject constructor() : FeatureEntry {
 }
 ```
 
-- [ ] **Step 5: Add the Podcasts button to the start screen**
+- [x] **Step 5: Add the Podcasts button to the start screen**
 
 Read `feature/audiobooks/src/main/java/com/orator/feature/audiobooks/AudiobookListScreen.kt`,
 add an `onOpenPodcasts: () -> Unit` parameter, and extend the centered top menu row:
@@ -3238,12 +3238,12 @@ add an `onOpenPodcasts: () -> Unit` parameter, and extend the centered top menu 
 In `AudiobooksFeatureEntry.kt` pass `onOpenPodcasts = { navController.navigate(CommonRoutes.Podcasts) }`.
 The audiobooks feature references only `core:navigation` — no feature-to-feature dependency.
 
-- [ ] **Step 6: Build + full test suite**
+- [x] **Step 6: Build + full test suite**
 
 Run: `./gradlew assembleDebug test`
 Expected: BUILD SUCCESSFUL, all module tests PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add feature/podcasts feature/audiobooks
@@ -3256,7 +3256,7 @@ git commit -m "feat: podcast screens, navigation, and Podcasts entry on start sc
 
 ### Task 18: Device verification + docs
 
-- [ ] **Step 1: Full test suite + install**
+- [x] **Step 1: Full test suite + install**
 
 ```bash
 ./gradlew test          # all modules
@@ -3265,7 +3265,7 @@ git commit -m "feat: podcast screens, navigation, and Podcasts entry on start sc
 
 Report build times to the user (standing instruction since the RAM upgrade).
 
-- [ ] **Step 2: Manual device checklist** (user drives the Pixel 7a; wait for their results)
+- [x] **Step 2: Manual device checklist** (user drives the Pixel 7a; wait for their results)
 
 Before starting: `~/Android/Sdk/platform-tools/adb push local/podcasts.opml /sdcard/Download/podcasts.opml`
 (private file: it stays on the user's device; never in git)
@@ -3282,13 +3282,13 @@ Before starting: `~/Android/Sdk/platform-tools/adb push local/podcasts.opml /sdc
 10. Refresh all → completes in well under a minute (mostly HTTP 304 responses), "Refreshed N, 0 failed"; no duplicate episodes; the in-progress episode kept its position.
 11. Set a per-show speed override → applies on play; other shows unaffected.
 
-- [ ] **Step 3: Tick plan checkboxes, record deviations** in this file under an
+- [x] **Step 3: Tick plan checkboxes, record deviations** in this file under an
 "Execution notes" section (same convention as the P2/P3 plans).
 
-- [ ] **Step 4: Update `docs/architecture.md`** — split roadmap row 4 into 4a (this work, ✅ with
+- [x] **Step 4: Update `docs/architecture.md`** — split roadmap row 4 into 4a (this work, ✅ with
 date once verified) and 4b (discovery + transcripts, next); update the Status line.
 
-- [ ] **Step 5: Commit + push + PR**
+- [x] **Step 5: Commit + push + PR**
 
 ```bash
 git add -A docs
@@ -3301,4 +3301,40 @@ gh pr create --title "Phase 4a: podcasts — subscribe, cache, play" --body "...
 
 ## Execution notes (deviations from the written plan)
 
-(filled in during execution)
+Executed in-session 2026-06-10 (executing-plans, chunk-level task tracking). All 18 tasks
+done; all 11 device-checklist steps verified by the user on the Pixel 7a ("it all looks
+good"). Full suite green in 24 s post-upgrade.
+
+**Small deviations during Tasks 1–17:**
+- `FeedFetcher` was made `open` in Task 2 (plan deferred that to Task 10) to avoid touching
+  the file twice.
+- Two FeedFetcherTest assertions tightened: the no-op `assertNull(null)` became a real
+  `assertTrue(result is Failure)`, and the unreachable-host test captures the URL before
+  `server.shutdown()` (calling `url()` after shutdown is unreliable).
+
+**Device-verification fixes (each its own commit, found by the user driving the phone):**
+- `safeDrawingPadding()` at the nav host — edge-to-edge was on but no screen consumed
+  insets, so top menus hid under the status bar/camera cutout.
+- SAF mime-rename bug: `text/plain` made the provider rename `.orator-id` →
+  `.orator-id.txt`, breaking the ownership check → duplicate `[abcd]` show dirs and
+  silently dropped tree writes. Mime now matches extension (json/html/jpg), octet-stream
+  for extensionless names; legacy `.txt` markers still readable; broken tree wiped and
+  rebuilt from the DB.
+- `android:usesCleartextTraffic="true"` — plain-http enclosures are still common and both
+  streaming and downloads must fetch them.
+- Download outcomes surfaced ("Download complete"/"Download failed: …" + logcat); progress
+  marked indeterminate the instant Download is tapped (connection setup looked like a dead
+  button); a server aborting the connection AFTER the last byte no longer reports failure
+  (the file was verified byte-exact against the feed's declared length).
+- Decimal `itunes:duration` values ("5400.0") now parse (they yielded 0 → outro clip
+  silently skipped); episode rows show their duration as a clip diagnostic.
+- `refreshAll` parallelized 6-wide (Semaphore) with a Mutex guarding Podcasts-root
+  creation; OPML import remains sequential.
+- **User decision:** clip and speed changes apply immediately to a currently playing
+  episode of the show (queue rebuilt in place at the same audio moment; intro-delta
+  position shift). Previously they only applied on the next queue build, which made
+  outro testing look broken.
+
+**Deferred (P4b candidates):** unsubscribe (no removal UI; cache writer has no delete
+path — removing a show would orphan its tree dir), per-show busy state for the UI-phase
+refresh indicator, download progress circle (UI phase).
