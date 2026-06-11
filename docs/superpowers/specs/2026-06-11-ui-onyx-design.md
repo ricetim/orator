@@ -64,7 +64,7 @@ New `OratorShell` composable hosting everything below `OratorTheme`:
   "Search Podcast Index…" field-style button → `podcast-search` route, ＋ Add RSS
   feed (dialog with URL field → `subscribe()`), APP section: History, Settings.
 - MiniPlayer: 2dp progress strip on top edge, 38dp artwork, title, sub-line
-  `−remaining · speed`, play/pause button. Tap → player route. Backed by a small
+  `−remaining · speed` (+ `· trim` when silence trim is on), play/pause button. Tap → player route. Backed by a small
   `MiniPlayerViewModel` combining `PlaybackConnection.state` with an artwork lookup
   (mediaId → book coverPath or podcast artworkUrl via DAOs).
 
@@ -108,8 +108,8 @@ sub-line = newest-episode recency. Tile → show screen.
 **Show screen** (rework of PodcastDetailScreen): header (86dp art, title, author ·
 episode count, `✓ Subscribed` pill → confirm unsubscribe, effects-summary pill →
 opens shared effects sheet for this show). Episode list: `EpisodeRow` with date
-block, duration, `↓ downloaded` marker in accent, trailing **download button with
-progress circle** (backlog item: ↓ idle → `CircularProgressIndicator` at
+block, duration, `↓ downloaded` marker in accent, `· transcript` marker when one
+is stored, trailing **download button with progress circle** (backlog item: ↓ idle → `CircularProgressIndicator` at
 `EpisodeDownloader.progress` → done state). Row tap → play episode (existing
 play-from-detail logic) and open player. `SwipeActionRow` ← delete download
 (only on downloaded rows).
@@ -138,30 +138,50 @@ media types, backdrop gradient keyed by `mediaType`.
 - Bottom row: Sleep (sheet: duration presets + end-of-chapter/episode →
   `SleepTimer`), Effects (shared sheet), Queue (→ queue route).
 
-**Effects sheet** (feature:player, `ModalBottomSheet`, opened from either player or
-a show's effects pill): speed chips 1×/1.2×/1.5×/1.7×/2×, Trim silence toggle,
-Volume boost toggle, Skip intro/outro toggle (podcasts; shows −Ns/−Ns values),
-"Override for this show/book only" switch flipping between global `PlayerPrefs`
-writes and the per-item override (`speedOverride` on show/book — only fields that
-exist; toggles without per-item storage stay global-only and the override switch
-covers speed alone, labeled accordingly).
+**Effects sheet** (feature:player, `ModalBottomSheet`). Always opens **with a
+context** — the playing item (from a player) or a show (from its effects pill);
+there is no context-free "global mode" (defaults are edited in Settings, below).
+Rows:
+- **Speed**: preset chips 1×/1.2×/1.5×/1.7×/2× flanked by −/＋ 0.1-step buttons;
+  the matching chip highlights, and a non-preset value (e.g. 1.3× from the old UI)
+  shows as a highlighted numeric label between the steppers. With the override
+  switch OFF, writes `perTypeSpeed[mediaType]` (per-type speed is a CLAUDE.md
+  requirement); with it ON, writes the item's `speedOverride` (exists on both
+  show and book).
+- **Trim silence** toggle — global pref; always writes `PlayerPrefs`
+  (sub-line notes it applies everywhere).
+- **Volume boost**: toggle + value. `boostMb` is an Int (0–1500 mB); OFF writes 0,
+  ON writes 300 if currently 0; while ON, −/＋ steppers adjust in 300 mB steps
+  showing the dB value. Global pref.
+- **Skip intro / outro** (visible only for podcast contexts): per-show only —
+  no global pref exists. Toggle + two small −15s/＋15s stepper values (intro,
+  outro), preserving today's `clipIntroMs/clipOutroMs` editing; toggle OFF zeroes
+  both, ON restores 30s/30s if both are zero.
+- **Override for this show/book only** switch — controls the speed row's target
+  as described above (speed is the only per-item field that exists).
 
 **Queue tab** (feature:player, new): read-only. "Now playing" row + "Next · n"
-section listing upcoming queue items from `ActiveQueueInfo`/`PlaybackConnection`;
-tap row → `seekTo(index, 0)`. Hint line explains the full queue ships with
-playlists.
+section. Rows are the loaded queue items; for a single-file book (M4B, one queue
+item) the rows are its **chapters** instead (from `ActiveQueueInfo` boundaries) so
+the tab isn't empty, matching the mockup's chapter rows. Tap → `seekTo(index, 0)`
+(or chapter-start seek). Empty state when nothing is loaded: "Nothing playing".
+Hint line explains the full mixed queue ships with playlists.
 
 **History** (restyle): rows with artwork/initials, title, relative time, completed
 mark. **Settings** (restyle): Library — Import OPML, Storage folder; Playback —
-default effects summary row → effects sheet (global mode), smart rewind, default
-sleep minutes (existing prefs). **Search** (restyle): existing P4b discovery flow
-in Onyx styling.
+podcast speed and book speed rows (`perTypeSpeed`, with clear-to-global), global
+speed, trim silence, volume boost stepper, smart rewind, default sleep minutes —
+all existing prefs, restyled as `SettingsRow`s (no sheet involved). **Search**
+(restyle): existing P4b discovery flow in Onyx styling.
 
 ## Data / API touches (smallest possible)
 
 - `PlaybackConnection`: expose current queue item titles/indices for the Queue tab
   (read-only snapshot or flow — derive from existing state + ActiveQueueInfo;
   add only what the tab needs).
+- `PlaybackUiState` carries no media type; UI derives it from the mediaId prefix
+  (`audiobook/` vs `podcast/`) via a small shared helper (used by the player
+  backdrop, mini player, and queue tab).
 - Podcast grid badge: count query on existing episode table (or omit).
 - Everything else binds to existing VM flows; VMs are reorganized when their
   screen is (BookDetail/EpisodeDetail logic folds into player VMs).
