@@ -38,6 +38,14 @@ class RssParserTest {
     }
 
     @Test
+    fun `parses decimal durations some feeds emit`() {
+        val xml = """<?xml version="1.0"?><rss version="2.0"><channel><title>S</title>
+            <item><title>E</title><itunes:duration>5400.0</itunes:duration>
+            <enclosure url="https://x/e.mp3" type="audio/mpeg"/></item></channel></rss>"""
+        assertEquals(5_400_000L, RssParser.parse(xml)!!.items.single().durationMs)
+    }
+
+    @Test
     fun `prefers content-encoded over description for show notes`() {
         val items = RssParser.parse(load("full.xml"))!!.items
         assertTrue(items[0].showNotesHtml!!.contains("Rich notes"))

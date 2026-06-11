@@ -65,6 +65,9 @@ fun PodcastDetailScreen(
                     Text(episode.title)
                     Text(
                         listOfNotNull(
+                            // Visible duration doubles as a clip diagnostic: outro skip only
+                            // works on episodes whose duration is known.
+                            episode.durationMs.takeIf { it > 0 }?.let(::formatDuration),
                             if (episode.audioPath != null) "downloaded" else null,
                             if (episode.positionMs > 0) "in progress" else null,
                         ).joinToString(" · ").ifEmpty { " " },
@@ -73,6 +76,11 @@ fun PodcastDetailScreen(
             }
         }
     }
+}
+
+private fun formatDuration(ms: Long): String {
+    val minutes = ms / 60_000
+    return if (minutes >= 60) "${minutes / 60}h ${minutes % 60}m" else "${minutes}m"
 }
 
 @Composable

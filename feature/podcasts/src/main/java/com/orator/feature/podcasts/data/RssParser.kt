@@ -145,19 +145,15 @@ object RssParser {
         return 0L
     }
 
-    /** itunes:duration is "HH:MM:SS", "MM:SS", or bare seconds. */
+    /** itunes:duration is "HH:MM:SS", "MM:SS", or bare seconds — and some feeds emit decimals ("5400.0"). */
     private fun parseDuration(text: String?): Long {
         if (text.isNullOrBlank()) return 0L
-        val parts = text.trim().split(':')
-        return try {
-            when (parts.size) {
-                1 -> parts[0].toLong() * 1000
-                2 -> (parts[0].toLong() * 60 + parts[1].toLong()) * 1000
-                3 -> ((parts[0].toLong() * 60 + parts[1].toLong()) * 60 + parts[2].toLong()) * 1000
-                else -> 0L
-            }
-        } catch (_: NumberFormatException) {
-            0L
+        val parts = text.trim().split(':').map { it.toDoubleOrNull() ?: return 0L }
+        return when (parts.size) {
+            1 -> (parts[0] * 1000).toLong()
+            2 -> ((parts[0] * 60 + parts[1]) * 1000).toLong()
+            3 -> (((parts[0] * 60 + parts[1]) * 60 + parts[2]) * 1000).toLong()
+            else -> 0L
         }
     }
 }
