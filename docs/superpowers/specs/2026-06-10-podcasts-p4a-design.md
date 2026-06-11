@@ -49,11 +49,11 @@ auto-download rules, playlists, Podcasting-2.0 chapters, artwork display in UI
 |---|---|
 | `RssParser` | XmlPullParser; tolerant: skips items missing title or enclosure, never aborts a feed for one bad item. Extracts show title/author/description/artwork and per-item guid, title, pubDate, `itunes:duration`, enclosure URL + length, description (show notes HTML). |
 | `OpmlParser` | XmlPullParser; yields the list of `xmlUrl` feed URLs (with titles). |
-| `PodcastRepository` | subscribe(feedUrl), importOpml(uri), refreshAll(), refresh(podcastId); conditional GETs, upsert-by-GUID (positions/download state survive refresh), per-feed failure isolation (one bad feed bumps an error count, others proceed). |
+| `PodcastRepository` | subscribe(feedUrl), importOpml(uri), refreshAll(); conditional GETs, upsert-by-GUID (positions/download state survive refresh), per-feed failure isolation (one bad feed bumps an error count, others proceed). Single-show refresh is YAGNI for P4a — add it when a screen needs it. |
 | `EpisodeCacheWriter` | Writes/updates the human-readable SAF tree (below): show.json + cover always; episode dirs for latest 20 per show + downloaded episodes. DB write succeeds even if tree write fails (tree is a mirror, not the source of truth). |
 | `EpisodeDownloader` | Explicit per-episode download, sequential (one at a time); OkHttp stream → `audio.partial` → rename on completion; progress as `StateFlow<Map<episodeId, Float>>`; cancel supported; stale partials are replaced at the next download attempt; delete-download clears file + `audioPath`. |
 | `EpisodeQueueBuilder` | Episode → `PlayRequest` (details under Playback). |
-| `PodcastPositionListener` | `PlaybackPositionListener` impl (`@IntoSet`); parses `podcast:` mediaIds; persists clip-relative `positionMs` + `lastPlayedAtMs`. |
+| `PodcastPositionListener` | `PlaybackPositionListener` impl (`@IntoSet`); parses `podcast/<episodeId>` mediaIds; persists clip-relative `positionMs` + `lastPlayedAtMs`. |
 | `EpisodeSpeedOverrideListener` | `SpeedOverrideListener` impl; persists override **per show** on `PodcastEntity`. |
 | `ShowNotes` | HTML → text via `HtmlCompat`; finds `hh:mm:ss`/`mm:ss` patterns; exposes (text, list of timestamp spans) for tappable rendering. |
 | Screens | Show list, show detail, episode detail (placeholder UI, centered menus). |
@@ -102,12 +102,15 @@ episode at import would take minutes. Therefore: episode **show notes are stored
 DB** (`showNotesHtml` column — the UI reads Room only, never SAF), and the tree writes
 episode dirs only for the **latest 20 episodes per show plus every downloaded episode**.
 `show.json` and the show cover are always written. The tree remains a human-readable
-mirror; the DB remains the single source of truth.
+mirror; the DB remains the single source of truth. Each show/episode dir also carries a
+hidden `.orator-id` marker file (the owning row id) so name collisions between different
+shows/episodes are detected and disambiguated with an id suffix.
 
 ## Playback integration (reuses Phase 3 wholesale)
 
 - `EpisodeQueueBuilder` produces a single-item `PlayRequest`:
-  - mediaId `podcast:<episodeId>`; URI = `audioPath` if downloaded else enclosure URL
+  - mediaId `podcast/<episodeId>` (slash-delimited like `audiobook/<bookId>/<fileIndex>`;
+    the two parsers reject each other's formats); URI = `audioPath` if downloaded else enclosure URL
     (ExoPlayer streams HTTP natively; the `INTERNET` permission is already declared in
     the app manifest).
   - `MediaType.PODCAST`; `clipStartMs = clipIntroMs`;

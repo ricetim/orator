@@ -611,7 +611,7 @@ git commit -m "feat: Room v3 with podcast + episode tables, refresh-safe upsert 
 
 - [ ] **Step 3: `feature/podcasts/.gitignore`** containing `/build`.
 
-- [ ] **Step 4: `feature/podcasts/build.gradle.kts`** — copy of `feature/audiobooks/build.gradle.kts` with `namespace = "com.orator.feature.podcasts"` and one extra dependency block line: `implementation(project(":core:network"))` and `implementation(libs.okhttp)` (the downloader streams with the client directly). Keep the test deps (junit, robolectric, test.core, coroutines-test) and `isIncludeAndroidResources = true`.
+- [ ] **Step 4: `feature/podcasts/build.gradle.kts`** — copy of `feature/audiobooks/build.gradle.kts` with `namespace = "com.orator.feature.podcasts"` and two extra dependency lines: `implementation(project(":core:network"))` and `implementation(libs.okhttp)` (OkHttp is `implementation`, not `api`, in core:network — and the repository/downloader reference `OkHttpClient` directly). Keep the test deps (junit, robolectric, test.core, coroutines-test) and `isIncludeAndroidResources = true`.
 
 - [ ] **Step 5: `CommonRoutes.kt`** — add `const val Podcasts = "podcasts"` to the object (read the file first; it has Player/Settings/History).
 
@@ -775,7 +775,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+// Robolectric is REQUIRED: XmlPullParserFactory compiles against the mockable android.jar but
+// throws "not mocked" at runtime in plain local tests; only the Robolectric sandbox provides
+// the real (kxml2) implementation.
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class RssParserTest {
 
     private fun load(name: String): String =
@@ -1017,7 +1025,7 @@ object RssParser {
 - [ ] **Step 5: Run tests**
 
 Run: `./gradlew :feature:podcasts:testDebugUnitTest --tests "com.orator.feature.podcasts.data.RssParserTest"`
-Expected: 7 tests PASS. If `XmlPullParserFactory` fails to resolve on the JVM, add `testImplementation("net.sf.kxml:kxml2:2.3.0")` to the feature build file and note it as a test-only dependency.
+Expected: 7 tests PASS (under Robolectric — see the annotation comment in the test; without it, `XmlPullParserFactory.newInstance()` throws "Method not mocked" at runtime, which the parser's catch-all turns into confusing NPEs on `!!`).
 
 - [ ] **Step 6: Commit**
 
@@ -1058,7 +1066,13 @@ package com.orator.feature.podcasts.data
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+// Robolectric for the same reason as RssParserTest: XmlPullParserFactory is Android API.
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class OpmlParserTest {
 
     private fun load(name: String): String =
@@ -1259,7 +1273,8 @@ class CacheNamesTest {
 
     @Test
     fun `sanitizes illegal filename characters`() {
-        assertEquals("What_s Up_ Doc_", CacheNames.sanitize("What's Up? Doc:"))
+        // Apostrophes are legal in SAF filenames and are kept.
+        assertEquals("What's Up_ Doc_", CacheNames.sanitize("What's Up? Doc:"))
         assertEquals("a_b_c", CacheNames.sanitize("a/b\\c"))
     }
 
@@ -1276,10 +1291,10 @@ class CacheNamesTest {
 
     @Test
     fun `episode dir name is date-prefixed`() {
-        // 2026-06-09T08:00Z
+        // 1_780_992_000_000 ms = 2026-06-09T08:00:00Z (verified: date -u -d @1780992000)
         assertEquals(
             "2026-06-09 - My Episode",
-            CacheNames.episodeDirName(1_780_905_600_000L, "My Episode"),
+            CacheNames.episodeDirName(1_780_992_000_000L, "My Episode"),
         )
     }
 
@@ -1294,10 +1309,6 @@ class CacheNamesTest {
     }
 }
 ```
-
-NOTE for implementer: verify the epoch constant actually formats to `2026-06-09` in UTC before
-trusting the test (`Instant.ofEpochMilli(1_780_905_600_000L)` — adjust the constant if needed,
-not the format).
 
 `CacheJsonTest.kt` (Robolectric — `org.json` is an Android API; annotate `@RunWith(RobolectricTestRunner::class)` and `@Config(sdk = [34])` like `MediaItemFactoryTest`):
 
@@ -1533,6 +1544,13 @@ class EpisodeCacheWriter @Inject constructor(
     suspend fun writeCover(podcast: PodcastEntity, bytes: ByteArray) = bestEffort {
         val dir = showDir(podcast, create = true) ?: return@bestEffort
         writeBytes(dir, "cover.jpg", bytes)
+    }
+
+    /** Covers rarely change; refresh skips the re-download when one is already on disk. */
+    suspend fun coverExists(podcast: PodcastEntity): Boolean = try {
+        showDir(podcast, create = false)?.findFile("cover.jpg") != null
+    } catch (_: Exception) {
+        false
     }
 
     suspend fun writeEpisode(podcast: PodcastEntity, episode: EpisodeEntity) = bestEffort {
@@ -1939,8 +1957,9 @@ class PodcastRepository @Inject constructor(
     /** Best-effort mirror: show.json + cover + latest N episode dirs. Never throws. */
     private suspend fun writeTree(podcast: PodcastEntity) {
         cacheWriter.writeShow(podcast)
-        podcast.artworkUrl?.let { url ->
-            fetchBytes(url)?.let { cacheWriter.writeCover(podcast, it) }
+        val artworkUrl = podcast.artworkUrl
+        if (artworkUrl != null && !cacheWriter.coverExists(podcast)) {
+            fetchBytes(artworkUrl)?.let { cacheWriter.writeCover(podcast, it) }
         }
         episodeDao.latestForPodcast(podcast.id, TREE_EPISODE_LIMIT).forEach { episode ->
             cacheWriter.writeEpisode(podcast, episode)
@@ -2292,10 +2311,14 @@ import androidx.documentfile.provider.DocumentFile
 import com.orator.core.database.EpisodeDao
 import com.orator.core.database.PodcastDao
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -2308,6 +2331,9 @@ import javax.inject.Singleton
  * Explicit per-episode downloads, one at a time (Mutex). Streams to "audio.partial" then renames,
  * so an interrupted download never masquerades as a finished file; a stale partial from a killed
  * app is deleted at the next attempt. Progress is -1 while indeterminate (no Content-Length).
+ * UI calls [enqueue] — downloads run in the singleton's own scope so navigating away from the
+ * episode screen doesn't cancel them. Cancel is checked between 64 KB reads; a stalled stream
+ * is ended by the client's read timeout.
  */
 @Singleton
 class EpisodeDownloader @Inject constructor(
@@ -2318,11 +2344,17 @@ class EpisodeDownloader @Inject constructor(
     private val cacheWriter: EpisodeCacheWriter,
 ) {
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
     private val _progress = MutableStateFlow<Map<String, Float>>(emptyMap())
     val progress: StateFlow<Map<String, Float>> = _progress.asStateFlow()
 
     @Volatile private var cancelled: String? = null
+
+    /** Fire-and-forget entry point for the UI; survives the caller's lifecycle. */
+    fun enqueue(episodeId: String) {
+        scope.launch { download(episodeId) }
+    }
 
     fun cancel(episodeId: String) {
         cancelled = episodeId
@@ -2344,6 +2376,9 @@ class EpisodeDownloader @Inject constructor(
             dir.findFile("audio.partial")?.delete()
             val partial = dir.createFile("application/octet-stream", "audio.partial")
                 ?: return@withContext Result.failure(IllegalStateException("cannot create file"))
+            // renameTo mutates the DocumentFile's URI in place: after a successful rename,
+            // `partial` POINTS AT THE FINISHED FILE — the catch block must not delete it then.
+            var renamed = false
 
             try {
                 client.newCall(Request.Builder().url(episode.enclosureUrl).build())
@@ -2377,13 +2412,17 @@ class EpisodeDownloader @Inject constructor(
                             partial.delete()
                             return@withContext Result.failure(IllegalStateException("rename failed"))
                         }
+                        renamed = true
                         val finalFile = dir.findFile("audio.$ext")
                             ?: return@withContext Result.failure(IllegalStateException("file vanished"))
                         episodeDao.updateAudioPath(episodeId, finalFile.uri.toString())
                         Result.success(Unit)
                     }
+            } catch (e: CancellationException) {
+                if (!renamed) partial.delete()
+                throw e
             } catch (e: Exception) {
-                partial.delete()
+                if (!renamed) partial.delete()
                 Result.failure(e)
             } finally {
                 setProgress(episodeId, null)
@@ -2424,6 +2463,12 @@ class EpisodeDownloader @Inject constructor(
     }
 }
 ```
+
+NOTE: some SAF providers rename `audio.partial` (e.g. appending `.bin`) because the
+`application/octet-stream` mime doesn't match the extension — the kept `DocumentFile`
+reference still works, but the stale-partial `findFile("audio.partial")` cleanup could miss
+it. Same class of issue as the cache-writer mime note (Task 9); let device verification
+decide whether per-extension mimes are needed.
 
 - [ ] **Step 4: Run tests** — AudioExtTest PASS; module compiles.
 
@@ -2514,7 +2559,7 @@ object ShowNotes {
     data class Rendered(val text: String, val links: List<TimestampLink>)
 
     // hh:mm:ss or m:ss / mm:ss; minutes and seconds must be valid base-60 fields.
-    private val TIMESTAMP = Regex("""(?<![\d:.\-])(?:(\d{1,2}):)?([0-5]?\d):([0-5]\d)(?![\d:.\-])""")
+    private val TIMESTAMP = Regex("""(?<![\d:.\-])(?:(\d{1,2}):)?([0-5]?\d):([0-5]\d)(?![\d:])(?!\.\d)""")
 
     fun render(html: String): Rendered {
         val text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_COMPACT)
@@ -2534,9 +2579,12 @@ object ShowNotes {
 }
 ```
 
-NOTE: the regex guards `(?<![\d:.\-])`/`(?![\d:.\-])` reject `2026-06-10`, `1.2.3`, and
-`99:99` (the 60-based field classes do the latter). If `12:34 PM` style wall-clock times in
-notes produce false links, accept it — placeholder UI, seeks are clamped, no harm.
+NOTE: the leading guard `(?<![\d:.\-])` rejects `2026-06-10` and `1.2.3`; the 60-based field
+classes reject `99:99`. The trailing guards `(?![\d:])(?!\.\d)` reject longer digit runs and
+decimals like `12:34.5` while still matching a timestamp followed by a sentence-final period
+("at 1:02:03." must match — do NOT put `.` plainly in the trailing lookahead). If `12:34 PM`
+style wall-clock times in notes produce false links, accept it — placeholder UI, seeks are
+clamped, no harm.
 
 - [ ] **Step 4: Run tests** — 5 PASS.
 
@@ -2571,6 +2619,7 @@ import com.orator.feature.podcasts.data.PodcastRepository
 import com.orator.feature.podcasts.data.PodcastsFolderStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -2578,6 +2627,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -2621,8 +2671,10 @@ class PodcastListViewModel @Inject constructor(
         viewModelScope.launch {
             _lastResult.value = null
             val xml = runCatching {
-                context.contentResolver.openInputStream(uri)?.use {
-                    it.readBytes().decodeToString()
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use {
+                        it.readBytes().decodeToString()
+                    }
                 }
             }.getOrNull()
             if (xml == null) {
@@ -2784,9 +2836,8 @@ class EpisodeDetailViewModel @Inject constructor(
         }
     }
 
-    fun onDownload() {
-        viewModelScope.launch { downloader.download(episodeId) }
-    }
+    /** Fire-and-forget: the singleton downloader owns the job, so leaving this screen doesn't cancel it. */
+    fun onDownload() = downloader.enqueue(episodeId)
 
     fun onCancelDownload() = downloader.cancel(episodeId)
 
@@ -3228,7 +3279,7 @@ Before starting: `~/Android/Sdk/platform-tools/adb push local/podcasts.opml /sdc
 7. Download an episode → progress %, then "Downloaded"; `audio.mp3` (or `.m4a`) in the episode dir. Airplane mode → still plays.
 8. On a show: set Skip intro 30 s / Skip outro 30 s → replay an episode with known duration → starts 30 s in; slider range shrinks by 60 s total.
 9. Tap a timestamp in show notes → seeks there (minus the intro clip).
-10. Refresh all → completes in well under a minute (304s), "Refreshed N, 0 failed"; no duplicate episodes; the in-progress episode kept its position.
+10. Refresh all → completes in well under a minute (mostly HTTP 304 responses), "Refreshed N, 0 failed"; no duplicate episodes; the in-progress episode kept its position.
 11. Set a per-show speed override → applies on play; other shows unaffected.
 
 - [ ] **Step 3: Tick plan checkboxes, record deviations** in this file under an
