@@ -8,4 +8,5 @@ object CommonRoutes {
     const val Player = "player"
     const val Settings = "settings"
     const val History = "history"
+    const val Podcasts = "podcasts"
 }

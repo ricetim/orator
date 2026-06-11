@@ -32,4 +32,10 @@ object DatabaseModule {
 
     @Provides
     fun provideBookmarkDao(db: OratorDatabase): BookmarkDao = db.bookmarkDao()
+
+    @Provides
+    fun providePodcastDao(db: OratorDatabase): PodcastDao = db.podcastDao()
+
+    @Provides
+    fun provideEpisodeDao(db: OratorDatabase): EpisodeDao = db.episodeDao()
 }

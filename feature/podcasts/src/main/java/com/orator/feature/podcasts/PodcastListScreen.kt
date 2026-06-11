@@ -1,9 +1,10 @@
-package com.orator.feature.audiobooks
+package com.orator.feature.podcasts
 
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,77 +12,88 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.orator.core.database.BookEntity
+import com.orator.core.database.PodcastEntity
 
 @Composable
-fun AudiobookListScreen(
-    onBookClick: (String) -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenHistory: () -> Unit,
+fun PodcastListScreen(
+    onPodcastClick: (String) -> Unit,
     onOpenPlayer: () -> Unit,
-    onOpenPodcasts: () -> Unit,
-    viewModel: AudiobookListViewModel = hiltViewModel(),
+    viewModel: PodcastListViewModel = hiltViewModel(),
 ) {
-    val books by viewModel.books.collectAsStateWithLifecycle()
+    val podcasts by viewModel.podcasts.collectAsStateWithLifecycle()
     val hasFolder by viewModel.hasFolder.collectAsStateWithLifecycle()
+    val busy by viewModel.busy.collectAsStateWithLifecycle()
+    val lastResult by viewModel.lastResult.collectAsStateWithLifecycle()
     val playback by viewModel.playback.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var feedUrl by remember { mutableStateOf("") }
 
     val pickFolder = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree(),
     ) { uri ->
         if (uri != null) {
-            // Keep the grant across reboots; without this, rescans fail after restart.
             context.contentResolver.takePersistableUriPermission(
                 uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
             )
             viewModel.onFolderPicked(uri.toString())
         }
     }
+    val pickOpml = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) viewModel.onImportOpml(uri)
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
-        // Menus sit centered (user preference for test UIs); the book list still fills width.
+        // Menus sit centered (user preference for test UIs); the show list still fills width.
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Text("Podcasts")
         Row(horizontalArrangement = Arrangement.Center) {
-            TextButton(onClick = onOpenPodcasts) { Text("Podcasts") }
-            TextButton(onClick = onOpenHistory) { Text("History") }
-            TextButton(onClick = onOpenSettings) { Text("Settings") }
-        }
-        Text(text = "Audiobooks")
-        Row {
             Button(onClick = { pickFolder.launch(null) }) {
-                Text(if (hasFolder) "Change folder" else "Choose audiobook folder")
+                Text(if (hasFolder) "Change folder" else "Choose podcast folder")
             }
-            if (hasFolder) {
-                OutlinedButton(onClick = viewModel::onRescan) { Text("Rescan") }
-            }
+            OutlinedButton(onClick = { pickOpml.launch(arrayOf("*/*")) }) { Text("Import OPML") }
+            OutlinedButton(onClick = viewModel::onRefreshAll) { Text("Refresh all") }
         }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = feedUrl,
+                onValueChange = { feedUrl = it },
+                label = { Text("Feed URL") },
+                modifier = Modifier.weight(1f),
+            )
+            Button(onClick = { viewModel.onAddFeed(feedUrl); feedUrl = "" }) { Text("Add") }
+        }
+        busy?.let { Text(it) }
+        lastResult?.let { Text(it) }
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(books, key = BookEntity::id) { book ->
+            items(podcasts, key = PodcastEntity::id) { podcast ->
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onBookClick(book.id) }
+                        .clickable { onPodcastClick(podcast.id) }
                         .padding(vertical = 12.dp),
                 ) {
-                    Text(text = book.title)
-                    Text(text = book.author ?: "Unknown author")
+                    Text(podcast.title)
+                    Text(podcast.author ?: "Unknown author")
                 }
             }
         }
