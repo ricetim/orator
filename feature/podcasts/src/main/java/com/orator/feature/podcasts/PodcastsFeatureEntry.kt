@@ -16,7 +16,11 @@ class PodcastsFeatureEntry @Inject constructor() : FeatureEntry {
             PodcastListScreen(
                 onPodcastClick = { id -> navController.navigate(podcastDetailRoute(id)) },
                 onOpenPlayer = { navController.navigate(CommonRoutes.Player) },
+                onOpenSearch = { navController.navigate(PodcastSearchRoute) },
             )
+        }
+        navGraphBuilder.composable(PodcastSearchRoute) {
+            SearchScreen()
         }
         navGraphBuilder.composable(PodcastDetailRoutePattern) {
             PodcastDetailScreen(

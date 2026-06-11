@@ -33,6 +33,7 @@ import com.orator.core.database.PodcastEntity
 fun PodcastListScreen(
     onPodcastClick: (String) -> Unit,
     onOpenPlayer: () -> Unit,
+    onOpenSearch: () -> Unit,
     viewModel: PodcastListViewModel = hiltViewModel(),
 ) {
     val podcasts by viewModel.podcasts.collectAsStateWithLifecycle()
@@ -72,6 +73,7 @@ fun PodcastListScreen(
             }
             OutlinedButton(onClick = { pickOpml.launch(arrayOf("*/*")) }) { Text("Import OPML") }
             OutlinedButton(onClick = viewModel::onRefreshAll) { Text("Refresh all") }
+            OutlinedButton(onClick = onOpenSearch) { Text("Search") }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
