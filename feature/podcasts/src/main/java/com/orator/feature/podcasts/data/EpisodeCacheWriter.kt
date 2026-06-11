@@ -92,6 +92,11 @@ class EpisodeCacheWriter @Inject constructor(
         }
     }
 
+    /** Removes the show's whole tree dir (downloads included). Best-effort like all tree ops. */
+    suspend fun deleteShowDir(podcast: PodcastEntity) = bestEffort {
+        showDir(podcast, create = false)?.delete()
+    }
+
     /** Writes one extra file into the episode's dir (transcripts); null on any failure. */
     suspend fun writeEpisodeFile(
         podcast: PodcastEntity,

@@ -161,6 +161,27 @@ class PodcastRepositoryTest {
     }
 
     @Test
+    fun `unsubscribe removes podcast and episodes`() = runBlocking {
+        responses[FEED_A] =
+            FetchResult.Success(rss("Show A", "g1" to "One", "g2" to "Two"), null, null)
+        val id = repository.subscribe(FEED_A).getOrThrow()
+
+        repository.unsubscribe(id)
+
+        assertEquals(0, db.podcastDao().getAll().size)
+        assertEquals(0, db.episodeDao().latestForPodcast(id, 10).size)
+    }
+
+    @Test
+    fun `unsubscribe is idempotent`() = runBlocking {
+        responses[FEED_A] = FetchResult.Success(rss("Show A", "g1" to "One"), null, null)
+        val id = repository.subscribe(FEED_A).getOrThrow()
+        repository.unsubscribe(id)
+        repository.unsubscribe(id) // second call must not throw
+        assertEquals(0, db.podcastDao().getAll().size)
+    }
+
+    @Test
     fun `same guid across two shows stays two episodes`() = runBlocking {
         responses[FEED_A] = FetchResult.Success(rss("Show A", "g1" to "One"), null, null)
         responses[FEED_B] = FetchResult.Success(rss("Show B", "g1" to "Uno"), null, null)
