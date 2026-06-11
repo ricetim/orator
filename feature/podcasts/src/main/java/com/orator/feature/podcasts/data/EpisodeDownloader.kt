@@ -53,6 +53,9 @@ class EpisodeDownloader @Inject constructor(
 
     /** Fire-and-forget entry point for the UI; survives the caller's lifecycle. */
     fun enqueue(episodeId: String) {
+        // Indeterminate progress immediately: connection setup (redirects + TLS) takes seconds
+        // before the first chunk arrives, and the button must not look dead in the meantime.
+        setProgress(episodeId, -1f)
         scope.launch {
             _lastEvent.value = null
             _lastEvent.value = download(episodeId).fold(
@@ -88,6 +91,9 @@ class EpisodeDownloader @Inject constructor(
             // renameTo mutates the DocumentFile's URI in place: after a successful rename,
             // `partial` POINTS AT THE FINISHED FILE — the catch blocks must not delete it then.
             var renamed = false
+            // Servers sometimes abort the connection AFTER the last byte; once the file is
+            // renamed and recorded, a close-time exception must not report failure.
+            var succeeded = false
 
             try {
                 client.newCall(Request.Builder().url(episode.enclosureUrl).build())
@@ -125,12 +131,15 @@ class EpisodeDownloader @Inject constructor(
                         val finalFile = dir.findFile("audio.$ext")
                             ?: return@withContext Result.failure(IllegalStateException("file vanished"))
                         episodeDao.updateAudioPath(episodeId, finalFile.uri.toString())
+                        succeeded = true
                         Result.success(Unit)
                     }
             } catch (e: CancellationException) {
+                if (succeeded) return@withContext Result.success(Unit)
                 if (!renamed) partial.delete()
                 throw e
             } catch (e: Exception) {
+                if (succeeded) return@withContext Result.success(Unit)
                 if (!renamed) partial.delete()
                 Result.failure(e)
             } finally {
