@@ -53,7 +53,8 @@ class EpisodeCacheWriter @Inject constructor(
     }
 
     private fun ownerId(dir: DocumentFile): String? =
-        dir.findFile(".orator-id")?.let { f ->
+        // ".orator-id.txt" tolerated: builds before the mime fix were renamed by the provider.
+        (dir.findFile(".orator-id") ?: dir.findFile(".orator-id.txt"))?.let { f ->
             runCatching {
                 context.contentResolver.openInputStream(f.uri)?.use {
                     it.readBytes().decodeToString().trim()
@@ -114,7 +115,16 @@ class EpisodeCacheWriter @Inject constructor(
 
     private suspend fun writeBytes(dir: DocumentFile, name: String, bytes: ByteArray) {
         withContext(Dispatchers.IO) {
-            val mime = if (name.endsWith(".jpg")) "image/jpeg" else "text/plain"
+            // The provider APPENDS an extension when the name doesn't match the mime (e.g.
+            // text/plain + ".orator-id" → ".orator-id.txt"), which breaks findFile() and made
+            // the collision check spawn duplicate "[abcd]" dirs. Match mime to extension, and
+            // use octet-stream (no canonical extension → never renamed) for everything else.
+            val mime = when {
+                name.endsWith(".jpg") -> "image/jpeg"
+                name.endsWith(".json") -> "application/json"
+                name.endsWith(".html") -> "text/html"
+                else -> "application/octet-stream"
+            }
             val file = dir.findFile(name) ?: dir.createFile(mime, name) ?: return@withContext
             context.contentResolver.openOutputStream(file.uri, "wt")?.use { it.write(bytes) }
         }
