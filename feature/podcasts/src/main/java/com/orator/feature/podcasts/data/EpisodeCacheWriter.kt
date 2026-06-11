@@ -8,6 +8,8 @@ import com.orator.core.database.PodcastEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,11 +26,15 @@ class EpisodeCacheWriter @Inject constructor(
     private val folderStore: PodcastsFolderStore,
 ) {
 
+    /** Serializes root creation: parallel refreshes racing findFile/createDirectory would
+     *  otherwise end up with a provider-renamed "Podcasts (1)". */
+    private val rootMutex = Mutex()
+
     /** Resolves <picked>/Podcasts, creating it if needed; null when no folder is granted yet. */
-    private suspend fun podcastsRoot(): DocumentFile? {
+    private suspend fun podcastsRoot(): DocumentFile? = rootMutex.withLock {
         val uri = folderStore.treeUri.first() ?: return null
         val base = DocumentFile.fromTreeUri(context, Uri.parse(uri)) ?: return null
-        return base.findFile("Podcasts")?.takeIf { it.isDirectory }
+        base.findFile("Podcasts")?.takeIf { it.isDirectory }
             ?: base.createDirectory("Podcasts")
     }
 

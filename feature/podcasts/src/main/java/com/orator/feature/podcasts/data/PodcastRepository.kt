@@ -7,18 +7,27 @@ import com.orator.core.database.PodcastEntity
 import com.orator.core.network.FeedFetcher
 import com.orator.core.network.FetchResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /** Written to the tree per show: latest N episodes (plus anything downloaded). Spec amendment. */
 private const val TREE_EPISODE_LIMIT = 20
+
+/** Parallel feed fetches during refresh-all; modest so a weak network isn't saturated. */
+private const val REFRESH_CONCURRENCY = 6
 
 @Singleton
 class PodcastRepository @Inject constructor(
@@ -79,16 +88,28 @@ class PodcastRepository @Inject constructor(
         RefreshSummary(ok, failed)
     }
 
+    /**
+     * Feeds refresh in parallel ([REFRESH_CONCURRENCY] at a time): with manual-only refresh,
+     * latency is the whole cost — 43 sequential round-trips of mostly-304s is needless waiting.
+     * Counters are atomic because completions land on different workers.
+     */
     suspend fun refreshAll(): RefreshSummary = withContext(Dispatchers.IO) {
         val all = podcastDao.getAll()
-        var ok = 0
-        var failed = 0
-        all.forEachIndexed { index, podcast ->
-            _busy.value = "Refreshing ${index + 1}/${all.size}: ${podcast.title}"
-            if (refresh(podcast)) ok++ else failed++
+        val done = AtomicInteger(0)
+        val failed = AtomicInteger(0)
+        val gate = Semaphore(REFRESH_CONCURRENCY)
+        coroutineScope {
+            all.map { podcast ->
+                async {
+                    gate.withPermit {
+                        if (!refresh(podcast)) failed.incrementAndGet()
+                        _busy.value = "Refreshing ${done.incrementAndGet()}/${all.size}"
+                    }
+                }
+            }.awaitAll()
         }
         _busy.value = null
-        RefreshSummary(ok, failed)
+        RefreshSummary(all.size - failed.get(), failed.get())
     }
 
     private suspend fun refresh(podcast: PodcastEntity): Boolean {
