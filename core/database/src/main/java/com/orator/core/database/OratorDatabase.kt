@@ -9,8 +9,11 @@ import androidx.room.RoomDatabase
  * public release — tracked under roadmap Phase 9.
  */
 @Database(
-    entities = [BookEntity::class, ChapterEntity::class, BookmarkEntity::class, HistoryEntity::class],
-    version = 2,
+    entities = [
+        BookEntity::class, ChapterEntity::class, BookmarkEntity::class, HistoryEntity::class,
+        PodcastEntity::class, EpisodeEntity::class,
+    ],
+    version = 3,
     exportSchema = false,
 )
 abstract class OratorDatabase : RoomDatabase() {
@@ -18,4 +21,6 @@ abstract class OratorDatabase : RoomDatabase() {
     abstract fun chapterDao(): ChapterDao
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun historyDao(): HistoryDao
+    abstract fun podcastDao(): PodcastDao
+    abstract fun episodeDao(): EpisodeDao
 }
