@@ -51,7 +51,7 @@ feature/podcasts/src/test/...                (one test class per new unit; fixtu
 **Files:**
 - Modify: `feature/podcasts/build.gradle.kts`
 
-- [ ] **Step 1: Read the file, then apply these changes**
+- [x] **Step 1: Read the file, then apply these changes**
 
 At the very top of the file, the import line ONLY:
 
@@ -99,7 +99,7 @@ In `dependencies`, next to the other test deps:
     testImplementation(libs.okhttp.mockwebserver)
 ```
 
-- [ ] **Step 2: Verify** — Run: `./gradlew :feature:podcasts:assembleDebug` — BUILD SUCCESSFUL. Then confirm generated fields exist (without printing values):
+- [x] **Step 2: Verify** — Run: `./gradlew :feature:podcasts:assembleDebug` — BUILD SUCCESSFUL. Then confirm generated fields exist (without printing values):
 
 ```bash
 grep -c "PODCASTINDEX" feature/podcasts/build/generated/source/buildConfig/debug/com/orator/feature/podcasts/BuildConfig.java
@@ -107,7 +107,7 @@ grep -c "PODCASTINDEX" feature/podcasts/build/generated/source/buildConfig/debug
 
 Expected: `2`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add feature/podcasts/build.gradle.kts
@@ -120,7 +120,7 @@ git commit -m "build: BuildConfig credentials plumbing for Podcast Index"
 - Create: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/search/SearchProvider.kt`, `ItunesSearchProvider.kt`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/search/ItunesSearchProviderTest.kt`
 
-- [ ] **Step 1: Write the failing tests** (Robolectric for `org.json`; MockWebServer injected via the `baseUrl` constructor seam)
+- [x] **Step 1: Write the failing tests** (Robolectric for `org.json`; MockWebServer injected via the `baseUrl` constructor seam)
 
 ```kotlin
 package com.orator.feature.podcasts.data.search
@@ -188,9 +188,9 @@ class ItunesSearchProviderTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure** — `./gradlew :feature:podcasts:testDebugUnitTest --tests "*ItunesSearchProviderTest"` — FAIL (unresolved references).
+- [x] **Step 2: Run to verify failure** — `./gradlew :feature:podcasts:testDebugUnitTest --tests "*ItunesSearchProviderTest"` — FAIL (unresolved references).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `SearchProvider.kt`:
 
@@ -267,9 +267,9 @@ class ItunesSearchProvider(
 }
 ```
 
-- [ ] **Step 4: Run tests** — 2 PASS.
+- [x] **Step 4: Run tests** — 2 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -282,7 +282,7 @@ git commit -m "feat: SearchProvider seam + keyless iTunes search fallback"
 - Create: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/search/PodcastIndexSearchProvider.kt`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/search/PodcastIndexSearchProviderTest.kt`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 ```kotlin
 package com.orator.feature.podcasts.data.search
@@ -377,9 +377,9 @@ class PodcastIndexSearchProviderTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.orator.feature.podcasts.data.search
@@ -454,9 +454,9 @@ class PodcastIndexSearchProvider(
 }
 ```
 
-- [ ] **Step 4: Run tests** — 4 PASS.
+- [x] **Step 4: Run tests** — 4 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -469,7 +469,7 @@ git commit -m "feat: Podcast Index search with SHA-1 auth headers"
 - Create: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/search/CompositeSearchProvider.kt`, `SearchModule.kt`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/search/CompositeSearchProviderTest.kt`
 
-- [ ] **Step 1: Failing tests** (plain JUnit — fakes, no Android types)
+- [x] **Step 1: Failing tests** (plain JUnit — fakes, no Android types)
 
 ```kotlin
 package com.orator.feature.podcasts.data.search
@@ -527,9 +527,9 @@ class CompositeSearchProviderTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `CompositeSearchProvider.kt`:
 
@@ -585,9 +585,9 @@ object SearchModule {
 }
 ```
 
-- [ ] **Step 4: Run all search tests** — `./gradlew :feature:podcasts:testDebugUnitTest --tests "com.orator.feature.podcasts.data.search.*"` — 9 PASS.
+- [x] **Step 4: Run all search tests** — `./gradlew :feature:podcasts:testDebugUnitTest --tests "com.orator.feature.podcasts.data.search.*"` — 9 PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -602,13 +602,13 @@ git commit -m "feat: composite search (Podcast Index primary, iTunes fallback)"
 
 ViewModel/screen are thin glue over tested units — no dedicated unit tests (P2–P4a convention).
 
-- [ ] **Step 1: `PodcastsRoutes.kt`** — add (note: NOT under `podcasts/…` — `"podcasts/search"` would be shadowed by the `podcasts/{podcastId}` pattern):
+- [x] **Step 1: `PodcastsRoutes.kt`** — add (note: NOT under `podcasts/…` — `"podcasts/search"` would be shadowed by the `podcasts/{podcastId}` pattern):
 
 ```kotlin
 internal const val PodcastSearchRoute = "podcast-search"
 ```
 
-- [ ] **Step 2: `SearchViewModel.kt`**
+- [x] **Step 2: `SearchViewModel.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -676,7 +676,7 @@ class SearchViewModel @Inject constructor(
 }
 ```
 
-- [ ] **Step 3: `SearchScreen.kt`** (placeholder style: centered, `collectAsStateWithLifecycle`)
+- [x] **Step 3: `SearchScreen.kt`** (placeholder style: centered, `collectAsStateWithLifecycle`)
 
 ```kotlin
 package com.orator.feature.podcasts
@@ -751,7 +751,7 @@ fun SearchScreen(viewModel: SearchViewModel = hiltViewModel()) {
 }
 ```
 
-- [ ] **Step 4: Wire navigation** — in `PodcastsFeatureEntry.register` add:
+- [x] **Step 4: Wire navigation** — in `PodcastsFeatureEntry.register` add:
 
 ```kotlin
         navGraphBuilder.composable(PodcastSearchRoute) {
@@ -767,7 +767,7 @@ In `PodcastListScreen`: add parameter `onOpenSearch: () -> Unit,` after `onOpenP
 
 In `PodcastsFeatureEntry`, pass `onOpenSearch = { navController.navigate(PodcastSearchRoute) }` to `PodcastListScreen` (its only call site).
 
-- [ ] **Step 5: Build + commit**
+- [x] **Step 5: Build + commit**
 
 Run: `./gradlew assembleDebug` — BUILD SUCCESSFUL.
 
@@ -787,7 +787,7 @@ git commit -m "feat: podcast search screen with subscribe-from-results"
 - Modify (tests): `core/database/src/test/java/com/orator/core/database/EpisodeDaoTest.kt`
 - Modify (call site compiles in Task 8): `feature/podcasts/.../data/PodcastRepository.kt` — NOT in this task; `updateMetadata` keeps compiling because the new params get defaults? No — Room DAO methods cannot have defaults. The call site MUST be updated in the same commit. See Step 4.
 
-- [ ] **Step 1: `EpisodeEntity.kt`** — append three fields:
+- [x] **Step 1: `EpisodeEntity.kt`** — append three fields:
 
 ```kotlin
     /** Podcasting-2.0 transcript: URL+type from the feed; path set once fetched. */
@@ -796,7 +796,7 @@ git commit -m "feat: podcast search screen with subscribe-from-results"
     val transcriptPath: String? = null,
 ```
 
-- [ ] **Step 2: `EpisodeDao.kt`** — extend `updateMetadata` (SQL + signature) and add the path setter. Replace the whole `updateMetadata` block with:
+- [x] **Step 2: `EpisodeDao.kt`** — extend `updateMetadata` (SQL + signature) and add the path setter. Replace the whole `updateMetadata` block with:
 
 ```kotlin
     /**
@@ -826,9 +826,9 @@ git commit -m "feat: podcast search screen with subscribe-from-results"
     suspend fun updateTranscriptPath(id: String, path: String?)
 ```
 
-- [ ] **Step 3: `OratorDatabase.kt`** — `version = 4` (destructive migration already configured; devices wipe once more).
+- [x] **Step 3: `OratorDatabase.kt`** — `version = 4` (destructive migration already configured; devices wipe once more).
 
-- [ ] **Step 4: Update call sites and tests**
+- [x] **Step 4: Update call sites and tests**
 
 `PodcastRepository.upsertEpisodes` (read the file first): the `EpisodeEntity(...)` construction stays (new fields default to null at insert — refresh fills them via updateMetadata after Task 7 adds parsing; for now pass-through), and the `updateMetadata(...)` call gains `transcriptUrl = e.transcriptUrl, transcriptType = e.transcriptType,` after `showNotesHtml`.
 
@@ -862,9 +862,9 @@ Add one new test:
     }
 ```
 
-- [ ] **Step 5: Run** — `./gradlew :core:database:testDebugUnitTest :feature:podcasts:testDebugUnitTest` — all PASS.
+- [x] **Step 5: Run** — `./gradlew :core:database:testDebugUnitTest :feature:podcasts:testDebugUnitTest` — all PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add core/database/src feature/podcasts/src
@@ -878,7 +878,7 @@ git commit -m "feat: Room v4 with episode transcript columns, refresh-safe"
 - Modify: `feature/podcasts/src/test/resources/full.xml`
 - Test: extend `RssParserTest.kt`
 
-- [ ] **Step 1: Extend the fixture** — in `full.xml`, inside the "Episode Two" item (after the enclosure line) add two transcript candidates so preference is exercised:
+- [x] **Step 1: Extend the fixture** — in `full.xml`, inside the "Episode Two" item (after the enclosure line) add two transcript candidates so preference is exercised:
 
 ```xml
       <podcast:transcript url="https://example.com/ep2.json" type="application/json"/>
@@ -888,7 +888,7 @@ git commit -m "feat: Room v4 with episode transcript columns, refresh-safe"
 (The root element doesn't declare the `podcast:` namespace — that's deliberate: namespaces are
 not processed, matching real-world prefix variance.)
 
-- [ ] **Step 2: Failing tests** — add to `RssParserTest`:
+- [x] **Step 2: Failing tests** — add to `RssParserTest`:
 
 ```kotlin
     @Test
@@ -910,9 +910,9 @@ not processed, matching real-world prefix variance.)
     }
 ```
 
-- [ ] **Step 3: Run to verify failure** (unresolved `transcriptUrl`).
+- [x] **Step 3: Run to verify failure** (unresolved `transcriptUrl`).
 
-- [ ] **Step 4: Implement** — in `RssParser.kt`:
+- [x] **Step 4: Implement** — in `RssParser.kt`:
 
 `ParsedItem` gains:
 
@@ -956,9 +956,9 @@ And the preference helper (object-level):
 `PodcastRepository.upsertEpisodes` `EpisodeEntity(...)` construction gains
 `transcriptUrl = item.transcriptUrl, transcriptType = item.transcriptType,`.
 
-- [ ] **Step 5: Run** — all RssParser + repository tests PASS.
+- [x] **Step 5: Run** — all RssParser + repository tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -971,7 +971,7 @@ git commit -m "feat: parse podcast:transcript with type preference"
 - Create: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/TranscriptText.kt`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/TranscriptTextTest.kt`
 
-- [ ] **Step 1: Failing tests** (Robolectric — JSON branch uses `org.json`)
+- [x] **Step 1: Failing tests** (Robolectric — JSON branch uses `org.json`)
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -1036,9 +1036,9 @@ class TranscriptTextTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -1108,11 +1108,11 @@ object TranscriptText {
 }
 ```
 
-- [ ] **Step 4: Run tests** — 5 PASS. (If the VTT test fails on newline placement, trace `cues`
+- [x] **Step 4: Run tests** — 5 PASS. (If the VTT test fails on newline placement, trace `cues`
 with the fixture by hand and fix the implementation, not the expectation: expected output is
 one line per cue, single-spaced within a cue.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -1127,7 +1127,7 @@ git commit -m "feat: transcript-to-text converter for vtt/srt/json/plain"
 - Modify: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/EpisodeDownloader.kt`
 - Test: `feature/podcasts/src/test/java/com/orator/feature/podcasts/data/TranscriptFetcherTest.kt`
 
-- [ ] **Step 1: `EpisodeCacheWriter` changes**
+- [x] **Step 1: `EpisodeCacheWriter` changes**
 
 Extend the mime `when` in `writeBytes` (extension-matched so the provider never renames — the
 P4a lesson):
@@ -1163,7 +1163,7 @@ Add a public file writer (below `writeEpisode`):
     }
 ```
 
-- [ ] **Step 2: Failing tests for the fetcher's pure part + repository-level behavior**
+- [x] **Step 2: Failing tests for the fetcher's pure part + repository-level behavior**
 
 `TranscriptFetcherTest.kt` (Robolectric + in-memory Room + MockWebServer; the SAF write no-ops
 without a granted folder, so assert the DB/result behavior — file placement is device-verified):
@@ -1274,9 +1274,9 @@ class TranscriptFetcherTest {
 }
 ```
 
-- [ ] **Step 3: Run to verify failure.**
+- [x] **Step 3: Run to verify failure.**
 
-- [ ] **Step 4: Implement `TranscriptFetcher.kt`**
+- [x] **Step 4: Implement `TranscriptFetcher.kt`**
 
 ```kotlin
 package com.orator.feature.podcasts.data
@@ -1361,7 +1361,7 @@ class TranscriptFetcher @Inject constructor(
 }
 ```
 
-- [ ] **Step 5: Downloader hook** — in `EpisodeDownloader`: add constructor param
+- [x] **Step 5: Downloader hook** — in `EpisodeDownloader`: add constructor param
 `private val transcriptFetcher: TranscriptFetcher,` (after `cacheWriter`) and in `enqueue`'s
 fold add the auto-fetch on success:
 
@@ -1379,9 +1379,9 @@ downloader. Deliberate: "Download complete" publishes only AFTER the transcript 
 finishes — transcripts are small, and the combined "done" is the honest signal; do not
 "fix" the ordering.)
 
-- [ ] **Step 6: Run** — `./gradlew :feature:podcasts:testDebugUnitTest` — all PASS.
+- [x] **Step 6: Run** — `./gradlew :feature:podcasts:testDebugUnitTest` — all PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -1393,7 +1393,7 @@ git commit -m "feat: transcript fetcher with auto-fetch after downloads"
 **Files:**
 - Modify: `feature/podcasts/src/main/java/com/orator/feature/podcasts/EpisodeDetailViewModel.kt`, `EpisodeDetailScreen.kt`
 
-- [ ] **Step 1: ViewModel additions** (read the file first)
+- [x] **Step 1: ViewModel additions** (read the file first)
 
 Constructor gains `@ApplicationContext private val context: Context,` and
 `private val transcriptFetcher: TranscriptFetcher,` (imports:
@@ -1424,7 +1424,7 @@ New members:
     }
 ```
 
-- [ ] **Step 2: Screen additions** — collect `transcript` and `transcriptEvent`; below the
+- [x] **Step 2: Screen additions** — collect `transcript` and `transcriptEvent`; below the
 `downloadEvent?.let { Text(it) }` line add:
 
 ```kotlin
@@ -1445,9 +1445,9 @@ And after the show-notes block (still inside the scrollable Column):
 
 (`transcript` here is the collected state variable: `val transcript by viewModel.transcript.collectAsStateWithLifecycle()` — rename the local in the `let` to avoid shadowing if needed.)
 
-- [ ] **Step 3: Build + full feature tests** — `./gradlew :feature:podcasts:testDebugUnitTest assembleDebug` — PASS/SUCCESS.
+- [x] **Step 3: Build + full feature tests** — `./gradlew :feature:podcasts:testDebugUnitTest assembleDebug` — PASS/SUCCESS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -1464,7 +1464,7 @@ git commit -m "feat: transcript fetch button and plain-text viewer on episode sc
 - Modify: `feature/podcasts/src/main/java/com/orator/feature/podcasts/data/EpisodeCacheWriter.kt`, `PodcastRepository.kt`
 - Test: extend `PodcastRepositoryTest.kt`
 
-- [ ] **Step 1: Failing tests** — add to `PodcastRepositoryTest`:
+- [x] **Step 1: Failing tests** — add to `PodcastRepositoryTest`:
 
 ```kotlin
     @Test
@@ -1488,9 +1488,9 @@ git commit -m "feat: transcript fetch button and plain-text viewer on episode sc
     }
 ```
 
-- [ ] **Step 2: Run to verify failure** (unresolved `unsubscribe`).
+- [x] **Step 2: Run to verify failure** (unresolved `unsubscribe`).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `EpisodeCacheWriter` — add below `writeEpisodeFile`:
 
@@ -1513,9 +1513,9 @@ git commit -m "feat: transcript fetch button and plain-text viewer on episode sc
     }
 ```
 
-- [ ] **Step 4: Run** — repository tests PASS (10 total).
+- [x] **Step 4: Run** — repository tests PASS (10 total).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add feature/podcasts/src
@@ -1527,7 +1527,7 @@ git commit -m "feat: unsubscribe with full cache-tree cleanup"
 **Files:**
 - Modify: `feature/podcasts/src/main/java/com/orator/feature/podcasts/PodcastDetailViewModel.kt`, `PodcastDetailScreen.kt`, `PodcastsFeatureEntry.kt`
 
-- [ ] **Step 1: ViewModel** — constructor gains `private val repository: PodcastRepository,`
+- [x] **Step 1: ViewModel** — constructor gains `private val repository: PodcastRepository,`
 (import `com.orator.feature.podcasts.data.PodcastRepository`); add:
 
 ```kotlin
@@ -1539,7 +1539,7 @@ git commit -m "feat: unsubscribe with full cache-tree cleanup"
     }
 ```
 
-- [ ] **Step 2: Screen** — `PodcastDetailScreen` gains an `onUnsubscribed: () -> Unit` parameter.
+- [x] **Step 2: Screen** — `PodcastDetailScreen` gains an `onUnsubscribed: () -> Unit` parameter.
 Add imports `androidx.compose.runtime.mutableStateOf`, `remember`, `setValue` and below the
 speed `SettingRow` insert:
 
@@ -1559,10 +1559,10 @@ speed `SettingRow` insert:
         }
 ```
 
-- [ ] **Step 3: Entry** — pass `onUnsubscribed = { navController.popBackStack() }` at the
+- [x] **Step 3: Entry** — pass `onUnsubscribed = { navController.popBackStack() }` at the
 `PodcastDetailScreen` call site.
 
-- [ ] **Step 4: Build + commit**
+- [x] **Step 4: Build + commit**
 
 Run: `./gradlew assembleDebug test` — BUILD SUCCESSFUL, all PASS.
 
@@ -1573,12 +1573,12 @@ git commit -m "feat: unsubscribe button with inline confirmation"
 
 ### Task 13: Device verification + close-out
 
-- [ ] **Step 1: Full suite + install** — `./gradlew test` then `./gradlew installDebug`
+- [x] **Step 1: Full suite + install** — `./gradlew test` then `./gradlew installDebug`
 (wireless adb; `~/Android/Sdk/platform-tools/adb`). Report build times (standing instruction).
 DB v4 wipes the device library: re-pick folders and re-import the OPML
 (`/sdcard/Download/podcasts.opml` is already on the phone).
 
-- [ ] **Step 2: Manual checklist** (user drives; wait for results)
+- [x] **Step 2: Manual checklist** (user drives; wait for results)
 
 1. Podcasts → Search → search a term → results appear with "via Podcast Index".
 2. Subscribe from a result → button flips to "Subscribed"; show appears in the list.
@@ -1589,12 +1589,12 @@ DB v4 wipes the device library: re-pick folders and re-import the OPML
 7. Unsubscribe a show (one with a downloaded episode) → confirm → back on the list, show gone; `adb shell ls` confirms its folder is gone.
 8. Regression: stream an episode; clips/speed/smart-rewind still behave (P4a re-check).
 
-- [ ] **Step 3: Tick this plan's checkboxes + write the "Execution notes" section.**
+- [x] **Step 3: Tick this plan's checkboxes + write the "Execution notes" section.**
 
-- [ ] **Step 4: `docs/architecture.md`** — mark roadmap row 4b ✅ with the verified date; status
+- [x] **Step 4: `docs/architecture.md`** — mark roadmap row 4b ✅ with the verified date; status
 line → "Next: Phase 5 (playlists)".
 
-- [ ] **Step 5: Push + PR**
+- [x] **Step 5: Push + PR**
 
 ```bash
 git push -u origin phase-4b-podcasts
@@ -1605,4 +1605,18 @@ gh pr create --title "Phase 4b: podcasts — discovery, transcripts, unsubscribe
 
 ## Execution notes (deviations from the written plan)
 
-(filled in during execution)
+Executed in-session 2026-06-11 (executing-plans, chunk-level tracking). All 13 tasks done;
+device checklist verified by the user on the Pixel 7a ("everything works"). Full suite green
+in 30 s; installs ~19–23 s.
+
+**Deviations:**
+- Composite test gained a fourth case (`duplicate feed urls are collapsed`) covering the
+  review-added `distinctBy`.
+- Device fix: the podcast list action row gained a fourth button and overflowed the screen
+  (Compose `Row` doesn't wrap) — split into two centered rows so Search is visible.
+- Checklist step 3 (iTunes fallback with blanked secret) was covered by unit tests instead of
+  a device re-install round-trip; step 4's suggested show changed — the "Podcasting 2.0" feed
+  no longer serves transcript tags, so verification used **Podnews Daily**
+  (`https://podnews.net/rss`, per-episode `text/vtt`) and Buzzcast for the JSON format.
+- The live Podcast Index credentials were validated with a real `search/byterm` call before
+  implementation (HTTP 200), so device search worked first try ("via Podcast Index").
