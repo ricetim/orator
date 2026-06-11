@@ -832,7 +832,16 @@ git commit -m "feat: podcast search screen with subscribe-from-results"
 
 `PodcastRepository.upsertEpisodes` (read the file first): the `EpisodeEntity(...)` construction stays (new fields default to null at insert — refresh fills them via updateMetadata after Task 7 adds parsing; for now pass-through), and the `updateMetadata(...)` call gains `transcriptUrl = e.transcriptUrl, transcriptType = e.transcriptType,` after `showNotesHtml`.
 
-`EpisodeDaoTest.kt`: the two existing `updateMetadata` calls gain `transcriptUrl = null, transcriptType = null,` after `showNotesHtml`. Add one new test:
+`EpisodeDaoTest.kt`: the **three** existing `updateMetadata` calls (one named-arg, two
+positional) gain `transcriptUrl = null, transcriptType = null,` before `durationMs`. The
+positional ones become mixed positional-then-named, which is legal Kotlin in declaration
+order, e.g.:
+
+```kotlin
+        dao.updateMetadata("e1", "Ep e1", 0, "https://x/e1.mp3", null, transcriptUrl = null, transcriptType = null, durationMs = 0)
+```
+
+Add one new test:
 
 ```kotlin
     @Test
@@ -888,6 +897,16 @@ not processed, matching real-world prefix variance.)
         assertEquals("https://example.com/ep2.vtt", items[0].transcriptUrl) // vtt beats json
         assertEquals("text/vtt", items[0].transcriptType)
         assertNull(items[1].transcriptUrl)
+    }
+
+    @Test
+    fun `keeps an unknown-type transcript when nothing better exists`() {
+        val xml = """<?xml version="1.0"?><rss version="2.0"><channel><title>S</title>
+            <item><title>E</title>
+            <podcast:transcript url="https://x/t.xyz" type="application/x-mystery"/>
+            <enclosure url="https://x/e.mp3" type="audio/mpeg"/></item></channel></rss>"""
+        val item = RssParser.parse(xml)!!.items.single()
+        assertEquals("https://x/t.xyz", item.transcriptUrl)
     }
 ```
 
@@ -1355,7 +1374,10 @@ fold add the auto-fetch on success:
                 ...
 ```
 
-(Hilt constructs both singletons; no cycle — TranscriptFetcher does not reference the downloader.)
+(Hilt constructs both singletons; no cycle — TranscriptFetcher does not reference the
+downloader. Deliberate: "Download complete" publishes only AFTER the transcript fetch
+finishes — transcripts are small, and the combined "done" is the honest signal; do not
+"fix" the ordering.)
 
 - [ ] **Step 6: Run** — `./gradlew :feature:podcasts:testDebugUnitTest` — all PASS.
 
