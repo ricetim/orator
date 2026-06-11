@@ -159,6 +159,8 @@ class PodcastRepository @Inject constructor(
                 pubDateUtc = e.pubDateUtc,
                 enclosureUrl = e.enclosureUrl,
                 showNotesHtml = e.showNotesHtml,
+                transcriptUrl = e.transcriptUrl,
+                transcriptType = e.transcriptType,
                 durationMs = e.durationMs,
             )
         }

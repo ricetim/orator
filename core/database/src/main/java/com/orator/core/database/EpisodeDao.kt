@@ -13,12 +13,14 @@ interface EpisodeDao {
     suspend fun insertIgnore(episodes: List<EpisodeEntity>)
 
     /**
-     * Refresh metadata for an existing row WITHOUT touching positionMs/audioPath/lastPlayedAtMs.
-     * durationMs only improves: a 0 from the feed never erases a known value.
+     * Refresh metadata for an existing row WITHOUT touching positionMs/audioPath/
+     * lastPlayedAtMs/transcriptPath. durationMs only improves: a 0 from the feed never
+     * erases a known value.
      */
     @Query(
         "UPDATE episodes SET title = :title, pubDateUtc = :pubDateUtc, enclosureUrl = :enclosureUrl, " +
             "showNotesHtml = :showNotesHtml, " +
+            "transcriptUrl = :transcriptUrl, transcriptType = :transcriptType, " +
             "durationMs = CASE WHEN :durationMs > 0 THEN :durationMs ELSE durationMs END " +
             "WHERE id = :id",
     )
@@ -28,8 +30,13 @@ interface EpisodeDao {
         pubDateUtc: Long,
         enclosureUrl: String,
         showNotesHtml: String?,
+        transcriptUrl: String?,
+        transcriptType: String?,
         durationMs: Long,
     )
+
+    @Query("UPDATE episodes SET transcriptPath = :path WHERE id = :id")
+    suspend fun updateTranscriptPath(id: String, path: String?)
 
     @Query("SELECT * FROM episodes WHERE podcastId = :podcastId ORDER BY pubDateUtc DESC")
     fun observeForPodcast(podcastId: String): Flow<List<EpisodeEntity>>

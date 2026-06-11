@@ -52,7 +52,8 @@ class EpisodeDaoTest {
 
         dao.updateMetadata(
             id = "e1", title = "Remastered", pubDateUtc = 7,
-            enclosureUrl = "https://x/e1-v2.mp3", showNotesHtml = "<p>notes</p>", durationMs = 0,
+            enclosureUrl = "https://x/e1-v2.mp3", showNotesHtml = "<p>notes</p>",
+            transcriptUrl = null, transcriptType = null, durationMs = 0,
         )
 
         val row = dao.getById("e1")!!
@@ -66,11 +67,28 @@ class EpisodeDaoTest {
     fun `updateMetadata duration only improves`() = runBlocking {
         dao.insertIgnore(listOf(episode("e1").copy(durationMs = 600_000)))
 
-        dao.updateMetadata("e1", "Ep e1", 0, "https://x/e1.mp3", null, durationMs = 0)
+        dao.updateMetadata("e1", "Ep e1", 0, "https://x/e1.mp3", null, transcriptUrl = null, transcriptType = null, durationMs = 0)
         assertEquals(600_000L, dao.getById("e1")!!.durationMs) // 0 never erases
 
-        dao.updateMetadata("e1", "Ep e1", 0, "https://x/e1.mp3", null, durationMs = 700_000)
+        dao.updateMetadata("e1", "Ep e1", 0, "https://x/e1.mp3", null, transcriptUrl = null, transcriptType = null, durationMs = 700_000)
         assertEquals(700_000L, dao.getById("e1")!!.durationMs) // >0 updates
+    }
+
+    @Test
+    fun `updateMetadata sets transcript url and type but never transcriptPath`() = runBlocking {
+        dao.insertIgnore(listOf(episode("e1")))
+        dao.updateTranscriptPath("e1", "content://t/transcript.vtt")
+
+        dao.updateMetadata(
+            id = "e1", title = "Ep e1", pubDateUtc = 0, enclosureUrl = "https://x/e1.mp3",
+            showNotesHtml = null, transcriptUrl = "https://x/t.vtt", transcriptType = "text/vtt",
+            durationMs = 0,
+        )
+
+        val row = dao.getById("e1")!!
+        assertEquals("https://x/t.vtt", row.transcriptUrl)
+        assertEquals("text/vtt", row.transcriptType)
+        assertEquals("content://t/transcript.vtt", row.transcriptPath)
     }
 
     @Test
