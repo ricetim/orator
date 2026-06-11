@@ -149,6 +149,8 @@ class PodcastRepository @Inject constructor(
                 durationMs = item.durationMs,
                 enclosureUrl = item.enclosureUrl,
                 showNotesHtml = item.showNotesHtml,
+                transcriptUrl = item.transcriptUrl,
+                transcriptType = item.transcriptType,
             )
         }
         episodeDao.insertIgnore(entities)
