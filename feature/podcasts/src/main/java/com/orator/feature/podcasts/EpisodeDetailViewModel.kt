@@ -1,5 +1,7 @@
 package com.orator.feature.podcasts
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,23 +18,30 @@ import com.orator.feature.podcasts.data.EpisodeDownloader
 import com.orator.feature.podcasts.data.EpisodeQueueBuilder
 import com.orator.feature.podcasts.data.PodcastMediaId
 import com.orator.feature.podcasts.data.ShowNotes
+import com.orator.feature.podcasts.data.TranscriptFetcher
+import com.orator.feature.podcasts.data.TranscriptText
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class EpisodeDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @ApplicationContext private val context: Context,
     private val episodeDao: EpisodeDao,
     private val podcastDao: PodcastDao,
     private val playbackConnection: PlaybackConnection,
     private val playerPreferences: PlayerPreferences,
     private val downloader: EpisodeDownloader,
+    private val transcriptFetcher: TranscriptFetcher,
 ) : ViewModel() {
 
     private val episodeId: String = checkNotNull(savedStateHandle["episodeId"])
@@ -52,6 +61,25 @@ class EpisodeDetailViewModel @Inject constructor(
 
     /** "Download complete" / "Download failed: …" from the most recent attempt. */
     val downloadEvent: StateFlow<String?> = downloader.lastEvent
+
+    /** Rendered transcript text once a file exists; null until fetched. */
+    val transcript: StateFlow<String?> = episodeDao.observeById(episodeId)
+        .map { e ->
+            val path = e?.transcriptPath ?: return@map null
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(Uri.parse(path))
+                        ?.use { it.readBytes().decodeToString() }
+                }.getOrNull()?.let { TranscriptText.render(it, e.transcriptType) }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val transcriptEvent: StateFlow<String?> = transcriptFetcher.lastEvent
+
+    fun onGetTranscript() {
+        viewModelScope.launch { transcriptFetcher.fetch(episodeId) }
+    }
 
     fun isThisEpisode(state: PlaybackUiState): Boolean =
         state.mediaId?.let(PodcastMediaId::parse) == episodeId

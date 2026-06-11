@@ -30,6 +30,8 @@ fun EpisodeDetailScreen(viewModel: EpisodeDetailViewModel = hiltViewModel()) {
     val playback by viewModel.playback.collectAsStateWithLifecycle()
     val downloadProgress by viewModel.downloadProgress.collectAsStateWithLifecycle()
     val downloadEvent by viewModel.downloadEvent.collectAsStateWithLifecycle()
+    val transcript by viewModel.transcript.collectAsStateWithLifecycle()
+    val transcriptEvent by viewModel.transcriptEvent.collectAsStateWithLifecycle()
     val e = episode ?: return
 
     Column(
@@ -63,6 +65,10 @@ fun EpisodeDetailScreen(viewModel: EpisodeDetailViewModel = hiltViewModel()) {
             }
         }
         downloadEvent?.let { Text(it) }
+        transcriptEvent?.let { Text(it) }
+        if (e.transcriptUrl != null && e.transcriptPath == null) {
+            OutlinedButton(onClick = viewModel::onGetTranscript) { Text("Get transcript") }
+        }
 
         notes?.let { rendered ->
             val annotated = buildAnnotatedString {
@@ -89,6 +95,11 @@ fun EpisodeDetailScreen(viewModel: EpisodeDetailViewModel = hiltViewModel()) {
                 annotated.getStringAnnotations("timestamp", offset, offset).firstOrNull()
                     ?.let { viewModel.onTimestampTap(rendered.links[it.item.toInt()].positionMs) }
             }
+        }
+
+        transcript?.let { text ->
+            Text("Transcript", style = MaterialTheme.typography.titleMedium)
+            Text(text, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
