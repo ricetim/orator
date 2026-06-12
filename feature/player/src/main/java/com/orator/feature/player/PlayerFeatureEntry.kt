@@ -14,7 +14,10 @@ class PlayerFeatureEntry @Inject constructor() : FeatureEntry {
 
     override fun register(navGraphBuilder: NavGraphBuilder, navController: NavController) {
         navGraphBuilder.composable(route) {
-            PlayerScreen()
+            PlayerScreen(
+                onBack = { navController.popBackStack() },
+                onOpenQueue = { navController.navigate(CommonRoutes.Queue) },
+            )
         }
         navGraphBuilder.composable(CommonRoutes.History) {
             HistoryScreen()
