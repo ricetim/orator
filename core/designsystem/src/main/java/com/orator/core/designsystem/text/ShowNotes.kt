@@ -1,4 +1,4 @@
-package com.orator.feature.podcasts.data
+package com.orator.core.designsystem.text
 
 import androidx.core.text.HtmlCompat
 

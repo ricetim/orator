@@ -17,9 +17,9 @@ import com.orator.core.playback.SmartRewind
 import com.orator.feature.podcasts.data.EpisodeDownloader
 import com.orator.feature.podcasts.data.EpisodeQueueBuilder
 import com.orator.feature.podcasts.data.PodcastMediaId
-import com.orator.feature.podcasts.data.ShowNotes
+import com.orator.core.designsystem.text.ShowNotes
 import com.orator.feature.podcasts.data.TranscriptFetcher
-import com.orator.feature.podcasts.data.TranscriptText
+import com.orator.core.designsystem.text.TranscriptText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
