@@ -20,7 +20,7 @@ class PlayerFeatureEntry @Inject constructor() : FeatureEntry {
             )
         }
         navGraphBuilder.composable(CommonRoutes.History) {
-            HistoryScreen()
+            HistoryScreen(onBack = { navController.popBackStack() })
         }
         navGraphBuilder.composable(CommonRoutes.Queue) {
             QueueScreen()
