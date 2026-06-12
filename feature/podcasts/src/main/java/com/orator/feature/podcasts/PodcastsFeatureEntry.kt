@@ -18,7 +18,7 @@ class PodcastsFeatureEntry @Inject constructor() : FeatureEntry {
             )
         }
         navGraphBuilder.composable(PodcastSearchRoute) {
-            SearchScreen()
+            SearchScreen(onBack = { navController.popBackStack() })
         }
         navGraphBuilder.composable(PodcastDetailRoutePattern) {
             PodcastDetailScreen(
