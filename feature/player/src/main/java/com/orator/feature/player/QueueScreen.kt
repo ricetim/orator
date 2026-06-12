@@ -23,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.orator.core.designsystem.components.EpisodeRow
 import com.orator.core.designsystem.components.OnyxTopBar
+import com.orator.core.designsystem.components.RowArt
 import com.orator.core.designsystem.components.SectionLabel
 import com.orator.core.designsystem.shell.LocalShellControls
 import com.orator.core.designsystem.theme.OnyxTokens
@@ -63,6 +64,7 @@ fun QueueScreen(viewModel: QueueViewModel = hiltViewModel()) {
                         subLine = current.subLine,
                         onClick = {},
                         titleColor = OnyxTokens.AccentBright,
+                        leading = { RowArt(artworkModel = ui.artworkModel, title = current.title) },
                         trailing = { Text("▶", color = OnyxTokens.Accent, fontSize = 14.sp) },
                     )
                 }
@@ -73,6 +75,7 @@ fun QueueScreen(viewModel: QueueViewModel = hiltViewModel()) {
                     title = row.title,
                     subLine = row.subLine,
                     onClick = { viewModel.onJump(row.seekTarget) },
+                    leading = { RowArt(artworkModel = ui.artworkModel, title = row.title) },
                 )
             }
         }

@@ -1,5 +1,6 @@
 package com.orator.app
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -68,12 +70,29 @@ fun OratorShell(
         ShellControls(openDrawer = { scope.launch { drawerState.open() } })
     }
 
-    fun goTab(tab: String) {
-        navController.navigate(tab) {
-            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
+    // TEMP diagnostics for the dead Queue→Podcasts tab tap (remove once fixed).
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntryFlow.collect { entry ->
+            Log.d("OratorNav", "destination -> ${entry.destination.route}")
         }
+    }
+
+    fun goTab(tab: String) {
+        Log.d(
+            "OratorNav",
+            "goTab($tab) from=${navController.currentDestination?.route} " +
+                "start=${navController.graph.findStartDestination().route}",
+        )
+        try {
+            navController.navigate(tab) {
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        } catch (e: Exception) {
+            Log.e("OratorNav", "goTab($tab) failed", e)
+        }
+        Log.d("OratorNav", "goTab($tab) after navigate current=${navController.currentDestination?.route}")
     }
 
     fun closeDrawerThen(action: () -> Unit) {
