@@ -1,4 +1,4 @@
-package com.orator.feature.audiobooks.data
+package com.orator.core.playback.ids
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

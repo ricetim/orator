@@ -16,7 +16,7 @@ import com.orator.core.playback.PlayerPreferences
 import com.orator.core.playback.SmartRewind
 import com.orator.feature.podcasts.data.EpisodeDownloader
 import com.orator.feature.podcasts.data.EpisodeQueueBuilder
-import com.orator.feature.podcasts.data.PodcastMediaId
+import com.orator.core.playback.ids.PodcastMediaId
 import com.orator.core.designsystem.text.ShowNotes
 import com.orator.feature.podcasts.data.TranscriptFetcher
 import com.orator.core.designsystem.text.TranscriptText

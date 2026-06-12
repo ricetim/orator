@@ -1,4 +1,4 @@
-package com.orator.feature.audiobooks.data
+package com.orator.core.playback.ids
 
 /**
  * Encodes which (book, file-in-queue) a Media3 MediaItem represents, so the position

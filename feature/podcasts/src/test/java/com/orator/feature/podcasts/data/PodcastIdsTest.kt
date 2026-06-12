@@ -1,4 +1,5 @@
 package com.orator.feature.podcasts.data
+import com.orator.core.playback.ids.PodcastMediaId
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals

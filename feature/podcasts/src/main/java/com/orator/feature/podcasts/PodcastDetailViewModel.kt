@@ -9,7 +9,7 @@ import com.orator.core.database.PodcastDao
 import com.orator.core.database.PodcastEntity
 import com.orator.core.playback.PlaybackConnection
 import com.orator.feature.podcasts.data.EpisodeQueueBuilder
-import com.orator.feature.podcasts.data.PodcastMediaId
+import com.orator.core.playback.ids.PodcastMediaId
 import com.orator.feature.podcasts.data.PodcastRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted

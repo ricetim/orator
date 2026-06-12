@@ -1,4 +1,4 @@
-package com.orator.feature.podcasts.data
+package com.orator.core.playback.ids
 
 /** Routes service callbacks (position, speed) back to an episode row. Format: "podcast/<episodeId>". */
 object PodcastMediaId {

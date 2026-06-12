@@ -12,9 +12,9 @@ import com.orator.core.playback.PlaybackConnection
 import com.orator.core.playback.PlaybackUiState
 import com.orator.core.playback.PlayerPreferences
 import com.orator.core.playback.SmartRewind
-import com.orator.feature.audiobooks.data.AudiobookMediaId
+import com.orator.core.playback.ids.AudiobookMediaId
 import com.orator.feature.audiobooks.data.AudiobookRepository
-import com.orator.feature.audiobooks.data.PositionMapper
+import com.orator.core.playback.ids.PositionMapper
 import com.orator.feature.audiobooks.data.QueueBuilder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted

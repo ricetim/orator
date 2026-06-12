@@ -1,4 +1,4 @@
-package com.orator.feature.audiobooks.data
+package com.orator.core.playback.ids
 
 /**
  * A book's resume position and bookmarks are stored as ONE global millisecond offset from
