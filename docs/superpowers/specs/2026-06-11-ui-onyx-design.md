@@ -81,14 +81,14 @@ player (mockup behavior). Their VM logic is reused where it moves.
 - `CoverTile` — flush square grid tile: artwork, bottom caption scrim (title +
   small sub-line), optional accent count badge (top-right), optional 3dp progress
   strip along the bottom edge.
-- `TileGrid` — `LazyVerticalGrid`, 3 columns, zero gaps, bottom content padding
-  clearing mini player + nav.
+- (Grids are plain 3-column zero-gap `LazyVerticalGrid`s inlined in the screens, with
+  bottom content padding clearing mini player + nav — no wrapper component needed.)
 - `MiniPlayer` — dumb composable, state hoisted.
 - `EpisodeRow` — date block (day + month) or 44dp artwork variant, title, sub-line,
   optional trailing slot.
 - `SwipeActionRow` — wraps a row with horizontal drag-to-reveal action background
-  (anchoredDraggable), used for episode ← delete-download now and built so queue
-  swipes plug in at Phase 5.
+  (M3 `SwipeToDismissBox`, reveal-and-snap-back so the row never dismisses), used for
+  episode ← delete-download now and built so queue swipes plug in at Phase 5.
 - `DualProgressBars` — chapter bar (bright accent, thumb) + whole-item bar (accent,
   chapter tick marks), with the small uppercase label rows; chapter bar hidden when
   the item has no chapters.
@@ -179,9 +179,10 @@ all existing prefs, restyled as `SettingsRow`s (no sheet involved). **Search**
 - `PlaybackConnection`: expose current queue item titles/indices for the Queue tab
   (read-only snapshot or flow — derive from existing state + ActiveQueueInfo;
   add only what the tab needs).
-- `PlaybackUiState` carries no media type; UI derives it from the mediaId prefix
-  (`audiobook/` vs `podcast/`) via a small shared helper (used by the player
-  backdrop, mini player, and queue tab).
+- `PlaybackUiState` gains `mediaType` (recovered from MediaMetadata via the existing
+  `MediaItemFactory.mediaTypeOf` inverse) and `artist` — used by the player backdrop,
+  mini player, and queue tab. (Plan deviation from the earlier prefix-parsing idea:
+  one source of truth, no string parsing.)
 - Podcast grid badge: count query on existing episode table (or omit).
 - Everything else binds to existing VM flows; VMs are reorganized when their
   screen is (BookDetail/EpisodeDetail logic folds into player VMs).
