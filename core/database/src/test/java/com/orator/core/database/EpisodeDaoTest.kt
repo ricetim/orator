@@ -32,6 +32,24 @@ class EpisodeDaoTest {
     )
 
     @Test
+    fun `latestPubDates returns newest episode per podcast`() = runBlocking {
+        dao.insertIgnore(
+            listOf(
+                episode("e1", podcastId = "p1", pubDate = 100),
+                episode("e2", podcastId = "p1", pubDate = 300),
+                episode("e3", podcastId = "p2", pubDate = 200),
+            ),
+        )
+
+        val rows = dao.observeLatestPubDates().first()
+
+        assertEquals(
+            mapOf("p1" to 300L, "p2" to 200L),
+            rows.associate { it.podcastId to it.latestUtc },
+        )
+    }
+
+    @Test
     fun `insertIgnore leaves existing rows untouched`() = runBlocking {
         dao.insertIgnore(listOf(episode("e1")))
         dao.updateProgress("e1", positionMs = 5_000, lastPlayedAtMs = 42)

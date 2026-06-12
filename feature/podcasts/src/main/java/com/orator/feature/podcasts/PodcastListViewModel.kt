@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.orator.core.database.EpisodeDao
 import com.orator.core.database.PodcastEntity
 import com.orator.core.playback.PlaybackConnection
 import com.orator.core.playback.PlaybackUiState
@@ -27,11 +28,17 @@ class PodcastListViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: PodcastRepository,
     private val folderStore: PodcastsFolderStore,
+    episodeDao: EpisodeDao,
     playbackConnection: PlaybackConnection,
 ) : ViewModel() {
 
     val podcasts: StateFlow<List<PodcastEntity>> = repository.podcasts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** podcastId → newest episode pubDate, for tile sub-lines. */
+    val latestPub: StateFlow<Map<String, Long>> = episodeDao.observeLatestPubDates()
+        .map { rows -> rows.associate { it.podcastId to it.latestUtc } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val hasFolder: StateFlow<Boolean> = folderStore.treeUri.map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)

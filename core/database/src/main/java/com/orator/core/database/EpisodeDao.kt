@@ -38,6 +38,12 @@ interface EpisodeDao {
     @Query("UPDATE episodes SET transcriptPath = :path WHERE id = :id")
     suspend fun updateTranscriptPath(id: String, path: String?)
 
+    /** Newest episode date per podcast — drives the grid tiles' recency sub-line. */
+    data class PodcastLatestPub(val podcastId: String, val latestUtc: Long)
+
+    @Query("SELECT podcastId, MAX(pubDateUtc) AS latestUtc FROM episodes GROUP BY podcastId")
+    fun observeLatestPubDates(): Flow<List<PodcastLatestPub>>
+
     @Query("SELECT * FROM episodes WHERE podcastId = :podcastId ORDER BY pubDateUtc DESC")
     fun observeForPodcast(podcastId: String): Flow<List<EpisodeEntity>>
 
