@@ -19,5 +19,8 @@ class PlayerFeatureEntry @Inject constructor() : FeatureEntry {
         navGraphBuilder.composable(CommonRoutes.History) {
             HistoryScreen()
         }
+        navGraphBuilder.composable(CommonRoutes.Queue) {
+            QueueScreen()
+        }
     }
 }
