@@ -40,6 +40,7 @@ class PlaybackConnection @Inject constructor(
     playerPreferences: PlayerPreferences,
     private val activeQueueInfo: ActiveQueueInfo,
     private val speedOverrideListeners: Set<@JvmSuppressWildcards SpeedOverrideListener>,
+    private val clipOverrideListeners: Set<@JvmSuppressWildcards ClipOverrideListener>,
 ) {
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
@@ -172,6 +173,14 @@ class PlaybackConnection @Inject constructor(
         val mediaId = controller?.currentMediaItem?.mediaId ?: return
         scope.launch {
             speedOverrideListeners.forEach { it.onSpeedOverrideChanged(mediaId, speed) }
+        }
+    }
+
+    /** Per-show intro/outro edit from the player's effects sheet; features persist + rebuild. */
+    fun setClipOverride(introMs: Long, outroMs: Long) {
+        val mediaId = controller?.currentMediaItem?.mediaId ?: return
+        scope.launch {
+            clipOverrideListeners.forEach { it.onClipChanged(mediaId, introMs, outroMs) }
         }
     }
 

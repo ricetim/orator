@@ -98,14 +98,16 @@ class PodcastDetailViewModel @Inject constructor(
 
     /**
      * Steps are whole seconds in the UI; stored as ms. If an episode of THIS show is loaded in
-     * the player, the queue is rebuilt in place so the new clips apply immediately (user
-     * decision 2026-06-10: clip changes apply to everything, including current playback).
+     * the player, EpisodeClipListener persists + rebuilds the queue in place so the new clips
+     * apply immediately (user decision 2026-06-10); otherwise just persist.
      */
     fun onClipChange(introMs: Long, outroMs: Long) {
         viewModelScope.launch {
-            val before = podcastDao.getById(podcastId) ?: return@launch
-            podcastDao.updateClips(podcastId, introMs.coerceAtLeast(0), outroMs.coerceAtLeast(0))
-            rebuildActiveQueue(previousIntroMs = before.clipIntroMs)
+            if (activeEpisodeOfThisShow() != null) {
+                playbackConnection.setClipOverride(introMs, outroMs)
+            } else {
+                podcastDao.updateClips(podcastId, introMs.coerceAtLeast(0), outroMs.coerceAtLeast(0))
+            }
         }
     }
 
@@ -133,15 +135,5 @@ class PodcastDetailViewModel @Inject constructor(
         val mediaId = playbackConnection.state.value.mediaId ?: return null
         val episodeId = PodcastMediaId.parse(mediaId) ?: return null
         return episodeDao.getById(episodeId)?.takeIf { it.podcastId == podcastId }
-    }
-
-    private suspend fun rebuildActiveQueue(previousIntroMs: Long) {
-        val episode = activeEpisodeOfThisShow() ?: return
-        val updated = podcastDao.getById(podcastId) ?: return
-        // Positions are clip-relative: shift by the intro delta so the same audio moment keeps
-        // playing; Media3 clamps if the point now falls outside the new clip window.
-        val position = (playbackConnection.state.value.positionMs +
-            previousIntroMs - updated.clipIntroMs).coerceAtLeast(0)
-        playbackConnection.play(EpisodeQueueBuilder.build(updated, episode, position))
     }
 }
