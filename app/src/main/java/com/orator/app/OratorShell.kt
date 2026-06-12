@@ -1,15 +1,17 @@
 package com.orator.app
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
@@ -127,17 +129,18 @@ private fun OnyxNavBar(selected: String?, onSelect: (String) -> Unit) {
         TABS.forEach { tab ->
             val isSelected = tab.route == selected
             val tint = if (isSelected) OnyxTokens.Accent else OnyxTokens.TextFaint
+            // Whole cell is the tap target — an inner IconButton clips icon+label past 48dp.
             Column(
-                Modifier.weight(1f),
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable { onSelect(tab.route) },
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                IconButton(onClick = { onSelect(tab.route) }) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(tab.icon, contentDescription = tab.route, tint = tint)
-                        if (tab.label != null) {
-                            Text(tab.label, color = tint, fontSize = 10.5.sp)
-                        }
-                    }
+                Icon(tab.icon, contentDescription = tab.route, tint = tint)
+                if (tab.label != null) {
+                    Text(tab.label, color = tint, fontSize = 10.5.sp)
                 }
             }
         }
