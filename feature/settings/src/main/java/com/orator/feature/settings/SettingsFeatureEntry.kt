@@ -14,7 +14,7 @@ class SettingsFeatureEntry @Inject constructor() : FeatureEntry {
 
     override fun register(navGraphBuilder: NavGraphBuilder, navController: NavController) {
         navGraphBuilder.composable(route) {
-            SettingsScreen()
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

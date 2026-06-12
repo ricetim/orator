@@ -1,5 +1,6 @@
 package com.orator.feature.podcasts
 
+import com.orator.core.designsystem.contract.SettingsSection
 import com.orator.core.navigation.FeatureEntry
 import com.orator.core.playback.ClipOverrideListener
 import com.orator.core.playback.PlaybackPositionListener
@@ -32,4 +33,8 @@ interface PodcastsFeatureModule {
     @Binds
     @IntoSet
     fun bindClipOverrideListener(listener: EpisodeClipListener): ClipOverrideListener
+
+    @Binds
+    @IntoSet
+    fun bindSettingsSection(section: PodcastsSettingsSection): SettingsSection
 }
