@@ -11,4 +11,4 @@ internal const val EpisodeDetailRoutePattern = "podcasts/episode/{episodeId}"
 internal fun episodeDetailRoute(episodeId: String) = "podcasts/episode/$episodeId"
 
 // Distinct top segment: "podcasts/search" would sit inside the {podcastId} pattern's space.
-internal const val PodcastSearchRoute = "podcast-search"
+internal const val PodcastSearchRoute = CommonRoutes.PodcastSearch
