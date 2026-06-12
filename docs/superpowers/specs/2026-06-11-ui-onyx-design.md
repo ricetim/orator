@@ -36,6 +36,11 @@ branching on `isSystemInDarkTheme()`.
 
 ## Design tokens (core:designsystem)
 
+> **Superseded palette (user, 2026-06-12):** the colors below were replaced mid-build by
+> **Solarized Dark** — background `#002B36` (base03), surface `#073642` (base02), accent
+> cyan `#2AA198`, red `#DC322F`, text base2/base1/base00. `OnyxTokens.kt` is authoritative.
+> Layout/structure are unchanged; "dark-only theme" still holds (no light scheme).
+
 `theme/OnyxTokens.kt` — single source of truth, plain `object` (easy to tweak):
 
 - Colors: background `#000000`, surface `#15171C`, surfaceBorder `#23262C`,
