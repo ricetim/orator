@@ -15,21 +15,17 @@ class PodcastsFeatureEntry @Inject constructor() : FeatureEntry {
         navGraphBuilder.composable(PodcastsRoute) {
             PodcastListScreen(
                 onPodcastClick = { id -> navController.navigate(podcastDetailRoute(id)) },
-                onOpenPlayer = { navController.navigate(CommonRoutes.Player) },
-                onOpenSearch = { navController.navigate(PodcastSearchRoute) },
             )
         }
         navGraphBuilder.composable(PodcastSearchRoute) {
-            SearchScreen()
+            SearchScreen(onBack = { navController.popBackStack() })
         }
         navGraphBuilder.composable(PodcastDetailRoutePattern) {
             PodcastDetailScreen(
-                onEpisodeClick = { id -> navController.navigate(episodeDetailRoute(id)) },
+                onOpenPlayer = { navController.navigate(CommonRoutes.Player) },
+                onBack = { navController.popBackStack() },
                 onUnsubscribed = { navController.popBackStack() },
             )
-        }
-        navGraphBuilder.composable(EpisodeDetailRoutePattern) {
-            EpisodeDetailScreen()
         }
     }
 }

@@ -9,4 +9,7 @@ object CommonRoutes {
     const val Settings = "settings"
     const val History = "history"
     const val Podcasts = "podcasts"
+    const val Audiobooks = "audiobooks"
+    const val Queue = "queue"
+    const val PodcastSearch = "podcast-search"
 }

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Candidate E — Boost</title>
+<style>
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  body { background:#101216; font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 12px; color:#dde0e5; }
+  .title { font-size:15px; color:#9aa0ab; margin-bottom:14px; }
+  .title b { color:#fff; }
+  .title a { color:#fc7e0f; text-decoration:none; }
+
+  .phone { width:393px; height:830px; background:#fff; border-radius:32px; border:10px solid #16181c;
+    overflow:hidden; position:relative; box-shadow:0 24px 60px rgba(0,0,0,.5); color:#1c1c1e; }
+  .screen { position:absolute; inset:0; display:none; flex-direction:column; background:#fff; }
+  .screen.on { display:flex; }
+  .content { flex:1; overflow-y:auto; }
+
+  .nbar { display:flex; align-items:center; padding:16px 16px 8px; gap:8px; }
+  .nbar .logo { font-size:20px; font-weight:900; color:#fc7e0f; letter-spacing:.3px; flex:1; }
+  .nbar .ic { background:none; border:none; color:#fc7e0f; font-size:21px; cursor:pointer; padding:4px 8px; font-weight:700; }
+  .nbar .bk { background:none; border:none; color:#fc7e0f; font-size:16px; font-weight:600; cursor:pointer;
+    padding:4px 4px; flex:none; }
+  .nbar .ttl { font-size:16px; font-weight:700; flex:1; text-align:center; }
+
+  .sech { padding:18px 16px 7px; font-size:12px; font-weight:700; color:#8e8e93; letter-spacing:1px; }
+  .cell { display:flex; align-items:center; gap:12px; padding:11px 16px; border-bottom:1px solid #f0f0f2; cursor:pointer; }
+  .cell:active { background:#f7f7f8; }
+  .pl-ic { width:30px; height:30px; border-radius:7px; background:#fff3e6; color:#fc7e0f; font-size:15px;
+    display:flex; align-items:center; justify-content:center; flex:none; }
+  .cell .nm { flex:1; font-size:16px; font-weight:800; font-style:italic; color:#fc7e0f; }
+  .cell .ct { font-size:14px; color:#aeaeb2; font-weight:500; }
+  .cell .chev { color:#c7c7cc; font-size:15px; }
+  .art { width:52px; height:52px; border-radius:10px; flex:none; display:flex; align-items:center;
+    justify-content:center; color:#fff; font-weight:800; font-size:17px; }
+  .cell .pn { flex:1; min-width:0; }
+  .cell .pn b { display:block; font-size:15.5px; font-weight:650; font-style:normal; color:#1c1c1e;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cell .pn span { font-size:12.5px; color:#8e8e93; }
+
+  /* mini bar */
+  .mini { position:absolute; left:0; right:0; bottom:0; background:#f7f7f8; border-top:1px solid #e3e3e6;
+    display:flex; align-items:center; gap:12px; padding:10px 16px 18px; cursor:pointer; }
+  .mini .art { width:38px; height:38px; font-size:13px; border-radius:8px; }
+  .mini .mt { flex:1; min-width:0; }
+  .mini .mt b { display:block; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mini .mt span { font-size:11.5px; color:#8e8e93; }
+  .mini button { background:none; border:none; font-size:22px; color:#1c1c1e; cursor:pointer; }
+
+  /* show detail */
+  .shead { display:flex; gap:13px; padding:8px 16px 12px; align-items:center; border-bottom:1px solid #f0f0f2; }
+  .shead .art { width:64px; height:64px; font-size:21px; }
+  .shead h2 { font-size:18px; font-weight:800; }
+  .shead .au { font-size:13px; color:#8e8e93; margin-top:2px; }
+  .shead .gear { margin-left:auto; background:none; border:none; color:#fc7e0f; font-size:20px; cursor:pointer; }
+  .ep { display:flex; gap:10px; padding:12px 16px; border-bottom:1px solid #f0f0f2; cursor:pointer; }
+  .ep .ei { flex:1; min-width:0; }
+  .ep .ei b { display:block; font-size:15px; font-weight:700; line-height:1.3; }
+  .ep .ei .meta { font-size:12px; color:#8e8e93; margin:3px 0 4px; }
+  .ep .ei .meta .dl { color:#34a853; font-weight:600; }
+  .ep .ei p { font-size:13px; color:#8e8e93; line-height:1.45; display:-webkit-box;
+    -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .ep .add { background:none; border:1.5px solid #fc7e0f; color:#fc7e0f; width:30px; height:30px;
+    border-radius:50%; font-size:17px; font-weight:800; cursor:pointer; flex:none; margin-top:2px; line-height:1; }
+
+  /* player */
+  .player { background:linear-gradient(180deg,#2a6271 0%,#173c47 70%, #122e37 100%); color:#fff; }
+  .player .ptop { display:flex; align-items:center; padding:14px 16px 4px; }
+  .player .ptop button { background:none; border:none; color:rgba(255,255,255,.85); font-size:19px; cursor:pointer; padding:4px 8px; }
+  .player .ptop .pn { flex:1; text-align:center; font-size:13px; font-weight:700; color:rgba(255,255,255,.85); }
+  .pagewrap { flex:none; height:330px; display:flex; flex-direction:column; }
+  .ppage { display:none; flex:1; overflow-y:auto; padding:8px 26px 0; }
+  .ppage.on { display:block; }
+  .partbox { display:flex; justify-content:center; padding-top:14px; }
+  .part { width:252px; height:252px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+    font-size:64px; font-weight:800; color:#fff; box-shadow:0 18px 44px rgba(0,0,0,.45); }
+  .ppage h4 { font-size:11px; font-weight:800; letter-spacing:1.4px; color:rgba(255,255,255,.55);
+    text-transform:uppercase; margin:10px 0 8px; }
+  .ppage p { font-size:13.5px; line-height:1.6; color:rgba(255,255,255,.85); }
+  .ppage a { color:#ffb46b; text-decoration:none; font-weight:700; }
+  .chrow { display:flex; justify-content:space-between; padding:11px 2px; font-size:14px;
+    border-bottom:1px solid rgba(255,255,255,.12); cursor:pointer; color:rgba(255,255,255,.8); }
+  .chrow.now { color:#fff; font-weight:800; }
+  .chrow span:last-child { color:rgba(255,255,255,.55); font-variant-numeric:tabular-nums; }
+  .dots { display:flex; justify-content:center; gap:7px; padding:10px 0 2px; flex:none; }
+  .dots button { width:7px; height:7px; border-radius:50%; border:none; background:rgba(255,255,255,.3); cursor:pointer; padding:0; }
+  .dots button.sel { background:#fff; }
+  .ptmeta { text-align:center; padding:6px 24px 0; flex:none; }
+  .ptmeta b { font-size:16.5px; display:block; line-height:1.3; }
+  .ptmeta span { font-size:13px; color:rgba(255,255,255,.6); }
+  .pscrub { padding:14px 26px 0; flex:none; }
+  .pscrub .bar { height:4px; background:rgba(255,255,255,.22); border-radius:2px; position:relative; }
+  .pscrub .bar i { display:block; width:34%; height:100%; background:#fff; border-radius:2px; }
+  .pscrub .bar u { position:absolute; top:-4.5px; width:13px; height:13px; background:#fff; border-radius:50%; left:34%; }
+  .pscrub .tick { position:absolute; top:-2px; width:2px; height:8px; background:rgba(255,255,255,.55); border-radius:1px; }
+  .pscrub .tt { display:flex; justify-content:space-between; font-size:11px; color:rgba(255,255,255,.6);
+    margin-top:8px; font-variant-numeric:tabular-nums; }
+  .pctr { display:flex; align-items:center; justify-content:center; gap:34px; padding:8px 0 2px; flex:none; }
+  .pctr button { background:none; border:none; color:#fff; cursor:pointer; }
+  .pctr .sk { font-size:12px; font-weight:800; width:54px; height:54px; }
+  .pctr .sk i { font-style:normal; display:block; font-size:24px; margin-bottom:-3px; }
+  .pctr .pp { font-size:54px; line-height:1; }
+  .pbot { display:flex; justify-content:space-around; padding:8px 30px 20px; flex:none; }
+  .pbot button { background:none; border:none; color:rgba(255,255,255,.8); font-size:12px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .pbot button .g { font-size:20px; }
+  .pbot button.hot { color:#ffb46b; }
+
+  /* effects sheet */
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.45); display:none; z-index:8; }
+  .dim.on { display:block; }
+  .sheet { position:absolute; left:0; right:0; bottom:-480px; background:#fff; color:#1c1c1e; z-index:9;
+    border-radius:18px 18px 0 0; transition:bottom .25s ease; padding-bottom:18px; }
+  .sheet.on { bottom:0; }
+  .sheet .grab { width:40px; height:5px; background:#d6d6da; border-radius:3px; margin:10px auto 6px; }
+  .sheet h3 { text-align:center; font-size:16px; font-weight:800; padding-bottom:10px; border-bottom:1px solid #f0f0f2; }
+  .spd { display:flex; gap:8px; padding:16px; }
+  .spd button { flex:1; border:1.5px solid #e3e3e6; background:#fff; border-radius:10px; padding:11px 0;
+    font-size:14px; font-weight:700; color:#1c1c1e; cursor:pointer; }
+  .spd button.sel { background:#fc7e0f; border-color:#fc7e0f; color:#fff; }
+  .tgl { display:flex; align-items:center; gap:13px; padding:13px 16px; border-bottom:1px solid #f0f0f2; }
+  .tgl .ti { flex:1; }
+  .tgl .ti b { display:block; font-size:15px; font-weight:700; }
+  .tgl .ti span { font-size:12px; color:#8e8e93; }
+  .tgl .ti span em { color:#fc7e0f; font-style:normal; font-weight:700; }
+  .sw { width:50px; height:30px; border-radius:15px; background:#e3e3e6; border:none; position:relative;
+    cursor:pointer; flex:none; transition:background .15s; }
+  .sw u { position:absolute; top:2px; left:2px; width:26px; height:26px; border-radius:50%; background:#fff;
+    box-shadow:0 1px 4px rgba(0,0,0,.25); transition:left .15s; }
+  .sw.onn { background:#fc7e0f; }
+  .sw.onn u { left:22px; }
+  .perpod { display:flex; align-items:center; gap:10px; padding:13px 16px 0; font-size:13px; color:#8e8e93; }
+
+  .jump { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center; max-width:430px; }
+  .jump button { background:#23252c; color:#aeb5c2; border:1px solid #33363f; border-radius:999px;
+    font-size:12px; padding:6px 12px; cursor:pointer; }
+
+  .c1{background:linear-gradient(135deg,#3d6ef7,#23c4a0)} .c2{background:linear-gradient(135deg,#e85d75,#7b2ff7)}
+  .c3{background:linear-gradient(135deg,#f7971e,#ffd200);color:#5c4500!important} .c4{background:linear-gradient(135deg,#16a085,#145a32)}
+  .c5{background:linear-gradient(135deg,#7d4f2a,#caa472)} .c6{background:linear-gradient(135deg,#c0392b,#8e44ad)}
+  .c7{background:linear-gradient(135deg,#0f7bb5,#7adcf0);color:#073a55!important} .c8{background:linear-gradient(135deg,#5b6573,#2c3e50)}
+</style>
+</head>
+<body>
+  <div class="title"><a href="round-1.html">← round 1</a> &nbsp;·&nbsp; <b>Candidate E — “Boost”</b> · Overcast lineage</div>
+
+  <div class="phone">
+
+    <!-- HOME -->
+    <div class="screen on" id="home">
+      <div class="nbar"><span class="logo">ORATOR</span><button class="ic">⌕</button><button class="ic">＋</button></div>
+      <div class="content" style="padding-bottom:80px">
+        <div class="sech">PLAYLISTS</div>
+        <div class="cell" onclick="go('queue')"><div class="pl-ic">⚡</div><span class="nm">Queue</span><span class="ct">5</span><span class="chev">›</span></div>
+        <div class="cell" onclick="go('queue')"><div class="pl-ic">▶</div><span class="nm">All New Episodes</span><span class="ct">13</span><span class="chev">›</span></div>
+        <div class="cell" onclick="go('queue')"><div class="pl-ic">★</div><span class="nm">Favorites</span><span class="ct">3</span><span class="chev">›</span></div>
+        <div class="cell" onclick="go('queue')"><div class="pl-ic">📚</div><span class="nm">Audiobooks</span><span class="ct">12</span><span class="chev">›</span></div>
+
+        <div class="sech">PODCASTS</div>
+        <div class="cell" onclick="go('show')"><div class="art c1">DB</div><div class="pn"><b>The Daily Brief</b><span>Ep 214 — The Quiet Merge · today</span></div><span class="ct">3</span><span class="chev">›</span></div>
+        <div class="cell" onclick="go('show')"><div class="art c4">OM</div><div class="pn"><b>Orbital Mechanics</b><span>Launch Windows Explained · today</span></div><span class="ct">7</span><span class="chev">›</span></div>
+        <div class="cell" onclick="go('show')"><div class="art c2">LM</div><div class="pn"><b>Lingua Mortua</b><span>Dead Languages Live · today</span></div><span class="ct">1</span><span class="chev">›</span></div>
+        <div class="cell" onclick="go('show')"><div class="art c6">9V</div><div class="pn"><b>99% Visible</b><span>The Invisible Staircase · 2d</span></div><span class="ct">2</span><span class="chev">›</span></div>
+        <div class="cell" onclick="go('show')"><div class="art c3">TS</div><div class="pn"><b>Tales from the Stack</b><span>all played</span></div><span class="chev">›</span></div>
+        <div class="cell" onclick="go('show')"><div class="art c7">WX</div><div class="pn"><b>Weather or Not</b><span>all played</span></div><span class="chev">›</span></div>
+        <div class="cell" onclick="go('show')"><div class="art c8">NF</div><div class="pn"><b>Night Frequencies</b><span>all played</span></div><span class="chev">›</span></div>
+
+        <div class="sech">AUDIOBOOKS</div>
+        <div class="cell" onclick="go('player')"><div class="art c5">DR</div><div class="pn"><b>Dracula</b><span>Ch. 12 of 27 · 9h 14m left</span></div><span class="ct">62%</span><span class="chev">›</span></div>
+        <div class="cell" onclick="go('player')"><div class="art c8">OD</div><div class="pn"><b>The Odyssey</b><span>Ch. 3 of 24 · 11h left</span></div><span class="ct">14%</span><span class="chev">›</span></div>
+      </div>
+      <div class="mini" onclick="go('player')">
+        <div class="art c1">DB</div>
+        <div class="mt"><b>Ep 214 — The Quiet Merge</b><span>−41:08 · 1.2× + smart speed</span></div>
+        <button onclick="event.stopPropagation()">▮▮</button>
+      </div>
+    </div>
+
+    <!-- SHOW DETAIL -->
+    <div class="screen" id="show">
+      <div class="nbar"><button class="bk" onclick="go('home')">‹ Podcasts</button><span class="ttl"></span><button class="ic">⋯</button></div>
+      <div class="shead">
+        <div class="art c1">DB</div>
+        <div><h2>The Daily Brief</h2><div class="au">Meridian Audio · 3 new episodes</div></div>
+        <button class="gear">⚙</button>
+      </div>
+      <div class="content" style="padding-bottom:80px">
+        <div class="ep" onclick="go('player')">
+          <div class="ei">
+            <b>Ep 214 — The Quiet Merge</b>
+            <div class="meta">TODAY · 1:02:22 · <span class="dl">↓ downloaded</span> · transcript</div>
+            <p>This week we follow the merge nobody noticed — and what it tells us about how teams actually ship. With guest Dr. Sona Patel.</p>
+          </div>
+          <button class="add" onclick="event.stopPropagation()">＋</button>
+        </div>
+        <div class="ep" onclick="go('player')">
+          <div class="ei">
+            <b>Ep 213 — Margins of Error</b>
+            <div class="meta">YESTERDAY · 48:09</div>
+            <p>Polls said one thing, the vote said another. We dig into why forecasting keeps failing in the same direction.</p>
+          </div>
+          <button class="add" onclick="event.stopPropagation()">＋</button>
+        </div>
+        <div class="ep" onclick="go('player')">
+          <div class="ei">
+            <b>Ep 212 — Five Hundred Days of Static</b>
+            <div class="meta">JUN 9 · 55:31</div>
+            <p>A community radio station that broadcast silence for over a year — on purpose. The strange economics of dead air.</p>
+          </div>
+          <button class="add" onclick="event.stopPropagation()">＋</button>
+        </div>
+        <div class="ep" onclick="go('player')">
+          <div class="ei">
+            <b>Ep 211 — Interview: Dr. Sona Patel</b>
+            <div class="meta">JUN 8 · 1:14:05 · <span class="dl">↓ downloaded</span> · transcript</div>
+            <p>The full conversation on review queues, merge anxiety, and why "looks good to me" means five different things.</p>
+          </div>
+          <button class="add" onclick="event.stopPropagation()">＋</button>
+        </div>
+        <div class="ep" onclick="go('player')">
+          <div class="ei">
+            <b>Ep 210 — The Long Tail Wags</b>
+            <div class="meta">JUN 5 · 39:00 · PLAYED ✓</div>
+            <p>Why the least-downloaded episodes of any show quietly carry the catalog, and what that means for archives.</p>
+          </div>
+          <button class="add" onclick="event.stopPropagation()">＋</button>
+        </div>
+      </div>
+      <div class="mini" onclick="go('player')">
+        <div class="art c1">DB</div>
+        <div class="mt"><b>Ep 214 — The Quiet Merge</b><span>−41:08 · 1.2× + smart speed</span></div>
+        <button onclick="event.stopPropagation()">▮▮</button>
+      </div>
+    </div>
+
+    <!-- QUEUE PLAYLIST -->
+    <div class="screen" id="queue">
+      <div class="nbar"><button class="bk" onclick="go('home')">‹ Orator</button><span class="ttl">⚡ Queue</span><button class="ic" style="font-size:15px">Edit</button></div>
+      <div class="content" style="padding-bottom:80px">
+        <div class="ep" onclick="go('player')">
+          <div class="art c1" style="width:44px;height:44px;font-size:14px;margin-top:2px">DB</div>
+          <div class="ei"><b>Ep 214 — The Quiet Merge</b><div class="meta">NOW PLAYING · −41:08</div></div>
+        </div>
+        <div class="ep">
+          <div class="art c5" style="width:44px;height:44px;font-size:14px;margin-top:2px">DR</div>
+          <div class="ei"><b>Dracula — Chapter 12</b><div class="meta">AUDIOBOOK · resumes 14:22 · 36:10</div></div>
+          <span style="color:#c7c7cc;font-size:17px;margin-top:8px">≡</span>
+        </div>
+        <div class="ep">
+          <div class="art c4" style="width:44px;height:44px;font-size:14px;margin-top:2px">OM</div>
+          <div class="ei"><b>Launch Windows Explained</b><div class="meta">ORBITAL MECHANICS · 52:00</div></div>
+          <span style="color:#c7c7cc;font-size:17px;margin-top:8px">≡</span>
+        </div>
+        <div class="ep">
+          <div class="art c6" style="width:44px;height:44px;font-size:14px;margin-top:2px">9V</div>
+          <div class="ei"><b>The Invisible Staircase</b><div class="meta">99% VISIBLE · ↓ · 28:14</div></div>
+          <span style="color:#c7c7cc;font-size:17px;margin-top:8px">≡</span>
+        </div>
+        <div class="ep">
+          <div class="art c5" style="width:44px;height:44px;font-size:14px;margin-top:2px">DR</div>
+          <div class="ei"><b>Dracula — Chapter 13</b><div class="meta">AUDIOBOOK · 44:51</div></div>
+          <span style="color:#c7c7cc;font-size:17px;margin-top:8px">≡</span>
+        </div>
+        <div class="sech" style="text-align:center;letter-spacing:.4px">New episodes are added to the top of this playlist</div>
+      </div>
+      <div class="mini" onclick="go('player')">
+        <div class="art c1">DB</div>
+        <div class="mt"><b>Ep 214 — The Quiet Merge</b><span>−41:08 · 1.2× + smart speed</span></div>
+        <button onclick="event.stopPropagation()">▮▮</button>
+      </div>
+    </div>
+
+    <!-- PLAYER -->
+    <div class="screen player" id="player">
+      <div class="ptop">
+        <button onclick="go('home')">⌄</button>
+        <span class="pn">THE DAILY BRIEF</span>
+        <button>↥</button>
+      </div>
+      <div class="pagewrap">
+        <div class="ppage on" id="pgart"><div class="partbox"><div class="part c1">DB</div></div></div>
+        <div class="ppage" id="pgnotes">
+          <h4>Show notes</h4>
+          <p>This week we follow the merge nobody noticed — and what it tells us about how teams actually ship.
+          With guest <b>Dr. Sona Patel</b>.</p>
+          <p style="margin-top:10px">
+            <a href="#" onclick="return false">02:11</a> — Cold open: the Friday deploy<br>
+            <a href="#" onclick="return false">14:30</a> — Why review queues stall<br>
+            <a href="#" onclick="return false">38:05</a> — Interview begins<br>
+            <a href="#" onclick="return false">55:40</a> — Listener mail
+          </p>
+          <h4 style="margin-top:16px">Transcript</h4>
+          <p style="font-size:12.5px"><b>00:00</b> Welcome back to The Daily Brief…<br><b>00:08</b> Today: a merge request that sat for five hundred days…</p>
+        </div>
+        <div class="ppage" id="pgch">
+          <h4>Chapters</h4>
+          <div class="chrow"><span>1 · Cold open</span><span>02:11</span></div>
+          <div class="chrow now"><span>▶ 2 · The review queue</span><span>14:30</span></div>
+          <div class="chrow"><span>3 · Interview: Dr. Patel</span><span>38:05</span></div>
+          <div class="chrow"><span>4 · Listener mail</span><span>55:40</span></div>
+        </div>
+      </div>
+      <div class="dots">
+        <button class="sel" onclick="page(this,'pgart')"></button>
+        <button onclick="page(this,'pgnotes')"></button>
+        <button onclick="page(this,'pgch')"></button>
+      </div>
+      <div class="ptmeta">
+        <b>Ep 214 — The Quiet Merge</b>
+        <span>Ch. 2 — The review queue</span>
+      </div>
+      <div class="pscrub">
+        <div class="bar">
+          <i></i><u></u>
+          <span class="tick" style="left:3.4%"></span><span class="tick" style="left:23.2%"></span>
+          <span class="tick" style="left:61%"></span><span class="tick" style="left:89.2%"></span>
+        </div>
+        <div class="tt"><span>21:14</span><span>1.2× · smart speed</span><span>−41:08</span></div>
+      </div>
+      <div class="pctr">
+        <button class="sk"><i>↺</i>15</button>
+        <button class="pp">▮▮</button>
+        <button class="sk"><i>↻</i>30</button>
+      </div>
+      <div class="pbot">
+        <button><span class="g">😴</span>Sleep</button>
+        <button class="hot" onclick="fx(true)"><span class="g">⚡</span>Effects</button>
+        <button onclick="go('queue')"><span class="g">☰</span>Up Next</button>
+        <button><span class="g">★</span>Favorite</button>
+      </div>
+
+      <!-- effects sheet -->
+      <div class="dim" id="dim" onclick="fx(false)"></div>
+      <div class="sheet" id="fxsheet">
+        <div class="grab"></div>
+        <h3>Effects</h3>
+        <div class="spd">
+          <button>1×</button><button class="sel">1.2×</button><button>1.5×</button><button>1.7×</button><button>2×</button>
+        </div>
+        <div class="tgl">
+          <div class="ti"><b>Smart Speed</b><span>Trims silences · saved <em>9h 41m</em> so far</span></div>
+          <button class="sw onn" onclick="this.classList.toggle('onn')"><u></u></button>
+        </div>
+        <div class="tgl">
+          <div class="ti"><b>Voice Boost</b><span>Louder, normalized vocals</span></div>
+          <button class="sw" onclick="this.classList.toggle('onn')"><u></u></button>
+        </div>
+        <div class="tgl">
+          <div class="ti"><b>Skip intro / outro</b><span>−30s start · −90s end</span></div>
+          <button class="sw onn" onclick="this.classList.toggle('onn')"><u></u></button>
+        </div>
+        <div class="perpod">
+          <button class="sw onn" style="transform:scale(.8)" onclick="this.classList.toggle('onn')"><u></u></button>
+          Use these settings only for <b>&nbsp;The Daily Brief</b>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="jump">
+    <button onclick="go('home')">Home</button>
+    <button onclick="go('show')">Show detail</button>
+    <button onclick="go('queue')">Queue playlist</button>
+    <button onclick="go('player')">Player</button>
+    <button onclick="go('player');fx(true)">Effects sheet</button>
+  </div>
+
+<script>
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  fx(false);
+}
+function page(btn, id) {
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.querySelectorAll('.ppage').forEach(p => p.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+function fx(open) {
+  document.getElementById('dim').classList.toggle('on', open);
+  document.getElementById('fxsheet').classList.toggle('on', open);
+}
+</script>
+</body>
+</html>

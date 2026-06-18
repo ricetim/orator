@@ -16,5 +16,8 @@ abstract class PlaybackModule {
     abstract fun speedOverrideListeners(): Set<SpeedOverrideListener>
 
     @Multibinds
+    abstract fun clipOverrideListeners(): Set<ClipOverrideListener>
+
+    @Multibinds
     abstract fun playbackEventListeners(): Set<PlaybackEventListener>
 }

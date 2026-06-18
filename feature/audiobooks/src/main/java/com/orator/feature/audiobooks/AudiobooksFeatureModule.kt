@@ -1,5 +1,6 @@
 package com.orator.feature.audiobooks
 
+import com.orator.core.designsystem.contract.SettingsSection
 import com.orator.core.navigation.FeatureEntry
 import com.orator.core.playback.PlaybackPositionListener
 import com.orator.core.playback.SpeedOverrideListener
@@ -36,4 +37,8 @@ interface AudiobooksFeatureModule {
 
     @Binds
     fun bindChapterSource(impl: ContentResolverM4bChapterSource): M4bChapterSource
+
+    @Binds
+    @IntoSet
+    fun bindSettingsSection(section: AudiobooksSettingsSection): SettingsSection
 }

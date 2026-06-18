@@ -2,6 +2,7 @@ package com.orator.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.orator.core.designsystem.contract.SettingsSection
 import com.orator.core.model.MediaType
 import com.orator.core.playback.PlayerPreferences
 import com.orator.core.playback.PlayerPrefs
@@ -15,6 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val prefs: PlayerPreferences,
+    /** Feature-owned setting blocks (OPML import, library folders, …), Hilt-collected. */
+    val sections: Set<@JvmSuppressWildcards SettingsSection>,
 ) : ViewModel() {
 
     val state: StateFlow<PlayerPrefs> = prefs.flow

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Candidate G — Nocturne</title>
+<style>
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  body { background:#101216; font-family: system-ui, -apple-system, Roboto, sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 12px; color:#dde0e5; }
+  .title { font-size:15px; color:#9aa0ab; margin-bottom:14px; }
+  .title b { color:#fff; }
+  .title a { color:#2dd4bf; text-decoration:none; }
+
+  .phone { width:393px; height:830px; background:#050507; border-radius:32px; border:10px solid #16181c;
+    overflow:hidden; position:relative; box-shadow:0 24px 60px rgba(0,0,0,.5); color:#e6e8ea; }
+  .screen { position:absolute; inset:0; display:none; flex-direction:column; background:#050507; }
+  .screen.on { display:flex; }
+  .content { flex:1; overflow-y:auto; }
+
+  .topbar { display:flex; align-items:center; gap:10px; padding:16px 16px 8px; }
+  .topbar h1 { font-size:21px; font-weight:800; flex:1; letter-spacing:.3px; }
+  .icnbtn { background:none; border:none; font-size:20px; color:#9aa0a8; cursor:pointer; padding:4px 8px; }
+  .back { background:none; border:none; font-size:21px; color:#e6e8ea; cursor:pointer; padding:4px 8px; }
+
+  .chips { display:flex; gap:8px; padding:4px 16px 12px; overflow-x:auto; }
+  .chip { flex:none; font-size:12.5px; font-weight:700; border:1px solid #26282e; border-radius:999px;
+    padding:7px 14px; color:#9aa0a8; background:#0e0f12; cursor:pointer; }
+  .chip.sel { background:#2dd4bf; border-color:#2dd4bf; color:#04211c; }
+
+  .pgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; padding:8px 16px 110px; }
+  .tile { position:relative; cursor:pointer; }
+  .art { width:100%; aspect-ratio:1; border-radius:14px; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:23px; letter-spacing:.5px; }
+  .badge { position:absolute; top:-6px; right:-6px; background:#2dd4bf; color:#04211c; font-size:11px;
+    font-weight:800; border-radius:999px; min-width:20px; height:20px; display:flex; align-items:center;
+    justify-content:center; padding:0 5px; border:2px solid #050507; z-index:2; }
+  .tile .cap { font-size:10.5px; color:#8f949c; margin-top:6px; line-height:1.3; text-align:center; }
+  .tile .cap b { color:#cdd1d6; display:block; font-size:11px; }
+  .pbar { position:absolute; left:7px; right:7px; bottom:7px; height:4px; border-radius:2px; background:rgba(0,0,0,.45); }
+  .pbar i { display:block; height:100%; border-radius:2px; background:#2dd4bf; }
+  .stack { margin-top:10px; }
+  .stack .art { box-shadow:5px -5px 0 -1px #1a1c21, 10px -10px 0 -2px #111317; }
+  .typ { position:absolute; top:6px; left:6px; font-size:9px; font-weight:800; letter-spacing:.8px;
+    background:rgba(0,0,0,.55); color:#cdd1d6; border-radius:6px; padding:2px 6px; z-index:2; }
+
+  /* now-playing slim bar */
+  .mini { position:absolute; left:10px; right:10px; bottom:12px; background:#13151a; border:1px solid #22252c;
+    color:#fff; border-radius:14px; display:flex; align-items:center; gap:11px; padding:9px 13px;
+    cursor:pointer; z-index:5; }
+  .mini .m-art { width:38px; height:38px; border-radius:8px; flex:none; display:flex; align-items:center;
+    justify-content:center; font-weight:800; font-size:13px; }
+  .mini .m-t { flex:1; min-width:0; }
+  .mini .m-t b { display:block; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mini .m-t span { font-size:10.5px; color:#8f949c; }
+  .mini button { background:none; border:none; color:#fff; font-size:19px; cursor:pointer; }
+  .mini .mp { position:absolute; left:13px; right:13px; bottom:3px; height:2px; background:#22252c; }
+  .mini .mp i { display:block; width:34%; height:100%; background:#2dd4bf; }
+
+  /* drawer (with inline search) */
+  .dim { position:absolute; inset:0; background:rgba(0,0,0,.55); z-index:18; display:none; }
+  .dim.on { display:block; }
+  .drawer { position:absolute; top:0; bottom:0; left:0; width:300px; background:#0c0d10; z-index:19;
+    transform:translateX(-105%); transition:transform .22s ease; display:flex; flex-direction:column;
+    border-right:1px solid #1c1e24; }
+  .drawer.on { transform:translateX(0); }
+  .drawer .dh { padding:24px 18px 12px; }
+  .drawer .dh b { font-size:17px; font-weight:900; letter-spacing:2px; color:#2dd4bf; }
+  .drawer .dh span { display:block; font-size:11px; color:#8f949c; margin-top:3px; }
+  .dsearch { margin:4px 14px 10px; background:#16181d; border:1px solid #23262c; border-radius:11px;
+    padding:11px 13px; color:#8f949c; font-size:13.5px; cursor:pointer; }
+  .ditem { display:flex; align-items:center; gap:14px; padding:13px 18px; font-size:14px; font-weight:600;
+    color:#cdd1d6; cursor:pointer; border:none; background:none; width:100%; text-align:left; }
+  .ditem:active { background:#16181d; }
+  .ditem .g { font-size:17px; width:24px; text-align:center; }
+  .dsec { padding:13px 18px 3px; font-size:10px; font-weight:800; color:#5e636c; letter-spacing:1.4px; }
+
+  /* rows */
+  .swipeable .sw-inner { background:#050507; }
+  .sw-bg-l { background:#b3382c; }
+  .sw-bg-r { background:#0f8a6d; }
+  .eprow { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid #15171c; cursor:pointer; }
+  .eprow .d { width:42px; flex:none; text-align:center; }
+  .eprow .d b { display:block; font-size:14px; }
+  .eprow .d span { font-size:10px; color:#6e737c; text-transform:uppercase; }
+  .eprow .t { flex:1; min-width:0; }
+  .eprow .t b { display:block; font-size:13.5px; font-weight:650; line-height:1.3; }
+  .eprow .t span { font-size:11.5px; color:#8f949c; }
+  .eprow .t .dl { color:#2dd4bf; font-weight:600; }
+  .qart { width:44px; height:44px; border-radius:9px; flex:none; display:flex; align-items:center;
+    justify-content:center; font-weight:800; color:#fff; font-size:14px; }
+  .hint { padding:8px 18px; font-size:11px; color:#6e737c; text-align:center; }
+  .hint b { color:#9aa0a8; }
+  .secl { padding:12px 16px 6px; font-size:11px; font-weight:800; color:#6e737c; text-transform:uppercase; letter-spacing:.8px; }
+
+  .shead { display:flex; gap:14px; padding:4px 16px 10px; }
+  .shead .hart { width:86px; height:86px; border-radius:14px; flex:none; display:flex; align-items:center;
+    justify-content:center; font-size:28px; font-weight:800; color:#fff; }
+  .shead h2 { font-size:17px; font-weight:800; line-height:1.25; }
+  .shead .au { font-size:12.5px; color:#8f949c; margin:3px 0 8px; }
+  .pillb { display:inline-block; font-size:11.5px; font-weight:700; border:1px solid #26282e; border-radius:999px;
+    padding:5px 11px; margin:0 5px 5px 0; color:#cdd1d6; background:#0e0f12; cursor:pointer; }
+  .pillb.hot { background:#2dd4bf; border-color:#2dd4bf; color:#04211c; }
+
+  /* podcast player — E structure, nocturne skin */
+  .pplayer { background:radial-gradient(120% 90% at 50% 0%, #103c38 0%, #07120f 55%, #050507 100%); }
+  .ptop { display:flex; align-items:center; padding:14px 16px 2px; flex:none; }
+  .ptop button { background:none; border:none; color:#9aa0a8; font-size:19px; cursor:pointer; padding:4px 8px; }
+  .ptop .pn { flex:1; text-align:center; font-size:12.5px; font-weight:700; color:#9aa0a8; letter-spacing:1px; }
+  .pagewrap { flex:none; height:296px; display:flex; flex-direction:column; }
+  .ppage { display:none; flex:1; overflow-y:auto; padding:6px 26px 0; }
+  .ppage.on { display:block; }
+  .partbox { display:flex; justify-content:center; padding-top:10px; }
+  .part { width:224px; height:224px; border-radius:18px; display:flex; align-items:center; justify-content:center;
+    font-size:56px; font-weight:800; color:#fff; box-shadow:0 18px 50px rgba(0,0,0,.7); }
+  .ppage h4 { font-size:10.5px; font-weight:800; letter-spacing:1.4px; color:#5e636c; text-transform:uppercase; margin:10px 0 8px; }
+  .ppage p { font-size:13px; line-height:1.6; color:#cdd1d6; }
+  .ppage a { color:#5eead4; text-decoration:none; font-weight:700; }
+  .chrow { display:flex; justify-content:space-between; padding:10px 2px; font-size:13.5px;
+    border-bottom:1px solid #1a1c21; cursor:pointer; color:#9aa0a8; }
+  .chrow.now { color:#5eead4; font-weight:800; }
+  .dots { display:flex; justify-content:center; gap:7px; padding:8px 0 0; flex:none; }
+  .dots button { width:7px; height:7px; border-radius:50%; border:none; background:#26282e; cursor:pointer; padding:0; }
+  .dots button.sel { background:#2dd4bf; }
+  .ptmeta { text-align:center; padding:6px 24px 0; flex:none; }
+  .ptmeta b { font-size:15.5px; display:block; line-height:1.3; }
+  .ptmeta span { font-size:12px; color:#8f949c; }
+  .dual { padding:10px 26px 0; flex:none; }
+  .dual .lbl { display:flex; justify-content:space-between; font-size:10px; color:#6e737c;
+    margin:8px 0 5px; text-transform:uppercase; letter-spacing:.7px; font-variant-numeric:tabular-nums; }
+  .dual .bar { height:4px; background:#1c1e24; border-radius:2px; position:relative; }
+  .dual .bar i { display:block; height:100%; background:#2dd4bf; border-radius:2px; }
+  .dual .bar.ch i { background:#5eead4; }
+  .dual .bar u { position:absolute; top:-4.5px; width:13px; height:13px; background:#fff; border-radius:50%; }
+  .dual .tick { position:absolute; top:-2px; width:2px; height:8px; background:#3a3e46; }
+  .pctr { display:flex; align-items:center; justify-content:center; gap:34px; padding:12px 0 2px; flex:none; }
+  .pctr button { background:none; border:none; color:#fff; cursor:pointer; }
+  .pctr .sk { font-size:12px; font-weight:800; color:#cdd1d6; }
+  .pctr .sk i { font-style:normal; display:block; font-size:23px; margin-bottom:-2px; }
+  .pctr .pp { width:72px; height:72px; border-radius:50%; background:#2dd4bf; color:#04211c; font-size:26px; font-weight:900; }
+  .pbot { display:flex; justify-content:space-around; padding:10px 30px 18px; flex:none; }
+  .pbot button { background:none; border:none; color:#9aa0a8; font-size:11px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .pbot button .g { font-size:19px; }
+  .pbot button.hot { color:#5eead4; }
+
+  /* book player — B structure, nocturne skin */
+  .bhdr { display:flex; align-items:center; gap:10px; padding:16px 16px 4px; }
+  .bhdr .bt { flex:1; min-width:0; }
+  .bhdr .bt b { display:block; font-size:15.5px; }
+  .bhdr .bt span { font-size:12px; color:#8f949c; }
+  .coverwrap { display:flex; justify-content:center; padding:10px 0 4px; }
+  .cover { width:178px; height:178px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+    font-size:48px; font-weight:800; color:#fff; box-shadow:0 16px 44px rgba(0,0,0,.7); }
+  .chap { text-align:center; padding:12px 20px 2px; }
+  .chap b { font-size:15.5px; }
+  .chap span { display:block; font-size:12px; color:#8f949c; margin-top:3px; }
+  .bars { padding:10px 22px 2px; }
+  .bars .lbl { display:flex; justify-content:space-between; font-size:10.5px; color:#6e737c; margin:9px 0 5px;
+    text-transform:uppercase; letter-spacing:.6px; }
+  .bars .bar { height:7px; background:#1c1e24; border-radius:4px; }
+  .bars .bar i { display:block; height:100%; border-radius:4px; background:#2dd4bf; }
+  .bars .bar i.bk { background:#3e434c; }
+  .padgrid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; padding:14px 16px 6px; }
+  .pad { background:#13151a; border:1px solid #22252c; border-radius:14px; color:#e6e8ea; font-size:15px;
+    font-weight:800; padding:15px 0; cursor:pointer; text-align:center; }
+  .pad small { display:block; font-weight:600; font-size:10px; color:#8f949c; margin-top:2px; }
+  .playrow { display:grid; grid-template-columns:1fr 2fr 1fr; gap:10px; padding:6px 16px; }
+  .playrow .pad { font-size:20px; padding:20px 0; }
+  .playrow .play { background:#2dd4bf; color:#04211c; font-size:30px; border:none; border-radius:18px;
+    cursor:pointer; font-weight:900; }
+  .btiles { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; padding:8px 16px 18px; }
+  .btile { background:#13151a; border:1px solid #22252c; border-radius:14px; padding:11px 4px; text-align:center; cursor:pointer; }
+  .btile .g { font-size:17px; display:block; margin-bottom:3px; }
+  .btile b { font-size:11px; }
+  .btile small { display:block; font-size:9.5px; color:#8f949c; }
+
+  /* abs */
+  .srv { margin:4px 16px 10px; background:#0e0f12; border:1px solid #1c1e24; border-radius:14px;
+    padding:12px 14px; display:flex; align-items:center; gap:11px; }
+  .srv .ok { width:9px; height:9px; border-radius:50%; background:#2dd4bf; flex:none; }
+  .srv b { font-size:13px; font-family:ui-monospace,monospace; }
+  .srv span { display:block; font-size:10.5px; color:#8f949c; }
+  .cloud { position:absolute; top:6px; right:6px; background:rgba(0,0,0,.6); color:#cdd1d6; font-size:10.5px;
+    border-radius:7px; padding:2px 7px; z-index:2; }
+
+  .jump { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center; max-width:440px; }
+  .jump button { background:#23252c; color:#aeb5c2; border:1px solid #33363f; border-radius:999px;
+    font-size:12px; padding:6px 12px; cursor:pointer; }
+
+  .c1{background:linear-gradient(135deg,#3d6ef7,#23c4a0)} .c2{background:linear-gradient(135deg,#e85d75,#7b2ff7)}
+  .c3{background:linear-gradient(135deg,#f7971e,#ffd200);color:#5c4500!important} .c4{background:linear-gradient(135deg,#16a085,#145a32)}
+  .c5{background:linear-gradient(135deg,#7d4f2a,#caa472)} .c6{background:linear-gradient(135deg,#c0392b,#8e44ad)}
+  .c7{background:linear-gradient(135deg,#0f7bb5,#7adcf0);color:#073a55!important} .c8{background:linear-gradient(135deg,#5b6573,#2c3e50)}
+  .c9{background:linear-gradient(135deg,#8e2d2d,#d4a017)} .c10{background:linear-gradient(135deg,#1f3a5f,#4d7ea8)}
+</style>
+</head>
+<body>
+  <div class="title"><a href="round-2.html">← round 2</a> &nbsp;·&nbsp; <b>Candidate G — “Nocturne”</b> · unified AMOLED library</div>
+
+  <div class="phone">
+
+    <!-- UNIFIED LIBRARY -->
+    <div class="screen on" id="home">
+      <div class="topbar"><button class="icnbtn" onclick="drawer(true)">☰</button><h1>Library</h1>
+        <button class="icnbtn" onclick="go('queue')">⌸</button><button class="icnbtn">↻</button></div>
+      <div class="chips">
+        <span class="chip sel" onclick="filt(this,'all')">All</span>
+        <span class="chip" onclick="filt(this,'pod')">Podcasts</span>
+        <span class="chip" onclick="filt(this,'book')">Books</span>
+        <span class="chip" onclick="filt(this,'ser')">Series</span>
+        <span class="chip" onclick="go('abs')">☁ Server</span>
+      </div>
+      <div class="content">
+        <div class="pgrid">
+          <div class="tile f-pod" onclick="go('show')"><span class="typ">POD</span><div class="art c1">DB</div><div class="badge">3</div><div class="cap"><b>The Daily Brief</b>3 new</div></div>
+          <div class="tile f-book" onclick="go('bplayer')"><span class="typ">BOOK</span><div class="art c5">DR</div><div class="pbar"><i style="width:62%"></i></div><div class="cap"><b>Dracula</b>9h left</div></div>
+          <div class="tile f-pod" onclick="go('show')"><span class="typ">POD</span><div class="art c4">OM</div><div class="badge">7</div><div class="cap"><b>Orbital Mechanics</b>7 new</div></div>
+          <div class="tile f-ser stack" onclick="go('series')"><span class="typ">SERIES</span><div class="art c10">BA</div><div class="badge">5</div><div class="cap"><b>Barsoom</b>5 books</div></div>
+          <div class="tile f-pod" onclick="go('show')"><span class="typ">POD</span><div class="art c2">LM</div><div class="badge">1</div><div class="cap"><b>Lingua Mortua</b>1 new</div></div>
+          <div class="tile f-book" onclick="go('bplayer')"><span class="typ">BOOK</span><div class="art c8">OD</div><div class="pbar"><i style="width:14%"></i></div><div class="cap"><b>The Odyssey</b>11h left</div></div>
+          <div class="tile f-ser stack" onclick="go('series')"><span class="typ">SERIES</span><div class="art c9">SH</div><div class="badge">9</div><div class="cap"><b>Sherlock Holmes</b>9 books</div></div>
+          <div class="tile f-pod" onclick="go('show')"><span class="typ">POD</span><div class="art c6">9V</div><div class="badge">2</div><div class="cap"><b>99% Visible</b>2 new</div></div>
+          <div class="tile f-book" onclick="go('bplayer')"><span class="typ">BOOK</span><div class="art c4">MM</div><div class="cap"><b>Middlemarch</b>32h</div></div>
+          <div class="tile f-pod" onclick="go('show')"><span class="typ">POD</span><div class="art c3">TS</div><div class="cap"><b>Tales / Stack</b>played</div></div>
+          <div class="tile f-book" onclick="go('bplayer')"><span class="typ">BOOK</span><div class="art c6">JE</div><div class="pbar"><i style="width:91%"></i></div><div class="cap"><b>Jane Eyre</b>1h 40m</div></div>
+          <div class="tile f-pod" onclick="go('show')"><span class="typ">POD</span><div class="art c7">WX</div><div class="cap"><b>Weather or Not</b>played</div></div>
+        </div>
+      </div>
+      <div class="mini" onclick="go('pplayer')">
+        <div class="m-art c1">DB</div>
+        <div class="m-t"><b>Ep 214 — The Quiet Merge</b><span>−41:08 · 1.2× · trim on</span></div>
+        <button onclick="event.stopPropagation()">▮▮</button>
+        <div class="mp"><i></i></div>
+      </div>
+    </div>
+
+    <!-- SERIES -->
+    <div class="screen" id="series">
+      <div class="topbar"><button class="back" onclick="go('home')">←</button><h1 style="font-size:17px">Barsoom</h1><span style="font-size:12px;color:#6e737c">E. R. Burroughs</span></div>
+      <div class="content">
+        <div class="eprow" onclick="go('bplayer')"><div class="qart c10">1</div><div class="t"><b>A Princess of Mars</b><span>finished ✓ · 7h 12m</span></div></div>
+        <div class="eprow" onclick="go('bplayer')"><div class="qart c10">2</div><div class="t"><b>The Gods of Mars</b><span><span class="dl">▶ 38%</span> · 4h 51m left</span></div></div>
+        <div class="eprow" onclick="go('bplayer')"><div class="qart c10">3</div><div class="t"><b>The Warlord of Mars</b><span>7h 04m</span></div></div>
+        <div class="eprow" onclick="go('bplayer')"><div class="qart c10">4</div><div class="t"><b>Thuvia, Maid of Mars</b><span>5h 22m</span></div></div>
+        <div class="eprow" onclick="go('bplayer')"><div class="qart c10">5</div><div class="t"><b>The Chessmen of Mars</b><span>8h 40m · ☁ on server</span></div></div>
+      </div>
+    </div>
+
+    <!-- QUEUE -->
+    <div class="screen" id="queue">
+      <div class="topbar"><button class="back" onclick="go('home')">←</button><h1>Queue</h1><button class="icnbtn">⋮</button></div>
+      <div class="hint">swipe: ← <b>remove</b> (default) · → <b>play next</b> · configurable</div>
+      <div class="content">
+        <div class="secl">Now playing</div>
+        <div class="eprow"><div class="qart c1">DB</div><div class="t"><b>Ep 214 — The Quiet Merge</b><span>The Daily Brief · −41:08</span></div><span style="color:#2dd4bf">▶</span></div>
+        <div class="secl">Next · 4 · 2h 41m</div>
+        <div class="swipeable" data-left="Removed from queue" data-left-action="remove" data-right="Will play next">
+          <div class="sw-bg sw-bg-l">Remove ✕</div><div class="sw-bg sw-bg-r">⬆ Play next</div>
+          <div class="sw-inner"><div class="eprow"><div class="qart c5">DR</div><div class="t"><b>Dracula — Chapter 12</b><span>book · resumes 14:22</span></div><span style="color:#3e434c">≡</span></div></div>
+        </div>
+        <div class="swipeable" data-left="Removed from queue" data-left-action="remove" data-right="Will play next">
+          <div class="sw-bg sw-bg-l">Remove ✕</div><div class="sw-bg sw-bg-r">⬆ Play next</div>
+          <div class="sw-inner"><div class="eprow"><div class="qart c4">OM</div><div class="t"><b>Launch Windows Explained</b><span>Orbital Mechanics · 52m</span></div><span style="color:#3e434c">≡</span></div></div>
+        </div>
+        <div class="swipeable" data-left="Removed from queue" data-left-action="remove" data-right="Will play next">
+          <div class="sw-bg sw-bg-l">Remove ✕</div><div class="sw-bg sw-bg-r">⬆ Play next</div>
+          <div class="sw-inner"><div class="eprow"><div class="qart c6">9V</div><div class="t"><b>The Invisible Staircase</b><span>99% Visible · ↓ · 28m</span></div><span style="color:#3e434c">≡</span></div></div>
+        </div>
+        <div class="swipeable" data-left="Removed from queue" data-left-action="remove" data-right="Will play next">
+          <div class="sw-bg sw-bg-l">Remove ✕</div><div class="sw-bg sw-bg-r">⬆ Play next</div>
+          <div class="sw-inner"><div class="eprow"><div class="qart c5">DR</div><div class="t"><b>Dracula — Chapter 13</b><span>book · 44m</span></div><span style="color:#3e434c">≡</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHOW -->
+    <div class="screen" id="show">
+      <div class="topbar"><button class="back" onclick="go('home')">←</button><h1 style="font-size:16px">The Daily Brief</h1><button class="icnbtn">⋮</button></div>
+      <div class="content">
+        <div class="shead">
+          <div class="hart c1">DB</div>
+          <div>
+            <h2>The Daily Brief</h2>
+            <div class="au">Meridian Audio · 214 episodes</div>
+            <span class="pillb hot">✓ Subscribed</span><span class="pillb">1.2× · −30s/−90s</span>
+          </div>
+        </div>
+        <div class="hint">swipe: → <b>queue</b> · ← <b>delete download</b></div>
+        <div class="swipeable" data-right="＋ Added to queue" data-left="Download deleted">
+          <div class="sw-bg sw-bg-l">Delete ↓ ✕</div><div class="sw-bg sw-bg-r">＋ Queue</div>
+          <div class="sw-inner"><div class="eprow" onclick="go('pplayer')">
+            <div class="d"><b>11</b><span>Jun</span></div>
+            <div class="t"><b>Ep 214 — The Quiet Merge</b><span>1:02:22 · <span class="dl">↓ cached</span> · transcript</span></div></div></div>
+        </div>
+        <div class="swipeable" data-right="＋ Added to queue">
+          <div class="sw-bg sw-bg-r">＋ Queue</div>
+          <div class="sw-inner"><div class="eprow" onclick="go('pplayer')">
+            <div class="d"><b>10</b><span>Jun</span></div>
+            <div class="t"><b>Ep 213 — Margins of Error</b><span>48:09 · stream</span></div></div></div>
+        </div>
+        <div class="swipeable" data-right="＋ Added to queue">
+          <div class="sw-bg sw-bg-r">＋ Queue</div>
+          <div class="sw-inner"><div class="eprow" onclick="go('pplayer')">
+            <div class="d"><b>9</b><span>Jun</span></div>
+            <div class="t"><b>Ep 212 — Five Hundred Days of Static</b><span>55:31 · stream</span></div></div></div>
+        </div>
+        <div class="swipeable" data-right="＋ Added to queue" data-left="Download deleted">
+          <div class="sw-bg sw-bg-l">Delete ↓ ✕</div><div class="sw-bg sw-bg-r">＋ Queue</div>
+          <div class="sw-inner"><div class="eprow" onclick="go('pplayer')">
+            <div class="d"><b>8</b><span>Jun</span></div>
+            <div class="t"><b>Ep 211 — Interview: Dr. Sona Patel</b><span>1:14:05 · <span class="dl">↓ cached</span> · transcript</span></div></div></div>
+        </div>
+        <div style="height:80px"></div>
+      </div>
+      <div class="mini" onclick="go('pplayer')">
+        <div class="m-art c1">DB</div>
+        <div class="m-t"><b>Ep 214 — The Quiet Merge</b><span>−41:08 · 1.2× · trim on</span></div>
+        <button onclick="event.stopPropagation()">▮▮</button>
+        <div class="mp"><i></i></div>
+      </div>
+    </div>
+
+    <!-- PODCAST PLAYER -->
+    <div class="screen pplayer" id="pplayer">
+      <div class="ptop"><button onclick="go('home')">⌄</button><span class="pn">THE DAILY BRIEF</span><button>↥</button></div>
+      <div class="pagewrap">
+        <div class="ppage on" id="pgart"><div class="partbox"><div class="part c1">DB</div></div></div>
+        <div class="ppage" id="pgnotes">
+          <h4>Show notes</h4>
+          <p>This week we follow the merge nobody noticed. With guest <b>Dr. Sona Patel</b>.</p>
+          <p style="margin-top:8px"><a href="#" onclick="return false">02:11</a> Cold open · <a href="#" onclick="return false">14:30</a> Review queues ·
+          <a href="#" onclick="return false">38:05</a> Interview · <a href="#" onclick="return false">55:40</a> Mail</p>
+          <h4 style="margin-top:14px">Transcript</h4>
+          <p style="font-size:12px"><b>00:00</b> Welcome back to The Daily Brief…<br><b>00:08</b> Today: a merge request that sat…</p>
+        </div>
+        <div class="ppage" id="pgch">
+          <h4>Chapters</h4>
+          <div class="chrow"><span>1 · Cold open</span><span>02:11</span></div>
+          <div class="chrow now"><span>▶ 2 · The review queue</span><span>14:30</span></div>
+          <div class="chrow"><span>3 · Interview: Dr. Patel</span><span>38:05</span></div>
+          <div class="chrow"><span>4 · Listener mail</span><span>55:40</span></div>
+        </div>
+      </div>
+      <div class="dots">
+        <button class="sel" onclick="page(this,'pgart')"></button>
+        <button onclick="page(this,'pgnotes')"></button>
+        <button onclick="page(this,'pgch')"></button>
+      </div>
+      <div class="ptmeta"><b>Ep 214 — The Quiet Merge</b><span>Ch. 2 — The review queue</span></div>
+      <div class="dual">
+        <div class="lbl"><span>Chapter 2 / 4</span><span>6:44 · −7:46</span></div>
+        <div class="bar ch"><i style="width:46%"></i><u style="left:46%"></u></div>
+        <div class="lbl"><span>Episode</span><span>21:14 · −41:08</span></div>
+        <div class="bar"><i style="width:34%"></i>
+          <span class="tick" style="left:3.4%"></span><span class="tick" style="left:23.2%"></span>
+          <span class="tick" style="left:61%"></span><span class="tick" style="left:89.2%"></span>
+        </div>
+      </div>
+      <div class="pctr">
+        <button class="sk"><i>↺</i>15</button>
+        <button class="pp">▮▮</button>
+        <button class="sk"><i>↻</i>30</button>
+      </div>
+      <div class="pbot">
+        <button><span class="g">😴</span>Sleep</button>
+        <button class="hot"><span class="g">⚡</span>Effects</button>
+        <button onclick="go('queue')"><span class="g">⌸</span>Queue</button>
+        <button><span class="g">★</span>Favorite</button>
+      </div>
+    </div>
+
+    <!-- BOOK PLAYER -->
+    <div class="screen" id="bplayer">
+      <div class="bhdr">
+        <button class="back" onclick="go('home')">←</button>
+        <div class="bt"><b>Dracula</b><span>Bram Stoker · read by E. Howell</span></div>
+        <button class="icnbtn" onclick="go('queue')">⌸</button>
+      </div>
+      <div class="content">
+        <div class="coverwrap"><div class="cover c5">DR</div></div>
+        <div class="chap"><b>Chapter 12 — The Diary Resumes</b><span>14:22 of 36:10 in chapter</span></div>
+        <div class="bars">
+          <div class="lbl"><span>Chapter</span><span>−21:48</span></div>
+          <div class="bar"><i style="width:40%"></i></div>
+          <div class="lbl"><span>Book</span><span>9h 14m left · 62%</span></div>
+          <div class="bar"><i class="bk" style="width:62%"></i></div>
+        </div>
+        <div class="padgrid">
+          <button class="pad">−5m</button><button class="pad">−30s</button><button class="pad">+30s</button><button class="pad">+5m</button>
+        </div>
+        <div class="playrow">
+          <button class="pad">⏮<small>chapter</small></button>
+          <button class="play">▶</button>
+          <button class="pad">⏭<small>chapter</small></button>
+        </div>
+        <div class="btiles">
+          <div class="btile"><span class="g">⚡</span><b>1.4×</b><small>speed</small></div>
+          <div class="btile"><span class="g">😴</span><b>End ch.</b><small>sleep</small></div>
+          <div class="btile"><span class="g">🔖</span><b>＋ Mark</b><small>bookmark</small></div>
+          <div class="btile"><span class="g">☰</span><b>Ch. 12</b><small>chapters</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABS -->
+    <div class="screen" id="abs">
+      <div class="topbar"><button class="back" onclick="go('home')">←</button><h1 style="font-size:17px">audiobookshelf</h1></div>
+      <div class="srv"><span class="ok"></span><div><b>abs.home.lan:13378</b><span>connected · “Audiobooks” · 214 items</span></div></div>
+      <div class="chips">
+        <span class="chip sel">Recent</span><span class="chip">Series</span><span class="chip">Authors</span><span class="chip">Genres</span>
+      </div>
+      <div class="content">
+        <div class="pgrid" style="padding-top:2px">
+          <div class="tile"><span class="cloud">☁</span><div class="art c9">VM</div><div class="cap"><b>The Velvet Maze</b>11h 20m</div></div>
+          <div class="tile"><span class="cloud">☁</span><div class="art c2">GW</div><div class="cap"><b>Glasswing</b>8h 02m</div></div>
+          <div class="tile"><span class="cloud">✓</span><div class="art c5">DR</div><div class="cap"><b>Dracula</b>downloaded</div></div>
+          <div class="tile"><span class="cloud">☁</span><div class="art c7">NL</div><div class="cap"><b>North of Luck</b>6h 44m</div></div>
+          <div class="tile"><span class="cloud">☁</span><div class="art c4">EM</div><div class="cap"><b>Emberline</b>13h 09m</div></div>
+          <div class="tile"><span class="cloud">✓</span><div class="art c8">OD</div><div class="cap"><b>The Odyssey</b>downloaded</div></div>
+        </div>
+        <div class="hint">tap a book → <b>Stream</b> now or <b>Download</b> to device</div>
+      </div>
+    </div>
+
+    <!-- DRAWER -->
+    <div class="dim" id="ddim" onclick="drawer(false)"></div>
+    <div class="drawer" id="drw">
+      <div class="dh"><b>ORATOR</b><span>43 podcasts · 16 books · 9h 41m saved by trim</span></div>
+      <div class="dsearch" onclick="drawer(false)">⌕ &nbsp;Search Podcast Index…</div>
+      <button class="ditem" onclick="drawer(false)"><span class="g">＋</span>Add RSS feed</button>
+      <button class="ditem" onclick="drawer(false)"><span class="g">⇪</span>Import OPML</button>
+      <button class="ditem" onclick="drawer(false);go('abs')"><span class="g">☁</span>audiobookshelf</button>
+      <div class="dsec">APP</div>
+      <button class="ditem" onclick="drawer(false)"><span class="g">🕓</span>History</button>
+      <button class="ditem" onclick="drawer(false)"><span class="g">⇄</span>Swipe actions</button>
+      <button class="ditem" onclick="drawer(false)"><span class="g">⚙</span>Settings</button>
+    </div>
+  </div>
+
+  <div class="jump">
+    <button onclick="go('home')">Library</button>
+    <button onclick="go('series')">Series</button>
+    <button onclick="go('queue')">Queue</button>
+    <button onclick="go('show')">Show</button>
+    <button onclick="go('pplayer')">Pod player</button>
+    <button onclick="go('bplayer')">Book player</button>
+    <button onclick="go('abs')">ABS</button>
+    <button onclick="drawer(true)">Drawer</button>
+  </div>
+
+<script src="swipe.js"></script>
+<script>
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  drawer(false);
+}
+function page(btn, id) {
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.querySelectorAll('.ppage').forEach(p => p.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+function drawer(open) {
+  document.getElementById('ddim').classList.toggle('on', open);
+  document.getElementById('drw').classList.toggle('on', open);
+}
+function filt(chip, kind) {
+  chip.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('sel'));
+  chip.classList.add('sel');
+  document.querySelectorAll('#home .tile').forEach(t => {
+    t.style.display = (kind === 'all' || t.classList.contains('f-' + kind)) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

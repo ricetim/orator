@@ -40,6 +40,7 @@ class PlaybackConnection @Inject constructor(
     playerPreferences: PlayerPreferences,
     private val activeQueueInfo: ActiveQueueInfo,
     private val speedOverrideListeners: Set<@JvmSuppressWildcards SpeedOverrideListener>,
+    private val clipOverrideListeners: Set<@JvmSuppressWildcards ClipOverrideListener>,
 ) {
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
@@ -111,12 +112,26 @@ class PlaybackConnection @Inject constructor(
         _state.value = PlaybackUiState(
             isPlaying = c.isPlaying,
             title = c.mediaMetadata.title?.toString().orEmpty(),
+            artist = c.mediaMetadata.artist?.toString().orEmpty(),
             mediaId = c.currentMediaItem?.mediaId,
+            mediaType = MediaItemFactory.mediaTypeOf(c.mediaMetadata),
             currentIndex = c.currentMediaItemIndex,
             positionMs = c.currentPosition.coerceAtLeast(0),
             durationMs = c.duration.takeIf { it != C.TIME_UNSET } ?: 0,
             speed = c.playbackParameters.speed,
         )
+    }
+
+    /** One row per loaded Media3 queue item. Read-only; the full mixed queue is Phase 5. */
+    data class QueueItemSnapshot(val index: Int, val mediaId: String, val title: String)
+
+    /** Snapshot of the loaded queue. Call again when state.currentIndex/mediaId changes. */
+    fun queueSnapshot(): List<QueueItemSnapshot> {
+        val c = controller ?: return emptyList()
+        return (0 until c.mediaItemCount).map { i ->
+            val item = c.getMediaItemAt(i)
+            QueueItemSnapshot(i, item.mediaId, item.mediaMetadata.title?.toString().orEmpty())
+        }
     }
 
     /** Toggles play/pause for whatever is currently loaded. */
@@ -158,6 +173,14 @@ class PlaybackConnection @Inject constructor(
         val mediaId = controller?.currentMediaItem?.mediaId ?: return
         scope.launch {
             speedOverrideListeners.forEach { it.onSpeedOverrideChanged(mediaId, speed) }
+        }
+    }
+
+    /** Per-show intro/outro edit from the player's effects sheet; features persist + rebuild. */
+    fun setClipOverride(introMs: Long, outroMs: Long) {
+        val mediaId = controller?.currentMediaItem?.mediaId ?: return
+        scope.launch {
+            clipOverrideListeners.forEach { it.onClipChanged(mediaId, introMs, outroMs) }
         }
     }
 

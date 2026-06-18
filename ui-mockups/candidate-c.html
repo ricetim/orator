@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Candidate C — Flow</title>
+<style>
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  body { background:#101216; font-family: system-ui, -apple-system, Roboto, sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:24px 12px; color:#dde0e5; }
+  .title { font-size:15px; color:#9aa0ab; margin-bottom:14px; }
+  .title b { color:#fff; }
+  .title a { color:#9d8cff; text-decoration:none; }
+
+  .phone { width:393px; height:830px; border-radius:32px; border:10px solid #16181c; overflow:hidden;
+    position:relative; box-shadow:0 24px 60px rgba(0,0,0,.5); color:#eceaf6;
+    background:linear-gradient(170deg,#191430 0%,#221a45 55%,#14122b 100%); }
+  .screen { position:absolute; inset:0; display:none; flex-direction:column;
+    background:linear-gradient(170deg,#191430 0%,#221a45 55%,#14122b 100%); }
+  .screen.on { display:flex; }
+  .content { flex:1; overflow-y:auto; padding-bottom:90px; }
+
+  .top { display:flex; align-items:center; padding:20px 20px 8px; gap:10px; }
+  .top h1 { font-size:23px; font-weight:800; flex:1; letter-spacing:.3px; }
+  .top .ic { background:rgba(255,255,255,.07); border:none; color:#cfc9e8; width:38px; height:38px;
+    border-radius:50%; font-size:17px; cursor:pointer; }
+  .back { background:none; border:none; color:#eceaf6; font-size:22px; cursor:pointer; padding:4px 8px; }
+
+  .nav { position:absolute; left:0; right:0; bottom:0; display:flex; padding:8px 6px 16px;
+    background:rgba(16,13,32,.86); backdrop-filter:blur(8px); border-top:1px solid rgba(255,255,255,.06); }
+  .nav button { flex:1; background:none; border:none; color:#8d87a8; font-size:10.5px; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .nav button .g { font-size:19px; }
+  .nav button.sel { color:#b3a5ff; font-weight:700; }
+
+  /* hero card */
+  .hero { margin:10px 16px 18px; border-radius:22px; padding:18px;
+    background:linear-gradient(135deg,rgba(124,108,255,.32),rgba(52,210,176,.16));
+    border:1px solid rgba(255,255,255,.12); cursor:pointer; }
+  .hero .row { display:flex; gap:14px; align-items:center; }
+  .hero .ha { width:84px; height:84px; border-radius:14px; flex:none; display:flex; align-items:center;
+    justify-content:center; font-size:28px; font-weight:800; color:#fff; box-shadow:0 8px 22px rgba(0,0,0,.4); }
+  .hero .ht { flex:1; min-width:0; }
+  .hero .ht .k { font-size:10.5px; font-weight:800; letter-spacing:1.2px; color:#34d2b0; text-transform:uppercase; }
+  .hero .ht b { display:block; font-size:16px; margin:3px 0 2px; line-height:1.3; }
+  .hero .ht span { font-size:12.5px; color:#b6aed6; }
+  .hero .hb { display:flex; align-items:center; gap:14px; margin-top:14px; }
+  .hero .bar { flex:1; height:5px; background:rgba(255,255,255,.14); border-radius:3px; }
+  .hero .bar i { display:block; width:34%; height:100%; border-radius:3px; background:#34d2b0; }
+  .hero .pl { width:52px; height:52px; border-radius:50%; background:#fff; color:#1d1640; border:none;
+    font-size:20px; cursor:pointer; flex:none; font-weight:900; }
+  .hero .tm { font-size:11.5px; color:#b6aed6; }
+
+  .sect { display:flex; align-items:baseline; padding:4px 20px 10px; gap:10px; }
+  .sect h2 { font-size:15px; font-weight:800; flex:1; }
+  .sect a { font-size:12px; color:#9d8cff; text-decoration:none; font-weight:700; }
+
+  .qcard { display:flex; align-items:center; gap:12px; margin:0 16px 10px; padding:11px 14px;
+    background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.07); border-radius:16px; cursor:pointer; }
+  .qcard .qa { width:46px; height:46px; border-radius:10px; flex:none; display:flex; align-items:center;
+    justify-content:center; font-weight:800; color:#fff; font-size:16px; }
+  .qcard .qt { flex:1; min-width:0; }
+  .qcard .qt b { display:block; font-size:13.5px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .qcard .qt span { font-size:11.5px; color:#9b93ba; }
+  .tagp, .tagb { font-size:9px; font-weight:800; letter-spacing:.8px; padding:3px 7px; border-radius:6px; }
+  .tagp { background:rgba(124,108,255,.25); color:#bdb1ff; }
+  .tagb { background:rgba(52,210,176,.2); color:#6fe5c8; }
+  .qcard .h { color:#5f5880; font-size:17px; cursor:grab; }
+
+  /* library lists */
+  .caro { display:flex; gap:12px; overflow-x:auto; padding:4px 16px 16px; }
+  .caro .ca { width:104px; flex:none; cursor:pointer; }
+  .caro .art { width:104px; height:104px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+    font-size:30px; font-weight:800; color:#fff; }
+  .caro .ca b { display:block; font-size:11.5px; margin-top:6px; line-height:1.3; }
+  .caro .ca span { font-size:10.5px; color:#9b93ba; }
+  .lrow { display:flex; align-items:center; gap:13px; padding:11px 20px; cursor:pointer; }
+  .lrow .la { width:54px; height:54px; border-radius:12px; flex:none; display:flex; align-items:center;
+    justify-content:center; font-size:18px; font-weight:800; color:#fff; }
+  .lrow .lt { flex:1; min-width:0; border-bottom:1px solid rgba(255,255,255,.05); padding-bottom:11px; }
+  .lrow .lt b { display:block; font-size:14px; }
+  .lrow .lt span { font-size:12px; color:#9b93ba; }
+  .dot { width:9px; height:9px; border-radius:50%; background:#34d2b0; }
+
+  /* full player */
+  .fp { padding:8px 24px 110px; display:flex; flex-direction:column; }
+  .grab { width:42px; height:5px; background:rgba(255,255,255,.18); border-radius:3px; margin:8px auto 18px; cursor:pointer; }
+  .fpart { width:256px; height:256px; border-radius:22px; margin:4px auto 22px; display:flex; align-items:center;
+    justify-content:center; font-size:68px; font-weight:800; color:#fff; box-shadow:0 20px 50px rgba(0,0,0,.55); }
+  .fpt { text-align:center; }
+  .fpt b { font-size:18px; display:block; line-height:1.35; }
+  .fpt span { font-size:13px; color:#b6aed6; }
+  .fsc { margin:22px 0 6px; }
+  .fsc .bar { height:5px; background:rgba(255,255,255,.14); border-radius:3px; position:relative; }
+  .fsc .bar i { display:block; width:34%; height:100%; background:#9d8cff; border-radius:3px; }
+  .fsc .bar u { position:absolute; left:34%; top:-4px; width:13px; height:13px; background:#fff; border-radius:50%; }
+  .fsc .tt { display:flex; justify-content:space-between; font-size:11px; color:#9b93ba; margin-top:8px; }
+  .fctr { display:flex; align-items:center; justify-content:center; gap:28px; margin:12px 0; }
+  .fctr button { background:none; border:none; color:#fff; cursor:pointer; }
+  .fctr .sk { font-size:13px; font-weight:800; width:54px; height:54px; border-radius:50%;
+    border:1.5px solid rgba(255,255,255,.25); }
+  .fctr .pp { width:76px; height:76px; border-radius:50%; background:#9d8cff; color:#171232; font-size:28px; font-weight:900; }
+  .fchips { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
+  .fchips span { font-size:12px; font-weight:700; background:rgba(255,255,255,.08); padding:7px 13px;
+    border-radius:999px; color:#d6d0ec; cursor:pointer; }
+  .peek { margin-top:20px; background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.07);
+    border-radius:16px; padding:12px 14px; }
+  .peek .k { font-size:10px; font-weight:800; letter-spacing:1.2px; color:#9b93ba; text-transform:uppercase; margin-bottom:8px; }
+
+  /* search */
+  .sfield { margin:8px 20px 14px; background:rgba(255,255,255,.08); border-radius:14px; padding:13px 16px;
+    color:#b6aed6; font-size:14px; }
+  .sub { font-size:12px; font-weight:800; background:#9d8cff; color:#171232; border:none; border-radius:999px;
+    padding:8px 14px; cursor:pointer; flex:none; }
+  .subd { background:rgba(255,255,255,.1); color:#b6aed6; }
+  .via { padding:2px 20px 10px; font-size:11.5px; color:#7e76a0; }
+
+  .jump { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; justify-content:center; max-width:420px; }
+  .jump button { background:#23252c; color:#aeb5c2; border:1px solid #33363f; border-radius:999px;
+    font-size:12px; padding:6px 12px; cursor:pointer; }
+
+  .c1{background:linear-gradient(135deg,#3d6ef7,#23c4a0)} .c2{background:linear-gradient(135deg,#e85d75,#7b2ff7)}
+  .c3{background:linear-gradient(135deg,#f7971e,#ffd200);color:#5c4500!important} .c4{background:linear-gradient(135deg,#16a085,#145a32)}
+  .c5{background:linear-gradient(135deg,#7d4f2a,#caa472)} .c6{background:linear-gradient(135deg,#c0392b,#8e44ad)}
+  .c7{background:linear-gradient(135deg,#0f7bb5,#7adcf0)} .c8{background:linear-gradient(135deg,#5b6573,#2c3e50)}
+</style>
+</head>
+<body>
+  <div class="title"><a href="round-1.html">← round 1</a> &nbsp;·&nbsp; <b>Candidate C — “Flow”</b> · queue-first, mixed media</div>
+
+  <div class="phone">
+
+    <!-- HOME / QUEUE -->
+    <div class="screen on" id="home">
+      <div class="top"><h1>Listening</h1><button class="ic">🕓</button><button class="ic">⚙</button></div>
+      <div class="content">
+        <div class="hero" onclick="go('player')">
+          <div class="row">
+            <div class="ha c1">DB</div>
+            <div class="ht">
+              <div class="k">Now playing · Podcast</div>
+              <b>Ep 214 — The Quiet Merge</b>
+              <span>The Daily Brief</span>
+            </div>
+          </div>
+          <div class="hb">
+            <span class="tm">21:14</span>
+            <div class="bar"><i></i></div>
+            <span class="tm">−41:08</span>
+            <button class="pl" onclick="event.stopPropagation()">▮▮</button>
+          </div>
+        </div>
+
+        <div class="sect"><h2>Up Next</h2><a href="#" onclick="return false">Edit</a></div>
+        <div class="qcard" onclick="go('player')">
+          <div class="qa c5">DR</div>
+          <div class="qt"><b>Dracula — Chapter 12</b><span>36m · resumes at 14:22</span></div>
+          <span class="tagb">BOOK</span><span class="h">≡</span>
+        </div>
+        <div class="qcard" onclick="go('player')">
+          <div class="qa c4">OM</div>
+          <div class="qt"><b>Launch Windows Explained</b><span>Orbital Mechanics · 52m</span></div>
+          <span class="tagp">POD</span><span class="h">≡</span>
+        </div>
+        <div class="qcard" onclick="go('player')">
+          <div class="qa c6">9V</div>
+          <div class="qt"><b>The Invisible Staircase</b><span>99% Visible · 28m</span></div>
+          <span class="tagp">POD</span><span class="h">≡</span>
+        </div>
+        <div class="qcard" onclick="go('player')">
+          <div class="qa c5">DR</div>
+          <div class="qt"><b>Dracula — Chapter 13</b><span>44m</span></div>
+          <span class="tagb">BOOK</span><span class="h">≡</span>
+        </div>
+
+        <div class="sect"><h2>New today</h2><a href="#" onclick="return false">All</a></div>
+        <div class="qcard" onclick="go('podcasts')">
+          <div class="qa c2">LM</div>
+          <div class="qt"><b>Dead Languages Live</b><span>Lingua Mortua · 44m · just refreshed</span></div>
+          <span class="tagp">POD</span><span style="color:#9d8cff;font-weight:800">＋</span>
+        </div>
+      </div>
+      <div class="nav">
+        <button class="sel"><span class="g">◉</span>Listening</button>
+        <button onclick="go('podcasts')"><span class="g">▦</span>Podcasts</button>
+        <button onclick="go('booksc')"><span class="g">📚</span>Books</button>
+        <button onclick="go('search')"><span class="g">⌕</span>Search</button>
+      </div>
+    </div>
+
+    <!-- PODCAST LIBRARY -->
+    <div class="screen" id="podcasts">
+      <div class="top"><h1>Podcasts</h1><button class="ic">↻</button></div>
+      <div class="content">
+        <div class="sect"><h2>Recently updated</h2></div>
+        <div class="caro">
+          <div class="ca" onclick="go('home')"><div class="art c1">DB</div><b>The Daily Brief</b><span>3 new</span></div>
+          <div class="ca" onclick="go('home')"><div class="art c4">OM</div><b>Orbital Mechanics</b><span>1 new</span></div>
+          <div class="ca" onclick="go('home')"><div class="art c2">LM</div><b>Lingua Mortua</b><span>1 new</span></div>
+          <div class="ca" onclick="go('home')"><div class="art c6">9V</div><b>99% Visible</b><span>2 new</span></div>
+        </div>
+        <div class="sect"><h2>All shows · 43</h2><a href="#" onclick="return false">A–Z</a></div>
+        <div class="lrow" onclick="go('home')"><div class="la c1">DB</div><div class="lt"><b>The Daily Brief</b><span>3 unplayed · daily news</span></div><span class="dot"></span></div>
+        <div class="lrow" onclick="go('home')"><div class="la c2">LM</div><div class="lt"><b>Lingua Mortua</b><span>1 unplayed · weekly</span></div><span class="dot"></span></div>
+        <div class="lrow" onclick="go('home')"><div class="la c3">TS</div><div class="lt"><b>Tales from the Stack</b><span>all played</span></div></div>
+        <div class="lrow" onclick="go('home')"><div class="la c4">OM</div><div class="lt"><b>Orbital Mechanics</b><span>7 unplayed</span></div><span class="dot"></span></div>
+        <div class="lrow" onclick="go('home')"><div class="la c7">WX</div><div class="lt"><b>Weather or Not</b><span>all played</span></div></div>
+        <div class="lrow" onclick="go('home')"><div class="la c8">NF</div><div class="lt"><b>Night Frequencies</b><span>all played</span></div></div>
+      </div>
+      <div class="nav">
+        <button onclick="go('home')"><span class="g">◉</span>Listening</button>
+        <button class="sel"><span class="g">▦</span>Podcasts</button>
+        <button onclick="go('booksc')"><span class="g">📚</span>Books</button>
+        <button onclick="go('search')"><span class="g">⌕</span>Search</button>
+      </div>
+    </div>
+
+    <!-- BOOKS -->
+    <div class="screen" id="booksc">
+      <div class="top"><h1>Audiobooks</h1><button class="ic">＋</button></div>
+      <div class="content">
+        <div class="sect"><h2>Continue</h2></div>
+        <div class="caro">
+          <div class="ca" onclick="go('player')"><div class="art c5">DR</div><b>Dracula</b><span>62% · 9h left</span></div>
+          <div class="ca" onclick="go('player')"><div class="art c8">OD</div><b>The Odyssey</b><span>14% · 11h left</span></div>
+          <div class="ca" onclick="go('player')"><div class="art c6">JE</div><b>Jane Eyre</b><span>91% · 1h left</span></div>
+        </div>
+        <div class="sect"><h2>Library · 12</h2><a href="#" onclick="return false">audiobookshelf ✓</a></div>
+        <div class="lrow" onclick="go('player')"><div class="la c5">DR</div><div class="lt"><b>Dracula</b><span>Bram Stoker · m4b · 27 ch.</span></div></div>
+        <div class="lrow" onclick="go('player')"><div class="la c8">OD</div><div class="lt"><b>The Odyssey</b><span>Homer · 24 ch.</span></div></div>
+        <div class="lrow" onclick="go('player')"><div class="la c4">MM</div><div class="lt"><b>Middlemarch</b><span>George Eliot · 32h 11m</span></div></div>
+        <div class="lrow" onclick="go('player')"><div class="la c6">JE</div><div class="lt"><b>Jane Eyre</b><span>Charlotte Brontë</span></div></div>
+      </div>
+      <div class="nav">
+        <button onclick="go('home')"><span class="g">◉</span>Listening</button>
+        <button onclick="go('podcasts')"><span class="g">▦</span>Podcasts</button>
+        <button class="sel"><span class="g">📚</span>Books</button>
+        <button onclick="go('search')"><span class="g">⌕</span>Search</button>
+      </div>
+    </div>
+
+    <!-- FULL PLAYER -->
+    <div class="screen" id="player">
+      <div class="content fp">
+        <div class="grab" onclick="go('home')"></div>
+        <div class="fpart c1">DB</div>
+        <div class="fpt"><b>Ep 214 — The Quiet Merge</b><span>The Daily Brief · Jun 11</span></div>
+        <div class="fsc">
+          <div class="bar"><i></i><u></u></div>
+          <div class="tt"><span>21:14</span><span>−41:08</span></div>
+        </div>
+        <div class="fctr">
+          <button class="sk">−15</button>
+          <button class="pp">▮▮</button>
+          <button class="sk">+30</button>
+        </div>
+        <div class="fchips">
+          <span>1.2×</span><span>😴 Sleep</span><span>✂ Trim</span><span>🔊 Boost</span><span>📝 Transcript</span>
+        </div>
+        <div class="peek" onclick="go('home')">
+          <div class="k">Next in queue</div>
+          <div style="display:flex;gap:11px;align-items:center">
+            <div class="qa c5" style="width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">DR</div>
+            <div class="qt"><b style="font-size:13px">Dracula — Chapter 12</b><br><span style="font-size:11px;color:#9b93ba">resumes at 14:22 · 22m left</span></div>
+            <span class="tagb" style="margin-left:auto">BOOK</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="screen" id="search">
+      <div class="top"><h1>Search</h1></div>
+      <div class="sfield">⌕ &nbsp;quiet merge</div>
+      <div class="via">12 results via Podcast Index</div>
+      <div class="content">
+        <div class="lrow"><div class="la c1">DB</div><div class="lt"><b>The Daily Brief</b><span>Meridian Audio</span></div><button class="sub subd">✓ Subscribed</button></div>
+        <div class="lrow"><div class="la c3">TS</div><div class="lt"><b>Tales from the Stack</b><span>Stackhouse Media</span></div><button class="sub">＋ Subscribe</button></div>
+        <div class="lrow"><div class="la c8">NF</div><div class="lt"><b>Night Frequencies</b><span>Indie</span></div><button class="sub">＋ Subscribe</button></div>
+        <div class="lrow"><div class="la c7">WX</div><div class="lt"><b>Weather or Not</b><span>Climate Co-op</span></div><button class="sub">＋ Subscribe</button></div>
+      </div>
+      <div class="nav">
+        <button onclick="go('home')"><span class="g">◉</span>Listening</button>
+        <button onclick="go('podcasts')"><span class="g">▦</span>Podcasts</button>
+        <button onclick="go('booksc')"><span class="g">📚</span>Books</button>
+        <button class="sel"><span class="g">⌕</span>Search</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="jump">
+    <button onclick="go('home')">Queue home</button>
+    <button onclick="go('podcasts')">Podcasts</button>
+    <button onclick="go('booksc')">Books</button>
+    <button onclick="go('player')">Player</button>
+    <button onclick="go('search')">Search</button>
+  </div>
+
+<script>
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+}
+</script>
+</body>
+</html>

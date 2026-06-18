@@ -1,7 +1,5 @@
 package com.orator.feature.audiobooks
 
-const val AudiobooksRoute = "audiobooks"
+import com.orator.core.navigation.CommonRoutes
 
-internal const val BookDetailRoutePattern = "audiobooks/{bookId}"
-
-internal fun bookDetailRoute(bookId: String) = "audiobooks/$bookId"
+const val AudiobooksRoute = CommonRoutes.Audiobooks

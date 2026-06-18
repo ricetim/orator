@@ -1,4 +1,5 @@
 package com.orator.feature.podcasts.data
+import com.orator.core.playback.ids.PodcastMediaId
 
 import com.orator.core.database.EpisodeEntity
 import com.orator.core.database.PodcastEntity
