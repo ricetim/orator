@@ -455,8 +455,13 @@ rejected: more moving state and a new Player listener.)
   `chapterBoundariesMs = chapters.map { it.startMs }.filter { it > 0 }` (as today). MULTI_FILE →
   `fileDurationsMs = ChapterTimeline.fileDurations(chapters)`,
   `chapterBoundariesMs = chapters.indices.map { ChapterTimeline.globalStartOf(chapters, it) }.filter { it > 0 }`.
-  Add a `fileDurationsMs` `StateFlow` to `ActiveQueueInfo` set alongside `chapterBoundariesMs`
-  wherever the latter is populated.
+  Add a `fileDurationsMs` `StateFlow` to `ActiveQueueInfo`; the single population site is
+  `ActiveQueueInfo.onNewQueue(...)` (called from `PlaybackConnection.kt:153`) — extend its
+  signature to also take `fileDurationsMs` and pass it from the `PlayRequest` in the same edit.
+  Also update the stale KDoc on `PlayRequest.chapterBoundariesMs` (`PlayRequest.kt:20-26`, which
+  says "within a single item / multi-file leaves it empty") to reflect global boundaries.
+  Keep the SINGLE_FILE assertion `fileDurationsMs == [bookDuration]` so the empty-list case is
+  legacy/non-audiobook only, never a live audiobook path (justifies the Task 4.2 fallback).
 - [ ] **Step 4: Run green.** **Step 5: Commit.** `git commit -am "feat(playback): carry file durations + global chapter boundaries on PlayRequest"`
 
 ### Task 4.2: Convert position to global in the sleep loop
