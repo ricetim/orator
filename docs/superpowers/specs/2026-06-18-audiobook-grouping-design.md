@@ -223,7 +223,9 @@ directory (≥2 audio files)
 
 - Exact sleep-timer "end of chapter" wiring for in-file chapter boundaries (see Components §6).
   This is the one genuine design unknown to resolve during planning by reading the sleep logic.
-
-(Resolved during spec review: `AudiobookMediaId` encodes the **file** index for `MULTI_FILE`
-— see `QueueBuilder` above; the full `SourceKind` touch surface is enumerated in Components
-§1–§6.)
+- **`ChaptersPage` highlight contract:** the page highlights the current row by comparing list
+  position against `currentChapterIndex` (`PlayerScreen.kt:82` → `ChaptersPage.kt:34`). Since
+  `ChapterUi.index` becomes the **global** chapter index and the row list is the full sorted
+  chapter list, these coincide — but the plan must explicitly verify `currentChapterIndex` is
+  fed the global chapter index (not the file index) and add a test asserting the right row
+  highlights for a multi-`chpl` book.
