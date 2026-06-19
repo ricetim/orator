@@ -5,8 +5,10 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 
 /**
- * A chapter. For M4B books every chapter shares the book's fileUri and startMs is an offset
- * into that file. For MP3_DIR books each chapter is its own file and startMs is 0.
+ * A chapter. [startMs] is an offset within [fileUri]. For SINGLE_FILE books every chapter
+ * shares the book's one file. For MULTI_FILE books chapters are each file's `chpl` flattened
+ * in order; a file's first chapter starts at 0 so chapters tile the timeline (see
+ * ChapterTimeline).
  */
 @Entity(
     tableName = "chapters",

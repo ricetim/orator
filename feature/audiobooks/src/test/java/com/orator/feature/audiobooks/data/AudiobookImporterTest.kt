@@ -66,7 +66,7 @@ class AudiobookImporterTest {
 
         val book = db.bookDao().observeAll().first().single()
         assertEquals("Tagged Title", book.title)
-        assertEquals(SourceKind.M4B, book.sourceKind)
+        assertEquals(SourceKind.SINGLE_FILE, book.sourceKind)
         assertEquals(60_000, book.durationMs)
 
         val chapters = db.chapterDao().getForBook(book.id)
@@ -100,7 +100,7 @@ class AudiobookImporterTest {
         importer.import(listOf(scanned))
 
         val book = db.bookDao().observeAll().first().single()
-        assertEquals(SourceKind.MP3_DIR, book.sourceKind)
+        assertEquals(SourceKind.MULTI_FILE, book.sourceKind)
         assertEquals(120_000, book.durationMs) // 2 files x fake 60s
 
         val chapters = db.chapterDao().getForBook(book.id)

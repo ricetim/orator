@@ -25,8 +25,8 @@ class AudiobookPositionListener @Inject constructor(
         withContext(Dispatchers.IO) {
             val book = bookDao.getById(parsed.bookId) ?: return@withContext
             val global = when (book.sourceKind) {
-                SourceKind.M4B -> positionMs
-                SourceKind.MP3_DIR -> PositionMapper.toGlobal(
+                SourceKind.SINGLE_FILE -> positionMs
+                SourceKind.MULTI_FILE -> PositionMapper.toGlobal(
                     chapterDao.getForBook(book.id).map { it.durationMs },
                     parsed.fileIndex,
                     positionMs,

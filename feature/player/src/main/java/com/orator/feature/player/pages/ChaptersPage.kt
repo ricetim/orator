@@ -28,7 +28,7 @@ fun ChaptersPage(
     currentChapterIndex: Int?,
     onChapterTap: (Int) -> Unit,
 ) {
-    val sorted = if (sourceKind == SourceKind.M4B) chapters.sortedBy { it.startMs } else chapters
+    val sorted = if (sourceKind == SourceKind.SINGLE_FILE) chapters.sortedBy { it.startMs } else chapters
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 26.dp)) {
         item { SectionLabel("Chapters", Modifier.padding(top = 6.dp)) }
         itemsIndexed(sorted, key = { _, c -> c.chapterIndex }) { i, chapter ->
@@ -49,8 +49,8 @@ fun ChaptersPage(
                 )
                 Text(
                     text = when (sourceKind) {
-                        SourceKind.M4B -> TimeFormats.clock(chapter.startMs)
-                        SourceKind.MP3_DIR -> TimeFormats.clock(chapter.durationMs)
+                        SourceKind.SINGLE_FILE -> TimeFormats.clock(chapter.startMs)
+                        SourceKind.MULTI_FILE -> TimeFormats.clock(chapter.durationMs)
                     },
                     color = OnyxTokens.TextFaint,
                     fontSize = 13.sp,

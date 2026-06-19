@@ -32,7 +32,7 @@ class BookSpeedOverrideListenerTest {
                 listOf(
                     BookEntity(
                         id = "b1", title = "B", author = null, coverPath = null,
-                        sourceUri = "uri://b", sourceKind = SourceKind.M4B, durationMs = 60_000,
+                        sourceUri = "uri://b", sourceKind = SourceKind.SINGLE_FILE, durationMs = 60_000,
                         positionMs = 0, addedAtUtc = 0,
                     ),
                 ),

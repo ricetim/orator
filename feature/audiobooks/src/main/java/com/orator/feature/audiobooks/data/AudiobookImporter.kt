@@ -57,7 +57,7 @@ class AudiobookImporter @Inject constructor(
                 durationMs = (end - mark.startMs).coerceAtLeast(0),
             )
         }
-        insert(id, book, SourceKind.M4B, meta, durationMs = meta.durationMs, chapters = chapters)
+        insert(id, book, SourceKind.SINGLE_FILE, meta, durationMs = meta.durationMs, chapters = chapters)
     }
 
     private suspend fun importMp3Collection(id: String, book: ScannedBook.Mp3Collection) {
@@ -77,7 +77,7 @@ class AudiobookImporter @Inject constructor(
         val first = firstFileMeta ?: ExtractedMetadata(null, null, 0, null)
         // Directory name beats the first file's tag for a collection's title.
         val collectionMeta = first.copy(title = book.title)
-        insert(id, book, SourceKind.MP3_DIR, collectionMeta, durationMs = chapters.sumOf { it.durationMs }, chapters = chapters)
+        insert(id, book, SourceKind.MULTI_FILE, collectionMeta, durationMs = chapters.sumOf { it.durationMs }, chapters = chapters)
     }
 
     private suspend fun insert(

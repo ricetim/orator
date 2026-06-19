@@ -13,7 +13,7 @@ import androidx.room.RoomDatabase
         BookEntity::class, ChapterEntity::class, BookmarkEntity::class, HistoryEntity::class,
         PodcastEntity::class, EpisodeEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class OratorDatabase : RoomDatabase() {

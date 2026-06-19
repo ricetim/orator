@@ -33,14 +33,14 @@ object PlayerChapters {
     ): ChapterUi? {
         if (chapters.isEmpty()) return null
         return when (sourceKind) {
-            SourceKind.M4B -> {
+            SourceKind.SINGLE_FILE -> {
                 val sorted = chapters.sortedBy { it.startMs }
                 val i = sorted.indexOfLast { it.startMs <= positionMs }.coerceAtLeast(0)
                 val start = sorted[i].startMs
                 val end = sorted.getOrNull(i + 1)?.startMs ?: totalDurationMs
                 ChapterUi(i, sorted.size, sorted[i].title, positionMs - start, end - start)
             }
-            SourceKind.MP3_DIR -> {
+            SourceKind.MULTI_FILE -> {
                 val c = chapters.getOrNull(currentIndex) ?: return null
                 ChapterUi(currentIndex, chapters.size, c.title, positionMs, c.durationMs)
             }
@@ -75,9 +75,9 @@ object PlayerChapters {
 
     fun tap(chapters: List<ChapterEntity>, sourceKind: SourceKind, chapterIndex: Int): SeekTarget =
         when (sourceKind) {
-            SourceKind.M4B ->
+            SourceKind.SINGLE_FILE ->
                 SeekTarget(0, chapters.sortedBy { it.startMs }[chapterIndex].startMs)
-            SourceKind.MP3_DIR -> SeekTarget(chapterIndex, 0)
+            SourceKind.MULTI_FILE -> SeekTarget(chapterIndex, 0)
         }
 
     /** Whole-item progress 0..1 (the "Book"/"Episode" bar). */
@@ -90,8 +90,8 @@ object PlayerChapters {
     ): Float {
         if (totalDurationMs <= 0) return 0f
         val global = when (sourceKind) {
-            SourceKind.M4B -> positionMs
-            SourceKind.MP3_DIR ->
+            SourceKind.SINGLE_FILE -> positionMs
+            SourceKind.MULTI_FILE ->
                 PositionMapper.toGlobal(chapters.map { it.durationMs }, currentIndex, positionMs)
         }
         return (global.toFloat() / totalDurationMs).coerceIn(0f, 1f)
@@ -105,8 +105,8 @@ object PlayerChapters {
     ): List<Float> {
         if (totalDurationMs <= 0) return emptyList()
         val starts = when (sourceKind) {
-            SourceKind.M4B -> chapters.map { it.startMs }.sorted()
-            SourceKind.MP3_DIR -> chapters.map { it.durationMs }
+            SourceKind.SINGLE_FILE -> chapters.map { it.startMs }.sorted()
+            SourceKind.MULTI_FILE -> chapters.map { it.durationMs }
                 .runningFold(0L) { acc, d -> acc + d }.dropLast(1)
         }
         return starts.filter { it > 0 }.map { it.toFloat() / totalDurationMs }
@@ -121,8 +121,8 @@ object PlayerChapters {
     ): SeekTarget {
         val globalMs = (fraction.coerceIn(0f, 1f) * totalDurationMs).toLong()
         return when (sourceKind) {
-            SourceKind.M4B -> SeekTarget(0, globalMs)
-            SourceKind.MP3_DIR -> {
+            SourceKind.SINGLE_FILE -> SeekTarget(0, globalMs)
+            SourceKind.MULTI_FILE -> {
                 val p = PositionMapper.toFilePosition(chapters.map { it.durationMs }, globalMs)
                 SeekTarget(p.fileIndex, p.offsetMs)
             }

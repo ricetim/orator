@@ -18,7 +18,7 @@ object QueueBuilder {
 
     fun build(book: BookEntity, chapters: List<ChapterEntity>, startAtMs: Long): PlayRequest =
         when (book.sourceKind) {
-            SourceKind.M4B -> PlayRequest(
+            SourceKind.SINGLE_FILE -> PlayRequest(
                 items = listOf(
                     PlayableItem(
                         mediaId = AudiobookMediaId.encode(book.id, 0),
@@ -34,7 +34,7 @@ object QueueBuilder {
                 speedOverride = book.speedOverride,
             )
 
-            SourceKind.MP3_DIR -> {
+            SourceKind.MULTI_FILE -> {
                 val start = PositionMapper.toFilePosition(chapters.map { it.durationMs }, startAtMs)
                 PlayRequest(
                     items = chapters.map { chapter ->

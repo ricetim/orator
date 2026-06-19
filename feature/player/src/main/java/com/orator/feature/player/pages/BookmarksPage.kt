@@ -92,10 +92,10 @@ private fun chapterNumberFor(
 ): Int? {
     if (chapters.isEmpty()) return null
     return when (sourceKind) {
-        SourceKind.M4B ->
+        SourceKind.SINGLE_FILE ->
             chapters.sortedBy { it.startMs }.indexOfLast { it.startMs <= globalMs }
                 .coerceAtLeast(0) + 1
-        SourceKind.MP3_DIR ->
+        SourceKind.MULTI_FILE ->
             PositionMapper.toFilePosition(chapters.map { it.durationMs }, globalMs).fileIndex + 1
     }
 }

@@ -36,7 +36,7 @@ class OratorDatabaseTest {
         author = "An Author",
         coverPath = null,
         sourceUri = "content://tree/doc/$id",
-        sourceKind = SourceKind.M4B,
+        sourceKind = SourceKind.SINGLE_FILE,
         durationMs = 100_000,
         positionMs = positionMs,
         addedAtUtc = 1_000,
@@ -61,7 +61,7 @@ class OratorDatabaseTest {
         assertEquals(42_000, loaded.positionMs)
         assertEquals(777, loaded.lastPlayedAtMs)
         assertEquals("A Book", loaded.title)
-        assertEquals(SourceKind.M4B, loaded.sourceKind)
+        assertEquals(SourceKind.SINGLE_FILE, loaded.sourceKind)
     }
 
     @Test

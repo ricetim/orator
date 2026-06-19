@@ -146,8 +146,8 @@ class PlayerViewModel @Inject constructor(
     fun onBookmarkTap(bookmark: BookmarkEntity) {
         val c = content.value as? NowPlayingContent.Book ?: return
         when (c.book.sourceKind) {
-            SourceKind.M4B -> playbackConnection.seekTo(0, bookmark.positionMs)
-            SourceKind.MP3_DIR -> {
+            SourceKind.SINGLE_FILE -> playbackConnection.seekTo(0, bookmark.positionMs)
+            SourceKind.MULTI_FILE -> {
                 val p = PositionMapper.toFilePosition(
                     c.chapters.map { it.durationMs },
                     bookmark.positionMs,
@@ -165,8 +165,8 @@ class PlayerViewModel @Inject constructor(
     fun currentGlobalMs(c: NowPlayingContent.Book): Long {
         val s = uiState.value
         return when (c.book.sourceKind) {
-            SourceKind.M4B -> s.positionMs
-            SourceKind.MP3_DIR -> PositionMapper.toGlobal(
+            SourceKind.SINGLE_FILE -> s.positionMs
+            SourceKind.MULTI_FILE -> PositionMapper.toGlobal(
                 c.chapters.map { it.durationMs },
                 AudiobookMediaId.parse(s.mediaId.orEmpty())?.fileIndex ?: 0,
                 s.positionMs,
