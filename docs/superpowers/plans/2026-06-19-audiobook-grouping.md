@@ -59,7 +59,11 @@ Pure refactor, **no behavior change**. `SINGLE_FILE` = old `M4B` logic, `MULTI_F
 - `feature/player/.../PlayerViewModel.kt:149,150,168,169`
 - `feature/player/.../pages/BookmarksPage.kt:95,98`
 - `feature/player/.../pages/ChaptersPage.kt:31,52,53`
-- Tests referencing `SourceKind.M4B`/`MP3_DIR` (e.g. `PlayerChaptersTest`, `QueueBuilder`/importer tests).
+- Test sites (full list — confirmed via grep): `core/database/.../OratorDatabaseTest.kt`,
+  `feature/audiobooks/.../AudiobookPositionListenerTest.kt`,
+  `feature/audiobooks/.../BookSpeedOverrideListenerTest.kt`,
+  `feature/audiobooks/.../AudiobookImporterTest.kt`, `feature/audiobooks/.../QueueBuilderTest.kt`,
+  `feature/player/.../PlayerChaptersTest.kt`. (Task 1.1 Step 3 compile also surfaces any missed.)
 
 - [ ] **Step 1:** Replace `SourceKind.M4B` → `SourceKind.SINGLE_FILE` and `SourceKind.MP3_DIR` → `SourceKind.MULTI_FILE` at every site above (production + test). **Behavior unchanged** — just the names.
 - [ ] **Step 2: Run tests.** `./gradlew test` — Expected: PASS (rename only).
@@ -171,41 +175,49 @@ object ChapterTimeline {
 - Modify: `feature/audiobooks/.../data/AudiobookScanner.kt`
 - Test: `feature/audiobooks/.../data/AudiobookScannerTest.kt` (extend; create if absent)
 
-- [ ] **Step 1: Failing tests.** Use a fake `DocumentNode`. Cases: directory with one `.m4b` → `SingleFile`; directory with three `.m4b` → `MultiFile` natural-sorted; directory of `.mp3` → `MultiFile`; mixed `.m4b`+`.mp3` → `MultiFile` natural-sorted together; `Author/` (no audio) → recurse → `Book/` is the book; a directory with a file **and** a subdirectory yields both the file's book and the subdir's book (recurse always); empty dir → no books.
+- [ ] **Step 1: Rewrite the existing tests that encode the OLD behavior** (the file already
+  exists at `feature/audiobooks/.../AudiobookScannerTest.kt` with `FakeNode` + `dir`/`file`
+  helpers — **reuse them; do not declare a new fake**). Concretely:
+  - `a directory of mp3s becomes one book...` and `non-audio files are ignored`: change the cast
+    `ScannedBook.Mp3Collection` → `ScannedBook.MultiFile` (behavior otherwise identical).
+  - **Invert** `a directory with direct mp3s is not recursed further`: the new scanner *always*
+    recurses, so `My Book/(Track 1.mp3 + extras/bonus.mp3)` yields **two** books (each a lone
+    file → `SingleFile`). Rewrite it as `a stray file beside a subfolder still finds the subfolder`
+    asserting `books.size == 2`. (Note the title nuance: a directory with exactly **one** audio
+    file becomes a `SingleFile` titled by the **file stem**, not the directory name.)
+  - `m4b files become books wherever they sit` still passes (each dir has one audio file) but
+    rename it to `nested single-file books are found by recursion` for honesty.
+
+- [ ] **Step 2: Add new failing tests** (reusing the existing `FakeNode`/`dir`/`file` helpers):
 
 ```kotlin
-private class Node(
-    override val name: String, override val uri: String,
-    override val isDirectory: Boolean, private val kids: List<DocumentNode> = emptyList(),
-) : DocumentNode { override fun children() = kids }
-
-private fun file(n: String) = Node(n, "uri/$n", false)
-private fun dir(n: String, vararg kids: DocumentNode) = Node(n, "uri/$n", true, kids.toList())
-
-@Test fun single_m4b_is_single_file_book() {
-    val books = AudiobookScanner.scan(dir("Book", file("a.m4b")))
-    assertEquals(1, books.size)
-    assertTrue(books[0] is ScannedBook.SingleFile)
+@Test fun `single m4b is a single-file book`() {
+    val books = AudiobookScanner.scan(dir("root", dir("Book", file("a.m4b"))))
+    assertTrue(books.single() is ScannedBook.SingleFile)
 }
-@Test fun many_m4b_in_one_dir_is_one_multi_file_book_sorted() {
-    val books = AudiobookScanner.scan(dir("Book", file("part (10).m4b"), file("part (2).m4b"), file("part (1).m4b")))
-    assertEquals(1, books.size)
-    val mf = books[0] as ScannedBook.MultiFile
+@Test fun `many m4b in one dir is one multi-file book, naturally sorted`() {
+    val books = AudiobookScanner.scan(
+        dir("root", dir("Book", file("part (10).m4b"), file("part (2).m4b"), file("part (1).m4b"))),
+    )
+    val mf = books.single() as ScannedBook.MultiFile
     assertEquals(listOf("part (1).m4b", "part (2).m4b", "part (10).m4b"), mf.files.map { it.name })
 }
-@Test fun mixed_audio_grouped_together() {
-    val books = AudiobookScanner.scan(dir("Book", file("a.m4b"), file("b.mp3")))
-    assertEquals(1, (books.single() as ScannedBook.MultiFile).let { 1 })
-    assertEquals(2, (books.single() as ScannedBook.MultiFile).files.size)
+@Test fun `mixed m4b and mp3 in one dir are grouped, naturally sorted`() {
+    val mf = AudiobookScanner.scan(dir("root", dir("Book", file("a.m4b"), file("b.mp3"))))
+        .single() as ScannedBook.MultiFile
+    assertEquals(2, mf.files.size)
 }
-@Test fun nested_author_then_book() {
-    val books = AudiobookScanner.scan(dir("Author", dir("Book", file("a.m4b"), file("b.m4b"))))
-    assertEquals(1, books.size); assertTrue(books[0] is ScannedBook.MultiFile)
+@Test fun `nested author then multi-file book`() {
+    val books = AudiobookScanner.scan(dir("root", dir("Author", dir("Book", file("a.m4b"), file("b.m4b")))))
+    assertTrue(books.single() is ScannedBook.MultiFile)
 }
 ```
+Cases covered: 1 `.m4b` → `SingleFile`; ≥2 `.m4b` → `MultiFile` natural-sorted; mixed
+`.m4b`+`.mp3` → `MultiFile`; `Author/`(no audio) → recurse → `Book/`; plus the inverted
+stray-file-beside-subfolder and empty-tree cases retained from the existing file.
 
-- [ ] **Step 2: Run red.** `./gradlew :feature:audiobooks:testDebugUnitTest --tests "*AudiobookScannerTest"` — FAIL.
-- [ ] **Step 3: Implement.** Replace `ScannedBook` and scanner:
+- [ ] **Step 3: Run red.** `./gradlew :feature:audiobooks:testDebugUnitTest --tests "*AudiobookScannerTest"` — FAIL (new cases unresolved / old casts broken).
+- [ ] **Step 4: Implement.** Replace `ScannedBook` and scanner:
 
 ```kotlin
 sealed interface ScannedBook {
@@ -249,8 +261,8 @@ object AudiobookScanner {
 }
 ```
 
-- [ ] **Step 4: Run green.** same command — PASS.
-- [ ] **Step 5: Commit.** `git commit -am "feat(audiobooks): scanner groups a directory's audio files into one book"`
+- [ ] **Step 5: Run green.** same command — PASS.
+- [ ] **Step 6: Commit.** `git commit -am "feat(audiobooks): scanner groups a directory's audio files into one book"`
 
 ### Task 2.3: Importer builds contiguous chapter rows (TDD the assembly)
 
@@ -411,10 +423,57 @@ private fun globalOf(chapters: List<ChapterEntity>, fileIndex: Int, positionMs: 
 
 ## Chunk 4: Sleep-timer "end of chapter" for in-file boundaries
 
-- [ ] **Step 1: Investigate.** Find the end-of-chapter sleep consumer (grep `chapterBoundariesMs`, "end of chapter", sleep timer in `core:playback` + `feature:player`). Determine whether boundaries are per-item or global, and how they're computed for the current model.
-- [ ] **Step 2: Decide + write failing test** for the chosen unit (e.g. "next chapter boundary after global position" for a MULTI_FILE book where the boundary is **inside** the current file/item).
-- [ ] **Step 3: Implement** so end-of-chapter uses the current chapter's global end (`ChapterTimeline.globalStartOf(chapters, currentChapter+1)`), mapped to a within-item target if the sleep mechanism stops at item-relative positions.
-- [ ] **Step 4: Gate + commit.** `git commit -am "fix(player): end-of-chapter sleep respects in-file chapter boundaries"`
+**Verified mechanism (from spec review):** `PlaybackService.kt:143-155` (`EndOfBoundary`) computes
+`SleepTimer.nextBoundary(activeQueueInfo.chapterBoundariesMs.value, player.currentPosition)`
+where `player.currentPosition` is **item-relative**; if `target == null` it falls back to
+waiting for the **item transition**. `ActiveQueueInfo.chapterBoundariesMs` is one
+`StateFlow<List<Long>>` set from `PlayRequest.chapterBoundariesMs` ("within a single item",
+`PlayRequest.kt:22`), populated **only for SINGLE_FILE** (`QueueBuilder.kt:33`); MULTI_FILE
+leaves it empty. So for a multi-chapter file the sleep stops at the **file** end, not the
+**chapter** end — the bug.
+
+**Decision (pinned): work in GLOBAL terms.** Carry `fileDurationsMs` on the request so the
+service can convert the item-relative position to a global one, and make `chapterBoundariesMs`
+hold **global** chapter starts for both kinds. SINGLE_FILE is the degenerate case
+(`fileDurationsMs = [bookDuration]`, item index 0 → global == item-relative), so the path
+unifies. (Alternative considered: per-item boundary lists swapped on `onMediaItemTransition` —
+rejected: more moving state and a new Player listener.)
+
+### Task 4.1: Carry file durations + global boundaries (TDD `QueueBuilder`)
+
+**Files:** `core/playback/.../PlayRequest.kt`, `core/playback/.../ActiveQueueInfo.kt`,
+`feature/audiobooks/.../QueueBuilder.kt` (+ its test).
+
+- [ ] **Step 1: Failing test** in `QueueBuilderTest`: for a MULTI_FILE book (file A `[c0 0..1000,
+  c1 1000..3000]`, file B `[c2 0..1500]`), `request.fileDurationsMs == [3000, 1500]` and
+  `request.chapterBoundariesMs == [1000, 3000]` (global chapter starts, 0 excluded). For a
+  SINGLE_FILE book, `fileDurationsMs == [bookDuration]` and `chapterBoundariesMs` == the chapter
+  `startMs` list (unchanged).
+- [ ] **Step 2: Run red.** `./gradlew :feature:audiobooks:testDebugUnitTest --tests "*QueueBuilderTest"` — FAIL.
+- [ ] **Step 3: Implement.** Add `val fileDurationsMs: List<Long> = emptyList()` to `PlayRequest`.
+  In `QueueBuilder`: SINGLE_FILE → `fileDurationsMs = listOf(book.durationMs)`,
+  `chapterBoundariesMs = chapters.map { it.startMs }.filter { it > 0 }` (as today). MULTI_FILE →
+  `fileDurationsMs = ChapterTimeline.fileDurations(chapters)`,
+  `chapterBoundariesMs = chapters.indices.map { ChapterTimeline.globalStartOf(chapters, it) }.filter { it > 0 }`.
+  Add a `fileDurationsMs` `StateFlow` to `ActiveQueueInfo` set alongside `chapterBoundariesMs`
+  wherever the latter is populated.
+- [ ] **Step 4: Run green.** **Step 5: Commit.** `git commit -am "feat(playback): carry file durations + global chapter boundaries on PlayRequest"`
+
+### Task 4.2: Convert position to global in the sleep loop
+
+**Files:** `core/playback/.../PlaybackService.kt:143-155`.
+
+- [ ] **Step 1:** In the `EndOfBoundary` branch, compute
+  `val global = PositionMapper.toGlobal(activeQueueInfo.fileDurationsMs.value, player.currentMediaItemIndex, player.currentPosition)`,
+  pass `global` to `SleepTimer.nextBoundary(...)`, and change the wait loop to compare in global
+  terms: `while (isActive && PositionMapper.toGlobal(fileDurations, player.currentMediaItemIndex, player.currentPosition) < target) delay(500)`.
+  Keep the `target == null` item-transition fallback for books with no interior boundaries
+  (e.g. one chapter per file). (If `fileDurationsMs` is empty for legacy reasons, fall back to
+  `player.currentPosition` so nothing regresses.)
+- [ ] **Step 2: Gate.** `./gradlew test lint assembleDebug` — green. (`PlaybackService` is Android
+  glue, verified on-device in Chunk 5; the boundary math it relies on is unit-tested in 4.1 +
+  the existing `SleepTimer`/`PositionMapper` tests.)
+- [ ] **Step 3: Commit.** `git commit -am "fix(playback): end-of-chapter sleep uses global chapter boundaries"`
 
 ---
 
