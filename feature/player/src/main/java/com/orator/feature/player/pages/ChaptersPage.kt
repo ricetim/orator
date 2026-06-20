@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.orator.core.database.ChapterEntity
+import com.orator.core.database.ChapterTimeline
 import com.orator.core.database.SourceKind
 import com.orator.core.designsystem.components.SectionLabel
 import com.orator.core.designsystem.text.TimeFormats
@@ -28,7 +29,7 @@ fun ChaptersPage(
     currentChapterIndex: Int?,
     onChapterTap: (Int) -> Unit,
 ) {
-    val sorted = if (sourceKind == SourceKind.M4B) chapters.sortedBy { it.startMs } else chapters
+    val sorted = if (sourceKind == SourceKind.SINGLE_FILE) chapters.sortedBy { it.startMs } else chapters
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 26.dp)) {
         item { SectionLabel("Chapters", Modifier.padding(top = 6.dp)) }
         itemsIndexed(sorted, key = { _, c -> c.chapterIndex }) { i, chapter ->
@@ -48,9 +49,10 @@ fun ChaptersPage(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
+                    // Chapter start position on the book timeline (global), for both kinds.
                     text = when (sourceKind) {
-                        SourceKind.M4B -> TimeFormats.clock(chapter.startMs)
-                        SourceKind.MP3_DIR -> TimeFormats.clock(chapter.durationMs)
+                        SourceKind.SINGLE_FILE -> TimeFormats.clock(chapter.startMs)
+                        SourceKind.MULTI_FILE -> TimeFormats.clock(ChapterTimeline.globalStartOf(sorted, i))
                     },
                     color = OnyxTokens.TextFaint,
                     fontSize = 13.sp,

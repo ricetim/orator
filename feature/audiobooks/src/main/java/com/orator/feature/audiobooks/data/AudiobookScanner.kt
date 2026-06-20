@@ -5,9 +5,11 @@ sealed interface ScannedBook {
     val title: String
     val rootUri: String
 
-    data class M4b(override val title: String, override val rootUri: String) : ScannedBook
+    /** Exactly one audio file; chapters come from its internal `chpl` (or whole-file). */
+    data class SingleFile(override val title: String, override val rootUri: String) : ScannedBook
 
-    data class Mp3Collection(
+    /** Several audio files (natural-sorted); chapters are each file's `chpl` flattened in order. */
+    data class MultiFile(
         override val title: String,
         override val rootUri: String,
         val files: List<ScannedFile>,
@@ -17,41 +19,45 @@ sealed interface ScannedBook {
 data class ScannedFile(val name: String, val uri: String)
 
 /**
- * Walks a picked folder and finds books:
- *  - every .m4b file is a book, at any depth;
- *  - every directory whose DIRECT children include .mp3 files is a book of those files
- *    (natural-sorted); its subdirectories are not entered (v1 simplification — a
- *    CD1/CD2-style book without root-level mp3s shows up as two books).
+ * Walks a picked folder. A directory that directly contains audio files is one book —
+ * `SingleFile` when there's exactly one file, `MultiFile` (natural-sorted) when there are
+ * several. Subdirectories are always scanned independently, so nested libraries
+ * (`Author/Book/parts`) are found and a stray file never hides a subfolder's book.
+ *
+ * Limitation (v1): a book split across sibling subdirectories with no audio at the parent level
+ * (CD1/CD2-style) scans as separate books.
  */
 object AudiobookScanner {
 
-    fun scan(root: DocumentNode): List<ScannedBook> {
-        val books = mutableListOf<ScannedBook>()
-        scanDirectory(root, books)
-        return books
-    }
+    private val AUDIO_EXTS = listOf(".m4b", ".mp3")
+    private fun isAudio(name: String) = AUDIO_EXTS.any { name.endsWith(it, ignoreCase = true) }
+
+    fun scan(root: DocumentNode): List<ScannedBook> =
+        mutableListOf<ScannedBook>().also { scanDirectory(root, it) }
 
     private fun scanDirectory(dir: DocumentNode, sink: MutableList<ScannedBook>) {
         val children = dir.children()
-
-        children
-            .filter { !it.isDirectory && it.name.endsWith(".m4b", ignoreCase = true) }
-            .forEach { sink.add(ScannedBook.M4b(title = it.name.removeSuffix(".m4b"), rootUri = it.uri)) }
-
-        val mp3s = children
-            .filter { !it.isDirectory && it.name.endsWith(".mp3", ignoreCase = true) }
+        val audio = children
+            .filter { !it.isDirectory && isAudio(it.name) }
             .sortedWith(compareBy(NaturalOrder) { it.name })
-        if (mp3s.isNotEmpty()) {
-            sink.add(
-                ScannedBook.Mp3Collection(
-                    title = dir.name,
-                    rootUri = dir.uri,
-                    files = mp3s.map { ScannedFile(it.name, it.uri) },
+
+        when {
+            audio.size == 1 -> sink.add(
+                ScannedBook.SingleFile(
+                    title = audio[0].name.substringBeforeLast('.'),
+                    rootUri = audio[0].uri,
                 ),
             )
-            return // claimed as a book; don't descend further
+            audio.size >= 2 -> sink.add(
+                ScannedBook.MultiFile(
+                    title = dir.name,
+                    rootUri = dir.uri,
+                    files = audio.map { ScannedFile(it.name, it.uri) },
+                ),
+            )
         }
 
+        // Always recurse so nested books are found and a stray file never hides subfolders.
         children.filter { it.isDirectory }.forEach { scanDirectory(it, sink) }
     }
 }

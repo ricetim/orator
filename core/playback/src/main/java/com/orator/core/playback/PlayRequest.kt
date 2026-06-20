@@ -19,10 +19,12 @@ data class PlayableItem(
 
 /**
  * A complete "play this" command from a feature: the queue plus where to start in it.
- * [chapterBoundariesMs] are chapter start positions *within a single item* (the m4b case) so the
- * boundary sleep timer can pause at "end of chapter"; multi-file queues leave it empty and the
- * timer falls back to item transitions. [speedOverride] is the per-item speed (book/episode),
- * resolved against type/global defaults by SpeedResolver.
+ * [chapterBoundariesMs] are chapter start positions on the **global** book timeline (0 excluded)
+ * so the boundary sleep timer can pause at "end of chapter" even when a chapter boundary falls
+ * inside a queue item (multi-file books). [fileDurationsMs] are the per-queue-item durations used
+ * to convert the playhead's (item index, in-item position) to a global position; for a
+ * single-item queue it is just `[bookDuration]`. Empty means non-audiobook (no chapter math).
+ * [speedOverride] is the per-item speed (book/episode), resolved by SpeedResolver.
  */
 data class PlayRequest(
     val items: List<PlayableItem>,
@@ -30,5 +32,6 @@ data class PlayRequest(
     val startPositionMs: Long = 0,
     val mediaType: MediaType,
     val chapterBoundariesMs: List<Long> = emptyList(),
+    val fileDurationsMs: List<Long> = emptyList(),
     val speedOverride: Float? = null,
 )

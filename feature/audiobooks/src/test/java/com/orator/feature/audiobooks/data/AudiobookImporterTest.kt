@@ -62,11 +62,11 @@ class AudiobookImporterTest {
             Mp4ChapterParser.Chapter("Two", 30_000),
         )
 
-        importer.import(listOf(ScannedBook.M4b("File Name", "uri://book1")))
+        importer.import(listOf(ScannedBook.SingleFile("File Name", "uri://book1")))
 
         val book = db.bookDao().observeAll().first().single()
         assertEquals("Tagged Title", book.title)
-        assertEquals(SourceKind.M4B, book.sourceKind)
+        assertEquals(SourceKind.SINGLE_FILE, book.sourceKind)
         assertEquals(60_000, book.durationMs)
 
         val chapters = db.chapterDao().getForBook(book.id)
@@ -81,7 +81,7 @@ class AudiobookImporterTest {
     fun `m4b without chapters gets one full-length chapter`() = runBlocking {
         chaptersInM4b = emptyList()
 
-        importer.import(listOf(ScannedBook.M4b("File Name", "uri://book1")))
+        importer.import(listOf(ScannedBook.SingleFile("File Name", "uri://book1")))
 
         val book = db.bookDao().observeAll().first().single()
         val chapter = db.chapterDao().getForBook(book.id).single()
@@ -91,7 +91,7 @@ class AudiobookImporterTest {
 
     @Test
     fun `imports an mp3 collection with one chapter per file`() = runBlocking {
-        val scanned = ScannedBook.Mp3Collection(
+        val scanned = ScannedBook.MultiFile(
             title = "Dir Name",
             rootUri = "uri://dir",
             files = listOf(ScannedFile("01 Intro.mp3", "uri://f1"), ScannedFile("02 Body.mp3", "uri://f2")),
@@ -100,7 +100,7 @@ class AudiobookImporterTest {
         importer.import(listOf(scanned))
 
         val book = db.bookDao().observeAll().first().single()
-        assertEquals(SourceKind.MP3_DIR, book.sourceKind)
+        assertEquals(SourceKind.MULTI_FILE, book.sourceKind)
         assertEquals(120_000, book.durationMs) // 2 files x fake 60s
 
         val chapters = db.chapterDao().getForBook(book.id)
@@ -111,11 +111,11 @@ class AudiobookImporterTest {
 
     @Test
     fun `rescan keeps existing books and their positions`() = runBlocking {
-        importer.import(listOf(ScannedBook.M4b("Book", "uri://book1")))
+        importer.import(listOf(ScannedBook.SingleFile("Book", "uri://book1")))
         val id = db.bookDao().observeAll().first().single().id
         db.bookDao().updateProgress(id, 42_000, lastPlayedAtMs = 1)
 
-        importer.import(listOf(ScannedBook.M4b("Book", "uri://book1")))
+        importer.import(listOf(ScannedBook.SingleFile("Book", "uri://book1")))
 
         val book = db.bookDao().observeAll().first().single()
         assertEquals(42_000, book.positionMs)
@@ -123,7 +123,7 @@ class AudiobookImporterTest {
 
     @Test
     fun `books that vanished from disk are removed`() = runBlocking {
-        importer.import(listOf(ScannedBook.M4b("Book", "uri://book1")))
+        importer.import(listOf(ScannedBook.SingleFile("Book", "uri://book1")))
 
         importer.import(emptyList())
 

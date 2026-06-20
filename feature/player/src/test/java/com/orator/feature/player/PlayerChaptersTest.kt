@@ -23,10 +23,60 @@ class PlayerChaptersTest {
         startMs = startMs, durationMs = durationMs,
     )
 
+    // MULTI_FILE flattened: file A = [c0 0..1000, c1 1000..3000], file B = [c2 0..1500]. Total 4500.
+    private fun mch(i: Int, file: String, startMs: Long, durationMs: Long) = ChapterEntity(
+        bookId = "b", chapterIndex = i, title = "Ch $i", fileUri = file,
+        startMs = startMs, durationMs = durationMs,
+    )
+    private val multi = listOf(
+        mch(0, "A", 0, 1_000), mch(1, "A", 1_000, 2_000), mch(2, "B", 0, 1_500),
+    )
+
+    @Test
+    fun `multi-file current is the global chapter, not the file`() {
+        // playing file A (item 0) at 1500ms in-file -> global 1500 -> second chapter
+        val c = PlayerChapters.current(multi, SourceKind.MULTI_FILE, 0, 1_500, 4_500)!!
+        assertEquals(1, c.index)
+        assertEquals(3, c.count)
+        assertEquals(500, c.positionInChapterMs)
+        assertEquals(2_000, c.chapterDurationMs)
+    }
+
+    @Test
+    fun `multi-file current while playing the second file`() {
+        // playing file B (item 1) at 200ms -> global 3200 -> third chapter
+        val c = PlayerChapters.current(multi, SourceKind.MULTI_FILE, 1, 200, 4_500)!!
+        assertEquals(2, c.index)
+    }
+
+    @Test
+    fun `multi-file tap maps chapter to file plus in-file offset`() {
+        // 2nd chapter is inside file A at offset 1000
+        assertEquals(PlayerChapters.SeekTarget(0, 1_000), PlayerChapters.tap(multi, SourceKind.MULTI_FILE, 1))
+        // 3rd chapter is the start of file B
+        assertEquals(PlayerChapters.SeekTarget(1, 0), PlayerChapters.tap(multi, SourceKind.MULTI_FILE, 2))
+    }
+
+    @Test
+    fun `multi-file ticks and item seek span files`() {
+        assertEquals(listOf(1_000f / 4_500f, 3_000f / 4_500f), PlayerChapters.ticks(multi, SourceKind.MULTI_FILE, 4_500))
+        assertEquals(PlayerChapters.SeekTarget(1, 600), PlayerChapters.itemSeek(multi, SourceKind.MULTI_FILE, 0.8f, 4_500))
+    }
+
+    @Test
+    fun `chapter number at global counts chapters, not files`() {
+        // global 1500 is the 2nd chapter (inside file A) -> number 2, NOT file number 1
+        assertEquals(2, PlayerChapters.chapterNumberAt(multi, SourceKind.MULTI_FILE, 1_500))
+        assertEquals(3, PlayerChapters.chapterNumberAt(multi, SourceKind.MULTI_FILE, 3_200)) // file B
+        assertEquals(1, PlayerChapters.chapterNumberAt(multi, SourceKind.MULTI_FILE, 0))
+        assertEquals(2, PlayerChapters.chapterNumberAt(m4b, SourceKind.SINGLE_FILE, 70_000))
+        assertNull(PlayerChapters.chapterNumberAt(emptyList(), SourceKind.SINGLE_FILE, 0))
+    }
+
     @Test
     fun `m4b current chapter from position`() {
         val c = PlayerChapters.current(
-            m4b, SourceKind.M4B, currentIndex = 0,
+            m4b, SourceKind.SINGLE_FILE, currentIndex = 0,
             positionMs = 70_000, totalDurationMs = 300_000,
         )!!
         assertEquals(1, c.index)
@@ -37,7 +87,7 @@ class PlayerChaptersTest {
 
     @Test
     fun `m4b last chapter duration runs to book end`() {
-        val c = PlayerChapters.current(m4b, SourceKind.M4B, 0, 200_000, 300_000)!!
+        val c = PlayerChapters.current(m4b, SourceKind.SINGLE_FILE, 0, 200_000, 300_000)!!
         assertEquals(2, c.index)
         assertEquals(150_000, c.chapterDurationMs)
     }
@@ -45,7 +95,7 @@ class PlayerChaptersTest {
     @Test
     fun `mp3 current chapter is the queue index`() {
         val c = PlayerChapters.current(
-            mp3, SourceKind.MP3_DIR, currentIndex = 1,
+            mp3, SourceKind.MULTI_FILE, currentIndex = 1,
             positionMs = 30_000, totalDurationMs = 300_000,
         )!!
         assertEquals(1, c.index)
@@ -55,42 +105,42 @@ class PlayerChaptersTest {
 
     @Test
     fun `empty chapters yields null`() {
-        assertNull(PlayerChapters.current(emptyList(), SourceKind.M4B, 0, 0, 100))
+        assertNull(PlayerChapters.current(emptyList(), SourceKind.SINGLE_FILE, 0, 0, 100))
     }
 
     @Test
     fun `next and previous targets m4b`() {
         assertEquals(
             PlayerChapters.SeekTarget(0, 150_000),
-            PlayerChapters.next(m4b, SourceKind.M4B, 0, 70_000),
+            PlayerChapters.next(m4b, SourceKind.SINGLE_FILE, 0, 70_000),
         )
         // >3s into chapter 1 → prev goes to its start
         assertEquals(
             PlayerChapters.SeekTarget(0, 60_000),
-            PlayerChapters.previous(m4b, SourceKind.M4B, 0, 70_000),
+            PlayerChapters.previous(m4b, SourceKind.SINGLE_FILE, 0, 70_000),
         )
         // <3s into chapter 1 → prev goes to chapter 0
         assertEquals(
             PlayerChapters.SeekTarget(0, 0),
-            PlayerChapters.previous(m4b, SourceKind.M4B, 0, 61_000),
+            PlayerChapters.previous(m4b, SourceKind.SINGLE_FILE, 0, 61_000),
         )
         // next at the last chapter: null (nothing to do)
-        assertNull(PlayerChapters.next(m4b, SourceKind.M4B, 0, 200_000))
+        assertNull(PlayerChapters.next(m4b, SourceKind.SINGLE_FILE, 0, 200_000))
     }
 
     @Test
     fun `next and previous targets mp3`() {
         assertEquals(
             PlayerChapters.SeekTarget(2, 0),
-            PlayerChapters.next(mp3, SourceKind.MP3_DIR, 1, 30_000),
+            PlayerChapters.next(mp3, SourceKind.MULTI_FILE, 1, 30_000),
         )
         assertEquals(
             PlayerChapters.SeekTarget(1, 0),
-            PlayerChapters.previous(mp3, SourceKind.MP3_DIR, 1, 30_000),
+            PlayerChapters.previous(mp3, SourceKind.MULTI_FILE, 1, 30_000),
         )
         assertEquals(
             PlayerChapters.SeekTarget(0, 0),
-            PlayerChapters.previous(mp3, SourceKind.MP3_DIR, 1, 1_000),
+            PlayerChapters.previous(mp3, SourceKind.MULTI_FILE, 1, 1_000),
         )
     }
 
@@ -98,31 +148,31 @@ class PlayerChaptersTest {
     fun `chapter tap targets`() {
         assertEquals(
             PlayerChapters.SeekTarget(0, 60_000),
-            PlayerChapters.tap(m4b, SourceKind.M4B, 1),
+            PlayerChapters.tap(m4b, SourceKind.SINGLE_FILE, 1),
         )
         assertEquals(
             PlayerChapters.SeekTarget(1, 0),
-            PlayerChapters.tap(mp3, SourceKind.MP3_DIR, 1),
+            PlayerChapters.tap(mp3, SourceKind.MULTI_FILE, 1),
         )
     }
 
     @Test
     fun `whole-item fraction and ticks`() {
-        assertEquals(0.5f, PlayerChapters.itemFraction(mp3, SourceKind.MP3_DIR, 1, 90_000, 300_000), 0.001f)
-        assertEquals(0.5f, PlayerChapters.itemFraction(m4b, SourceKind.M4B, 0, 150_000, 300_000), 0.001f)
-        assertEquals(listOf(0.2f, 0.5f), PlayerChapters.ticks(m4b, SourceKind.M4B, 300_000))
-        assertEquals(listOf(0.2f, 0.5f), PlayerChapters.ticks(mp3, SourceKind.MP3_DIR, 300_000))
+        assertEquals(0.5f, PlayerChapters.itemFraction(mp3, SourceKind.MULTI_FILE, 1, 90_000, 300_000), 0.001f)
+        assertEquals(0.5f, PlayerChapters.itemFraction(m4b, SourceKind.SINGLE_FILE, 0, 150_000, 300_000), 0.001f)
+        assertEquals(listOf(0.2f, 0.5f), PlayerChapters.ticks(m4b, SourceKind.SINGLE_FILE, 300_000))
+        assertEquals(listOf(0.2f, 0.5f), PlayerChapters.ticks(mp3, SourceKind.MULTI_FILE, 300_000))
     }
 
     @Test
     fun `item seek fraction to target`() {
         assertEquals(
             PlayerChapters.SeekTarget(0, 150_000),
-            PlayerChapters.itemSeek(m4b, SourceKind.M4B, 0.5f, 300_000),
+            PlayerChapters.itemSeek(m4b, SourceKind.SINGLE_FILE, 0.5f, 300_000),
         )
         assertEquals(
             PlayerChapters.SeekTarget(1, 30_000),
-            PlayerChapters.itemSeek(mp3, SourceKind.MP3_DIR, 0.3f, 300_000),
+            PlayerChapters.itemSeek(mp3, SourceKind.MULTI_FILE, 0.3f, 300_000),
         )
     }
 }

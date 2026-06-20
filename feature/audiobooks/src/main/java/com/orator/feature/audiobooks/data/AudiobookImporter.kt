@@ -4,7 +4,6 @@ import android.net.Uri
 import com.orator.core.database.BookDao
 import com.orator.core.database.BookEntity
 import com.orator.core.database.ChapterDao
-import com.orator.core.database.ChapterEntity
 import com.orator.core.database.SourceKind
 import javax.inject.Inject
 
@@ -34,70 +33,47 @@ class AudiobookImporter @Inject constructor(
     }
 
     private suspend fun importNew(id: String, book: ScannedBook) {
-        when (book) {
-            is ScannedBook.M4b -> importM4b(id, book)
-            is ScannedBook.Mp3Collection -> importMp3Collection(id, book)
+        // One file for SINGLE_FILE; the natural-sorted list for MULTI_FILE.
+        val files = when (book) {
+            is ScannedBook.SingleFile -> listOf(ScannedFile(name = book.title, uri = book.rootUri))
+            is ScannedBook.MultiFile -> book.files
         }
-    }
 
-    private suspend fun importM4b(id: String, book: ScannedBook.M4b) {
-        val uri = Uri.parse(book.rootUri)
-        val meta = extractor.extract(uri)
-        val marks = chapterSource.chaptersOf(uri)
-            .ifEmpty { listOf(Mp4ChapterParser.Chapter(title = book.title, startMs = 0)) }
-
-        val chapters = marks.mapIndexed { index, mark ->
-            val end = marks.getOrNull(index + 1)?.startMs ?: meta.durationMs
-            ChapterEntity(
-                bookId = id,
-                chapterIndex = index,
-                title = mark.title,
-                fileUri = book.rootUri,
-                startMs = mark.startMs,
-                durationMs = (end - mark.startMs).coerceAtLeast(0),
+        var firstMeta: ExtractedMetadata? = null
+        val fileChapters = files.map { f ->
+            val uri = Uri.parse(f.uri)
+            val meta = extractor.extract(uri)
+            if (firstMeta == null) firstMeta = meta
+            ChapterAssembler.FileChapters(
+                fileUri = f.uri,
+                durationMs = meta.durationMs,
+                marks = chapterSource.chaptersOf(uri),
+                fallbackTitle = f.name.substringBeforeLast('.'),
             )
         }
-        insert(id, book, SourceKind.M4B, meta, durationMs = meta.durationMs, chapters = chapters)
-    }
+        val chapters = ChapterAssembler.assemble(id, fileChapters)
+        val meta = firstMeta ?: ExtractedMetadata(null, null, 0, null)
 
-    private suspend fun importMp3Collection(id: String, book: ScannedBook.Mp3Collection) {
-        var firstFileMeta: ExtractedMetadata? = null
-        val chapters = book.files.mapIndexed { index, file ->
-            val fileMeta = extractor.extract(Uri.parse(file.uri))
-            if (firstFileMeta == null) firstFileMeta = fileMeta
-            ChapterEntity(
-                bookId = id,
-                chapterIndex = index,
-                title = file.name.substringBeforeLast('.'),
-                fileUri = file.uri,
-                startMs = 0,
-                durationMs = fileMeta.durationMs,
-            )
+        val kind = when (book) {
+            is ScannedBook.SingleFile -> SourceKind.SINGLE_FILE
+            is ScannedBook.MultiFile -> SourceKind.MULTI_FILE
         }
-        val first = firstFileMeta ?: ExtractedMetadata(null, null, 0, null)
-        // Directory name beats the first file's tag for a collection's title.
-        val collectionMeta = first.copy(title = book.title)
-        insert(id, book, SourceKind.MP3_DIR, collectionMeta, durationMs = chapters.sumOf { it.durationMs }, chapters = chapters)
-    }
+        // A lone file prefers its embedded title; a multi-file book is named by its directory.
+        val title = when (book) {
+            is ScannedBook.SingleFile -> meta.title?.takeIf { it.isNotBlank() } ?: book.title
+            is ScannedBook.MultiFile -> book.title
+        }
 
-    private suspend fun insert(
-        id: String,
-        book: ScannedBook,
-        kind: SourceKind,
-        meta: ExtractedMetadata,
-        durationMs: Long,
-        chapters: List<ChapterEntity>,
-    ) {
         bookDao.upsert(
             listOf(
                 BookEntity(
                     id = id,
-                    title = meta.title?.takeIf { it.isNotBlank() } ?: book.title,
+                    title = title,
                     author = meta.author,
                     coverPath = coverStore.save(id, meta.coverBytes),
                     sourceUri = book.rootUri,
                     sourceKind = kind,
-                    durationMs = durationMs,
+                    durationMs = chapters.sumOf { it.durationMs },
                     addedAtUtc = System.currentTimeMillis(),
                 ),
             ),

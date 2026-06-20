@@ -1,13 +1,16 @@
 package com.orator.feature.player
 
 import com.orator.core.database.ChapterEntity
+import com.orator.core.database.ChapterTimeline
 import com.orator.core.database.SourceKind
 import com.orator.core.playback.ids.PositionMapper
 
 /**
- * Pure chapter math for the unified player. M4B chapters are offsets inside one queue item;
- * MP3_DIR chapters ARE the queue items. Everything the chapter bar, tick marks, ⏮/⏭ and
- * chapter taps need, with no Android or playback dependencies.
+ * Pure chapter math for the unified player. SINGLE_FILE chapters are offsets inside one queue
+ * item. MULTI_FILE chapters tile a multi-file timeline (possibly several chapters per file);
+ * [currentIndex] is the playing file (queue item) and [positionMs] is the offset within it, so
+ * the math converts to/from a global position via ChapterTimeline + PositionMapper. Everything
+ * the chapter bar, tick marks, ⏮/⏭ and chapter taps need, with no Android/playback deps.
  */
 object PlayerChapters {
 
@@ -33,17 +36,33 @@ object PlayerChapters {
     ): ChapterUi? {
         if (chapters.isEmpty()) return null
         return when (sourceKind) {
-            SourceKind.M4B -> {
+            SourceKind.SINGLE_FILE -> {
                 val sorted = chapters.sortedBy { it.startMs }
                 val i = sorted.indexOfLast { it.startMs <= positionMs }.coerceAtLeast(0)
                 val start = sorted[i].startMs
                 val end = sorted.getOrNull(i + 1)?.startMs ?: totalDurationMs
                 ChapterUi(i, sorted.size, sorted[i].title, positionMs - start, end - start)
             }
-            SourceKind.MP3_DIR -> {
-                val c = chapters.getOrNull(currentIndex) ?: return null
-                ChapterUi(currentIndex, chapters.size, c.title, positionMs, c.durationMs)
+            SourceKind.MULTI_FILE -> {
+                val global = globalOf(chapters, currentIndex, positionMs)
+                val i = ChapterTimeline.chapterAtGlobal(chapters, global)
+                val start = ChapterTimeline.globalStartOf(chapters, i)
+                ChapterUi(i, chapters.size, chapters[i].title, global - start, chapters[i].durationMs)
             }
+        }
+    }
+
+    /** Global position for a MULTI_FILE book from its (file index, in-file offset). */
+    private fun globalOf(chapters: List<ChapterEntity>, fileIndex: Int, positionMs: Long): Long =
+        PositionMapper.toGlobal(ChapterTimeline.fileDurations(chapters), fileIndex, positionMs)
+
+    /** 1-based chapter number containing a GLOBAL position; null when chapters are unknown. */
+    fun chapterNumberAt(chapters: List<ChapterEntity>, sourceKind: SourceKind, globalMs: Long): Int? {
+        if (chapters.isEmpty()) return null
+        return when (sourceKind) {
+            SourceKind.SINGLE_FILE ->
+                chapters.sortedBy { it.startMs }.indexOfLast { it.startMs <= globalMs }.coerceAtLeast(0) + 1
+            SourceKind.MULTI_FILE -> ChapterTimeline.chapterAtGlobal(chapters, globalMs) + 1
         }
     }
 
@@ -75,9 +94,10 @@ object PlayerChapters {
 
     fun tap(chapters: List<ChapterEntity>, sourceKind: SourceKind, chapterIndex: Int): SeekTarget =
         when (sourceKind) {
-            SourceKind.M4B ->
+            SourceKind.SINGLE_FILE ->
                 SeekTarget(0, chapters.sortedBy { it.startMs }[chapterIndex].startMs)
-            SourceKind.MP3_DIR -> SeekTarget(chapterIndex, 0)
+            SourceKind.MULTI_FILE ->
+                SeekTarget(ChapterTimeline.fileIndexOf(chapters, chapterIndex), chapters[chapterIndex].startMs)
         }
 
     /** Whole-item progress 0..1 (the "Book"/"Episode" bar). */
@@ -90,9 +110,8 @@ object PlayerChapters {
     ): Float {
         if (totalDurationMs <= 0) return 0f
         val global = when (sourceKind) {
-            SourceKind.M4B -> positionMs
-            SourceKind.MP3_DIR ->
-                PositionMapper.toGlobal(chapters.map { it.durationMs }, currentIndex, positionMs)
+            SourceKind.SINGLE_FILE -> positionMs
+            SourceKind.MULTI_FILE -> globalOf(chapters, currentIndex, positionMs)
         }
         return (global.toFloat() / totalDurationMs).coerceIn(0f, 1f)
     }
@@ -105,9 +124,8 @@ object PlayerChapters {
     ): List<Float> {
         if (totalDurationMs <= 0) return emptyList()
         val starts = when (sourceKind) {
-            SourceKind.M4B -> chapters.map { it.startMs }.sorted()
-            SourceKind.MP3_DIR -> chapters.map { it.durationMs }
-                .runningFold(0L) { acc, d -> acc + d }.dropLast(1)
+            SourceKind.SINGLE_FILE -> chapters.map { it.startMs }.sorted()
+            SourceKind.MULTI_FILE -> chapters.indices.map { ChapterTimeline.globalStartOf(chapters, it) }
         }
         return starts.filter { it > 0 }.map { it.toFloat() / totalDurationMs }
     }
@@ -121,9 +139,9 @@ object PlayerChapters {
     ): SeekTarget {
         val globalMs = (fraction.coerceIn(0f, 1f) * totalDurationMs).toLong()
         return when (sourceKind) {
-            SourceKind.M4B -> SeekTarget(0, globalMs)
-            SourceKind.MP3_DIR -> {
-                val p = PositionMapper.toFilePosition(chapters.map { it.durationMs }, globalMs)
+            SourceKind.SINGLE_FILE -> SeekTarget(0, globalMs)
+            SourceKind.MULTI_FILE -> {
+                val p = PositionMapper.toFilePosition(ChapterTimeline.fileDurations(chapters), globalMs)
                 SeekTarget(p.fileIndex, p.offsetMs)
             }
         }

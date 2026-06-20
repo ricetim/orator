@@ -55,7 +55,7 @@ class AudiobookPositionListenerTest {
 
     @Test
     fun `m4b position is stored as-is`() = runBlocking {
-        seedBook(SourceKind.M4B)
+        seedBook(SourceKind.SINGLE_FILE)
 
         listener.onPositionChanged(AudiobookMediaId.encode("b1", 0), 42_000, 60_000)
 
@@ -66,7 +66,7 @@ class AudiobookPositionListenerTest {
 
     @Test
     fun `mp3 position is offset by preceding files`() = runBlocking {
-        seedBook(SourceKind.MP3_DIR)
+        seedBook(SourceKind.MULTI_FILE)
 
         listener.onPositionChanged(AudiobookMediaId.encode("b1", 1), 12_000, 30_000)
 
@@ -75,7 +75,7 @@ class AudiobookPositionListenerTest {
 
     @Test
     fun `foreign mediaIds are ignored`() = runBlocking {
-        seedBook(SourceKind.M4B)
+        seedBook(SourceKind.SINGLE_FILE)
 
         listener.onPositionChanged("podcast/xyz/0", 99_000, 0)
 

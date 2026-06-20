@@ -641,9 +641,14 @@ flowchart LR
 | **8** | Premium features | The premium set (TBD) shipping behind the gate | (depends on the chosen set) |
 | **9** | Launch readiness | Baseline profiles, R8 tuned, store listing + data-safety, signed release | — |
 
-**Status:** Phases 1–4a are merged (PR #1, #3, #4, #5); Phase 4b is complete and
-device-verified. UI/design iteration is deliberately deferred until backend functionality is
-complete, so Phases 2–6 ship with minimal placeholder UI. **Next: Phase 5 (playlists).**
+**Status:** Phases 1–4b are merged (PRs #1, #3, #4, #5, #6). The **Onyx UI redesign**
+(Solarized Dark, Jetpack Compose — single-token design system, modular per-component files) is
+merged (PR #7, 2026-06-18, device-verified on a Pixel 7a), replacing the placeholder screens
+across every feature — so UI/design iteration is **no longer deferred**. Before Phase 5, a P2
+audiobook-scanner bugfix is in progress: multi-part `.m4b` books (a directory of several `.m4b`
+files) were being split into separate library entries; the fix groups all audio files in a
+directory into one book ("directory = book", matching the existing `.mp3` behaviour).
+**Next: audiobook grouping bugfix → Phase 5 (playlists).**
 
 ---
 

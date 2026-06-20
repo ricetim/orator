@@ -3,8 +3,12 @@ package com.orator.core.database
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-/** How a book arrived in the library; determines how a playback queue is built. */
-enum class SourceKind { M4B, MP3_DIR }
+/**
+ * How a book's audio is laid out; determines how a playback queue is built.
+ * SINGLE_FILE: one file, chapters are internal `chpl` offsets. MULTI_FILE: several files
+ * (natural-sorted), chapters are each file's `chpl` flattened contiguously across files.
+ */
+enum class SourceKind { SINGLE_FILE, MULTI_FILE }
 
 /**
  * One audiobook. [positionMs] is the global resume position measured from the start of the
