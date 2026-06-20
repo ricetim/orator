@@ -522,8 +522,8 @@ dependencies {
 }
 ```
 
-- [ ] **Step 3: Register the module** — add `include(":feature:playlists")` to `settings.gradle`
-  (after `:feature:podcasts`).
+- [ ] **Step 3: Register the module** — add `include(":feature:playlists")` to
+  `settings.gradle.kts` (after `:feature:podcasts`).
 
 - [ ] **Step 4: Wire it into the app** — in `app/build.gradle.kts`, alongside the other
   `implementation(project(":feature:..."))` lines, add `implementation(project(":feature:playlists"))`.
@@ -539,7 +539,7 @@ dependencies {
 - [ ] **Step 6: Commit**
 
 ```bash
-git add feature/playlists/build.gradle.kts settings.gradle app/build.gradle.kts
+git add feature/playlists/build.gradle.kts settings.gradle.kts app/build.gradle.kts
 # include the manifest in the add only if you created one:
 # git add feature/playlists/src/main/AndroidManifest.xml
 git commit -m "feat(playlists): scaffold feature:playlists module
@@ -1218,10 +1218,11 @@ class PlaylistPlaybackControllerTest {
 ```
 
 > Add test helpers if not already present: `playlist()` / `item(...)` factory funcs and a
-> `fakeStore()` returning an `ActivePlaylistStore` backed by an in-memory `DataStore<Preferences>`
-> (use `PreferenceDataStoreFactory.create` with a temp file, or a tiny fake implementing the same
-> three suspend methods — simplest is a hand-rolled fake object with a nullable Long). Keep these
-> in the test source set next to `FakePlaylistDao`.
+> `fakeStore()` returning a **real `ActivePlaylistStore`** (it is a `final class`, so it can't be
+> faked by subclassing) backed by an in-memory `DataStore<Preferences>` created with
+> `PreferenceDataStoreFactory.create(scope = this /* TestScope */) { tmpFolder.newFile("active.preferences_pb") }`
+> — use a JUnit `@get:Rule val tmpFolder = TemporaryFolder()`. Keep these helpers in the test
+> source set next to `FakePlaylistDao`.
 
 - [ ] **Step 2: Run, expect failure.** Report build time.
 
@@ -1404,14 +1405,13 @@ class AudiobookPlaylistItemResolver @Inject constructor(
         val book = bookDao.getById(ref.id) ?: return null
         return PlaylistItemContent(
             title = book.title,
-            subtitle = book.author.orEmpty(),
-            artworkUri = book.coverUri,      // confirm the cover field name on BookEntity
+            subtitle = book.author.orEmpty(),   // BookEntity.author is String?
+            artworkUri = book.coverPath,        // BookEntity.coverPath: String?
             durationMs = book.durationMs,
         )
     }
 }
 ```
-> Confirm `BookEntity`'s cover/artwork field name when implementing (e.g. `coverUri`/`artworkUri`).
 
 - [ ] **Step 5: Bind both `@IntoSet`** in `AudiobooksFeatureModule.kt`:
 
@@ -1446,10 +1446,14 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - Modify: `feature/podcasts/.../PodcastsFeatureModule.kt`
 - Test: `feature/podcasts/.../data/EpisodePlayRequestFactoryTest.kt`
 
-> Mirror Task 3.1, delegating to `EpisodeQueueBuilder.build(podcast, episode, startAtMs =
-> episode.positionMs)`. Load via `EpisodeDao.getById(ref.id)` and the episode's `PodcastDao`
-> lookup (confirm method names). Resolver subtitle = show title; artwork = episode/podcast
-> artwork field (confirm); duration = `episode.durationMs`.
+> Mirror Task 3.1. Both the factory and the resolver inject **`EpisodeDao` + `PodcastDao`** —
+> `EpisodeEntity` has no show-name or artwork field, so those come from the parent podcast.
+> - Factory: `val ep = episodeDao.getById(ref.id) ?: return null; val pod =
+>   podcastDao.getById(ep.podcastId) ?: return null; EpisodeQueueBuilder.build(pod, ep,
+>   startAtMs = ep.positionMs)`.
+> - Resolver: `PlaylistItemContent(title = ep.title, subtitle = pod.title, artworkUri =
+>   pod.artworkUrl, durationMs = ep.durationMs)` (`PodcastEntity.artworkUrl: String?`,
+>   `PodcastEntity.title`). Return `null` if either the episode or its podcast is missing.
 
 - [ ] **Step 1:** Write the failing factory test (fake episode + podcast sources; assert same
   PlayRequest shape `EpisodeQueueBuilder.build` yields; `null` for unknown id).
@@ -1548,9 +1552,11 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - [ ] **Step 2:** Write `PlaylistDetailScreen`:
   - Header: playlist name, **Play from top** button, overflow (rename / delete).
   - Rows via `EpisodeRow`/a list row showing `content.title`, `content.subtitle`, and duration
-    formatted with `TimeFormats` **only when `content.durationMs > 0`** (never "0:00").
-  - **tap** row → `playItem(itemId)`; **swipe** (use `SwipeActionRow`, label "Remove ✕") →
-    `remove(itemId)`; **long-press drag** to reorder → `move(from, to)` on drop.
+    formatted with `TimeFormats` (package `com.orator.core.designsystem.text`) **only when
+    `content.durationMs > 0`** (never "0:00").
+  - **tap** row → `playItem(itemId)`; **swipe** → `remove(itemId)` using
+    `SwipeActionRow(enabled = true, actionLabel = "Remove ✕", onSwipeLeft = { remove(itemId) }) { /* row */ }`;
+    **long-press drag** to reorder → `move(from, to)` on drop.
   - For drag: implement with `Modifier.pointerInput` + `detectDragGesturesAfterLongPress`
     tracking a dragged index and target index over a `LazyColumn`; commit with `move(from,to)` on
     release. **If this proves fiddly, fall back to ▲/▼ move buttons on each row calling
@@ -1635,12 +1641,16 @@ class PlaylistsFeatureEntry @Inject constructor(
 ### Task 4.6: App tab
 
 **Files:**
+- Modify: `core/designsystem/src/main/java/com/orator/core/designsystem/icons/OnyxIcons.kt` (add `Playlists` vector)
 - Modify: `app/src/main/java/com/orator/app/OratorShell.kt`
 
 - [ ] **Step 1:** Read `OratorShell.kt` around `private val TABS = listOf(...)` to learn the tab
   data shape (route + label + icon).
-- [ ] **Step 2:** Add a **Playlists** tab entry referencing `CommonRoutes.Playlists` with a
-  suitable Material icon, placed after Audiobooks (or wherever fits the existing order). This is
+- [ ] **Step 2:** Add a **Playlists** tab entry referencing `CommonRoutes.Playlists`, placed after
+  Audiobooks. The existing tabs use custom `OnyxIcons` vectors (`OnyxIcons.Mic`/`.Book`/`.Queue`)
+  — there is no Material icons dependency. Add a new `Playlists` `ImageVector` to
+  `core/designsystem/.../icons/OnyxIcons.kt` (follow the lazy-`ImageVector.Builder` pattern of the
+  existing glyphs; a simple list/stack glyph) and use `OnyxIcons.Playlists` for the tab. This is
   the single `app`-module change; it names a `CommonRoutes` string, not the feature module.
 - [ ] **Step 3: Build** `./gradlew assembleDebug`. Expected: SUCCESS. Report build time.
 - [ ] **Step 4: Commit** (explicit path).
@@ -1655,11 +1665,12 @@ class PlaylistsFeatureEntry @Inject constructor(
   add the same ⋮ affordance navigating with `MediaType.AUDIOBOOK.name` + `book.id`.
 
 > `EpisodeRow` already exposes a free `trailing: @Composable () -> Unit` slot — drop an
-> `IconButton(Icons.Default.MoreVert)` there. For audiobook `CoverTile` (a grid tile), prefer
-> adding the ⋮ on the audiobook **detail** screen header, or a long-press menu on the tile, to
-> avoid cluttering the grid. Pass an `onAddToPlaylist: (id) -> Unit` lambda down from each
-> FeatureEntry's screen registration so navigation stays in the feature's entry (consistent with
-> how those features already navigate).
+> `IconButton` there. There is no Material icons dependency; use an `OnyxIcons` glyph (add a small
+> `OnyxIcons.AddToPlaylist`/`OnyxIcons.More` vector if none fits) or a plain `Text("＋")`. For
+> audiobook `CoverTile` (a grid tile), prefer adding the affordance on the audiobook **detail**
+> screen header, or a long-press menu on the tile, to avoid cluttering the grid. Pass an
+> `onAddToPlaylist: (id) -> Unit` lambda down from each FeatureEntry's screen registration so
+> navigation stays in the feature's entry (consistent with how those features already navigate).
 
 - [ ] **Step 1:** Podcasts — thread an `onAddToPlaylist: (episodeId: String) -> Unit` from
   `PodcastsFeatureEntry`'s `PodcastDetailScreen` registration (it already has `navController`),
