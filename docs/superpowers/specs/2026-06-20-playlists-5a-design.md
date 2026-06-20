@@ -128,7 +128,7 @@ data class PlaylistItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val playlistId: Long,
     val mediaType: MediaType,   // PODCAST = episode, AUDIOBOOK = whole book
-    val mediaId: String,        // episode.id (String PK) or book.id.toString()
+    val mediaId: String,        // episode.id or book.id — both are already String PKs
     val position: Long,         // order within the playlist; top = smallest value
 )
 ```
@@ -178,10 +178,11 @@ interface PlayRequestFactory {
 ```
 
 - `feature:audiobooks` provides `AudiobookPlayRequestFactory` + `AudiobookPlaylistItemResolver`
-  (mediaType = AUDIOBOOK). The factory loads the book + chapters, reads the book's resume
-  position, delegates to existing `QueueBuilder`; the resolver returns title/author/cover/total
-  duration. Both parse `ref.id` back to the book's `Long` PK (`toLongOrNull()`); a malformed or
-  missing id → `null` (consistent with "unresolvable").
+  (mediaType = AUDIOBOOK). `BookEntity.id` is already a `String` PK, so `ref.id` is the book id
+  directly (no parsing). The factory loads the book + chapters (`BookDao.getById`,
+  `ChapterDao`), reads the book's resume position (`BookEntity.positionMs`), delegates to existing
+  `QueueBuilder`; the resolver returns title/author/cover/`durationMs`. A `ref.id` with no matching
+  book → `null` (consistent with "unresolvable").
 - `feature:podcasts` provides `EpisodePlayRequestFactory` + `EpisodePlaylistItemResolver`
   (mediaType = PODCAST). The factory loads the episode + its podcast, reads `episode.positionMs`,
   delegates to existing `EpisodeQueueBuilder`; the resolver returns episode title / show name /
@@ -326,9 +327,10 @@ for that book; the controller sees the playing `mediaId` no longer matches P's t
 - **Factories + resolvers** (thin): each factory maps a `MediaRef` to the same `PlayRequest` its
   existing builder produces; each resolver maps a `MediaRef` to expected display fields;
   unresolvable / malformed ref → `null`.
-- **DAO**: dedupe via unique index; ordered query; cascade delete of items with playlist.
-  Tested at whatever level `core:database` already uses — **confirm Robolectric vs. keeping
-  logic in pure objects as the plan's first task** (the one decision deferred to planning).
+- **DAO**: dedupe via unique index; ordered query; cascade delete of items with playlist;
+  batch position update. Tested with **Robolectric + `Room.inMemoryDatabaseBuilder`**, matching
+  the existing `EpisodeDaoTest` / `PodcastDaoTest` / `HistoryDaoTest` convention in `core:database`
+  (`@RunWith(RobolectricTestRunner)`, `@Config(sdk=[34])`, `runBlocking`).
 - Per-chunk gate (project standard): `./gradlew test lint assembleDebug`; report build times.
 
 ## Risks / mitigations
