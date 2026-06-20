@@ -218,6 +218,9 @@ Operations:
     - AUDIOBOOK: `AudiobookMediaId.parse(mediaId)?.bookId == ref.id` — **ignore `fileIndex`**, so
       a multi-file book stays "matched" across its internal file→file transitions (otherwise the
       controller would wrongly stand down mid-book).
+    - A **null/blank** `mediaId` (the brief window between `play()` and the first state emission,
+      when no queue has loaded yet) is treated as "no match" → the controller does **not** stand
+      down. It only deactivates on a *non-blank* mediaId that resolves to a different ref.
 
 > **Completion signal — critical subtlety.** In `PlaybackService`, an internal file→file jump
 > inside a multi-file book is a Media3 `AUTO` transition that reports `onItemEnded(completed=true)`
@@ -264,7 +267,8 @@ history/position write. The finished item is still recorded in history exactly a
 - **PlaylistsScreen** — new top-level destination `CommonRoutes.Playlists`. Lists playlists
   (name + item count); "＋ New playlist" opens a name dialog. Tap → detail.
 - **PlaylistDetailScreen** — header (name, **Play from top**, overflow: rename / delete);
-  rows show artwork, title, subtitle (show name / author), duration. Interactions:
+  rows show artwork, title, subtitle (show name / author), duration (hidden when `durationMs == 0`
+  — a streamed episode whose length isn't known yet, never rendered as "0:00"). Interactions:
   **tap = play from top** (promotes tapped item to top then plays), **swipe = remove**,
   **long-press drag = reorder**. Empty state when drained.
 - **AddToPlaylistSheet** — destination `CommonRoutes.AddToPlaylist` taking `{mediaType}/{mediaId}`
