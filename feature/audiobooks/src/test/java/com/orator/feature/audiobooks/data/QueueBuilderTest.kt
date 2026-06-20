@@ -95,4 +95,24 @@ class QueueBuilderTest {
 
         assertEquals("Ch 0", request.items[0].title)
     }
+
+    @Test
+    fun `multi-file book with several chapters per file builds one item per file`() {
+        // file A has two chapters, file B one — items must be the two files, not three chapters.
+        val chapters = listOf(
+            chapter(0, "uri://A", 0, 1_000),
+            chapter(1, "uri://A", 1_000, 2_000),
+            chapter(2, "uri://B", 0, 1_500),
+        )
+
+        val request = QueueBuilder.build(book(SourceKind.MULTI_FILE), chapters, startAtMs = 3_200)
+
+        assertEquals(listOf("uri://A", "uri://B"), request.items.map { it.uri })
+        assertEquals(
+            listOf(AudiobookMediaId.encode("b1", 0), AudiobookMediaId.encode("b1", 1)),
+            request.items.map { it.mediaId }, // mediaId encodes the FILE index, not chapterIndex
+        )
+        assertEquals(1, request.startIndex)   // 3200ms lands in file B (after A's 3000ms)
+        assertEquals(200, request.startPositionMs)
+    }
 }

@@ -4,6 +4,7 @@ import com.orator.core.playback.ids.PositionMapper
 
 import com.orator.core.database.BookEntity
 import com.orator.core.database.ChapterEntity
+import com.orator.core.database.ChapterTimeline
 import com.orator.core.database.SourceKind
 import com.orator.core.model.MediaType
 import com.orator.core.playback.PlayRequest
@@ -11,8 +12,9 @@ import com.orator.core.playback.PlayableItem
 
 /**
  * Turns a book + chapters + global start position into a PlayRequest.
- * M4B: one queue item (chapters are seek targets inside it), global position == file position.
- * MP3_DIR: one queue item per file; PositionMapper finds the starting (file, offset).
+ * SINGLE_FILE: one queue item (chapters are seek targets inside it), global == file position.
+ * MULTI_FILE: one queue item per file (derived by grouping chapters on fileUri); PositionMapper
+ * maps the global start to a (file, offset) using per-file durations.
  */
 object QueueBuilder {
 
@@ -35,13 +37,17 @@ object QueueBuilder {
             )
 
             SourceKind.MULTI_FILE -> {
-                val start = PositionMapper.toFilePosition(chapters.map { it.durationMs }, startAtMs)
+                val files = ChapterTimeline.files(chapters)
+                val fileDurations = ChapterTimeline.fileDurations(chapters)
+                val start = PositionMapper.toFilePosition(fileDurations, startAtMs)
                 PlayRequest(
-                    items = chapters.map { chapter ->
+                    items = files.mapIndexed { fileIndex, uri ->
                         PlayableItem(
-                            mediaId = AudiobookMediaId.encode(book.id, chapter.chapterIndex),
-                            uri = chapter.fileUri,
-                            title = chapter.title,
+                            mediaId = AudiobookMediaId.encode(book.id, fileIndex),
+                            uri = uri,
+                            // The file isn't one chapter; use its first chapter's title (for an
+                            // mp3 track that IS the track title — preserves the old behavior).
+                            title = chapters.first { it.fileUri == uri }.title,
                             artist = book.author.orEmpty(),
                         )
                     },
