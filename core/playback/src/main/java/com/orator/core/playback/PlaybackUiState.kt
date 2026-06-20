@@ -5,6 +5,8 @@ import com.orator.core.model.MediaType
 /** Immutable snapshot of what the player UI needs to render. */
 data class PlaybackUiState(
     val isPlaying: Boolean = false,
+    /** True when the player has played its whole queue to the end (Media3 STATE_ENDED). */
+    val isEnded: Boolean = false,
     val title: String = "",
     val artist: String = "",
     val mediaId: String? = null,

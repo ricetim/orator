@@ -111,6 +111,7 @@ class PlaybackConnection @Inject constructor(
         val c = controller ?: return
         _state.value = PlaybackUiState(
             isPlaying = c.isPlaying,
+            isEnded = c.playbackState == Player.STATE_ENDED,
             title = c.mediaMetadata.title?.toString().orEmpty(),
             artist = c.mediaMetadata.artist?.toString().orEmpty(),
             mediaId = c.currentMediaItem?.mediaId,
