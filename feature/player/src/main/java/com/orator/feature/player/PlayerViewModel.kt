@@ -8,6 +8,7 @@ import com.orator.core.database.BookDao
 import com.orator.core.database.BookmarkDao
 import com.orator.core.database.BookmarkEntity
 import com.orator.core.database.ChapterDao
+import com.orator.core.database.ChapterTimeline
 import com.orator.core.database.EpisodeDao
 import com.orator.core.database.PodcastDao
 import com.orator.core.database.SourceKind
@@ -149,7 +150,7 @@ class PlayerViewModel @Inject constructor(
             SourceKind.SINGLE_FILE -> playbackConnection.seekTo(0, bookmark.positionMs)
             SourceKind.MULTI_FILE -> {
                 val p = PositionMapper.toFilePosition(
-                    c.chapters.map { it.durationMs },
+                    ChapterTimeline.fileDurations(c.chapters),
                     bookmark.positionMs,
                 )
                 playbackConnection.seekTo(p.fileIndex, p.offsetMs)
@@ -161,13 +162,13 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch { bookmarkDao.delete(id) }
     }
 
-    /** Global book position of the playhead (M4B: as reported; MP3_DIR: via PositionMapper). */
+    /** Global book position of the playhead (SINGLE_FILE: as reported; MULTI_FILE: via files). */
     fun currentGlobalMs(c: NowPlayingContent.Book): Long {
         val s = uiState.value
         return when (c.book.sourceKind) {
             SourceKind.SINGLE_FILE -> s.positionMs
             SourceKind.MULTI_FILE -> PositionMapper.toGlobal(
-                c.chapters.map { it.durationMs },
+                ChapterTimeline.fileDurations(c.chapters),
                 AudiobookMediaId.parse(s.mediaId.orEmpty())?.fileIndex ?: 0,
                 s.positionMs,
             )

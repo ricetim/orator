@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.orator.core.database.ChapterEntity
+import com.orator.core.database.ChapterTimeline
 import com.orator.core.database.SourceKind
 import com.orator.core.designsystem.components.SectionLabel
 import com.orator.core.designsystem.text.TimeFormats
@@ -48,9 +49,10 @@ fun ChaptersPage(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
+                    // Chapter start position on the book timeline (global), for both kinds.
                     text = when (sourceKind) {
                         SourceKind.SINGLE_FILE -> TimeFormats.clock(chapter.startMs)
-                        SourceKind.MULTI_FILE -> TimeFormats.clock(chapter.durationMs)
+                        SourceKind.MULTI_FILE -> TimeFormats.clock(ChapterTimeline.globalStartOf(sorted, i))
                     },
                     color = OnyxTokens.TextFaint,
                     fontSize = 13.sp,

@@ -4,6 +4,7 @@ import com.orator.core.playback.ids.PositionMapper
 
 import com.orator.core.database.BookDao
 import com.orator.core.database.ChapterDao
+import com.orator.core.database.ChapterTimeline
 import com.orator.core.database.SourceKind
 import com.orator.core.playback.PlaybackPositionListener
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +28,7 @@ class AudiobookPositionListener @Inject constructor(
             val global = when (book.sourceKind) {
                 SourceKind.SINGLE_FILE -> positionMs
                 SourceKind.MULTI_FILE -> PositionMapper.toGlobal(
-                    chapterDao.getForBook(book.id).map { it.durationMs },
+                    ChapterTimeline.fileDurations(chapterDao.getForBook(book.id)),
                     parsed.fileIndex,
                     positionMs,
                 )

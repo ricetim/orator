@@ -21,7 +21,7 @@ import com.orator.core.database.SourceKind
 import com.orator.core.designsystem.components.SectionLabel
 import com.orator.core.designsystem.text.TimeFormats
 import com.orator.core.designsystem.theme.OnyxTokens
-import com.orator.core.playback.ids.PositionMapper
+import com.orator.feature.player.PlayerChapters
 
 /**
  * Pager middle page for books: bookmarks (global positions) with chapter prefix, tap to jump,
@@ -89,13 +89,4 @@ private fun chapterNumberFor(
     chapters: List<ChapterEntity>,
     sourceKind: SourceKind,
     globalMs: Long,
-): Int? {
-    if (chapters.isEmpty()) return null
-    return when (sourceKind) {
-        SourceKind.SINGLE_FILE ->
-            chapters.sortedBy { it.startMs }.indexOfLast { it.startMs <= globalMs }
-                .coerceAtLeast(0) + 1
-        SourceKind.MULTI_FILE ->
-            PositionMapper.toFilePosition(chapters.map { it.durationMs }, globalMs).fileIndex + 1
-    }
-}
+): Int? = PlayerChapters.chapterNumberAt(chapters, sourceKind, globalMs)

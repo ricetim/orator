@@ -56,6 +56,16 @@ object PlayerChapters {
     private fun globalOf(chapters: List<ChapterEntity>, fileIndex: Int, positionMs: Long): Long =
         PositionMapper.toGlobal(ChapterTimeline.fileDurations(chapters), fileIndex, positionMs)
 
+    /** 1-based chapter number containing a GLOBAL position; null when chapters are unknown. */
+    fun chapterNumberAt(chapters: List<ChapterEntity>, sourceKind: SourceKind, globalMs: Long): Int? {
+        if (chapters.isEmpty()) return null
+        return when (sourceKind) {
+            SourceKind.SINGLE_FILE ->
+                chapters.sortedBy { it.startMs }.indexOfLast { it.startMs <= globalMs }.coerceAtLeast(0) + 1
+            SourceKind.MULTI_FILE -> ChapterTimeline.chapterAtGlobal(chapters, globalMs) + 1
+        }
+    }
+
     fun next(
         chapters: List<ChapterEntity>,
         sourceKind: SourceKind,

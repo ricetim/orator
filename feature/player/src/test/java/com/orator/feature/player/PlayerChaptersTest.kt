@@ -64,6 +64,16 @@ class PlayerChaptersTest {
     }
 
     @Test
+    fun `chapter number at global counts chapters, not files`() {
+        // global 1500 is the 2nd chapter (inside file A) -> number 2, NOT file number 1
+        assertEquals(2, PlayerChapters.chapterNumberAt(multi, SourceKind.MULTI_FILE, 1_500))
+        assertEquals(3, PlayerChapters.chapterNumberAt(multi, SourceKind.MULTI_FILE, 3_200)) // file B
+        assertEquals(1, PlayerChapters.chapterNumberAt(multi, SourceKind.MULTI_FILE, 0))
+        assertEquals(2, PlayerChapters.chapterNumberAt(m4b, SourceKind.SINGLE_FILE, 70_000))
+        assertNull(PlayerChapters.chapterNumberAt(emptyList(), SourceKind.SINGLE_FILE, 0))
+    }
+
+    @Test
     fun `m4b current chapter from position`() {
         val c = PlayerChapters.current(
             m4b, SourceKind.SINGLE_FILE, currentIndex = 0,
