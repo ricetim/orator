@@ -44,8 +44,9 @@ principle.
 ## Goals
 
 - Create, name, rename, and delete multiple playlists.
-- Add a podcast **episode** or an **audiobook** to a playlist from that feature's existing
-  overflow menu, with no dependency from those features on `feature:playlists`.
+- Add a podcast **episode** or an **audiobook** to a playlist via a **new per-item "Add to
+  playlist" action** in each feature (neither feature has an overflow menu today — see §6),
+  with no dependency from those features on `feature:playlists`.
 - A playlist detail screen lists items (mixed types) with artwork/title/subtitle/duration;
   supports tap-to-play-from-top, swipe-to-remove, and drag-to-reorder.
 - "Play from top" plays the whole playlist: each item plays to its end (a book resumes and
@@ -85,15 +86,18 @@ feature:playlists  ──depends on──▶  core:model, core:database, core:pl
        ▲
        │ (NO dependency the other way)
 feature:audiobooks ─┐
-feature:podcasts   ─┴─ contribute a PlayRequestFactory via Hilt @IntoSet; gain an
-                       "Add to playlist" overflow action that navigates by a CommonRoutes string
-app  ── collects PlaylistsFeatureEntry via the existing Set<FeatureEntry> multibinding
+feature:podcasts   ─┴─ contribute PlayRequestFactory + PlaylistItemResolver via Hilt @IntoSet;
+                       gain a new "Add to playlist" action that navigates by a CommonRoutes string
+app  ── collects PlaylistsFeatureEntry via the existing Set<FeatureEntry> multibinding;
+        adds a Playlists top-level tab (a CommonRoutes string — still names no feature module)
 ```
 
 `feature:playlists` never references `feature:audiobooks` or `feature:podcasts`. The other
-features never reference `feature:playlists`. They meet only at three `core` seams:
-`MediaRef` (core:model), `PlayRequestFactory` (core:playback, Hilt set), and `CommonRoutes`
-strings (core:navigation). New media types in future need **zero** playlist changes.
+features never reference `feature:playlists`. They meet only at `core` seams:
+`MediaRef` (core:model), `PlaylistItemResolver` (core:model, Hilt set — display fields),
+`PlayRequestFactory` (core:playback, Hilt set — playback), and `CommonRoutes` strings
+(core:navigation). New media types in future need **zero** playlist changes — they just
+contribute one resolver + one factory.
 
 ### 1. Data model — `core:database` (schema v5 → v6)
 
@@ -135,18 +139,34 @@ data class PlaylistItemEntity(
   delete item, batch-update positions (transaction), delete top item.
 - New entities + DAO registered on `OratorDatabase`; `version = 6`.
 
-### 2. `MediaRef` — `core:model`
+### 2. `MediaRef` + `PlaylistItemResolver` — `core:model`
 
 ```kotlin
 enum class MediaType { PODCAST, AUDIOBOOK }   // unchanged
 
 data class MediaRef(val type: MediaType, val id: String)
+
+/** Display fields for one playlist row. Plain data — no Android, no playback. */
+data class PlaylistItemContent(
+    val title: String, val subtitle: String,
+    val artworkUri: String?, val durationMs: Long,
+)
+
+/** Resolves a MediaRef to its display fields. Contributed per media type via Hilt @IntoSet
+ *  (mirrors PlaybackEventListener). null = the underlying entity is gone (prune the row). */
+interface PlaylistItemResolver {
+    val mediaType: MediaType
+    suspend fun resolve(ref: MediaRef): PlaylistItemContent?
+}
 ```
 
-A plain pointer used by the playlist layer and the factory seam. (Kept a `data class`, not a
-value class, because it has two fields.)
+`MediaRef` is a plain pointer. `PlaylistItemResolver` is the **display seam**: it keeps
+per-type knowledge (an episode's title + show name, a book's title + author + cover) inside the
+owning feature, so `feature:playlists` never reads the other features' entities or derives their
+display logic. Kept separate from the playback seam below (display vs. playback are different
+concerns; `core:model` must not depend on `core:playback`).
 
-### 3. `PlayRequestFactory` — `core:playback` (the keystone seam)
+### 3. `PlayRequestFactory` — `core:playback` (the playback seam)
 
 ```kotlin
 /** Builds a single-entity PlayRequest for one MediaRef, reading the entity + its resume
@@ -157,12 +177,18 @@ interface PlayRequestFactory {
 }
 ```
 
-- `feature:audiobooks` provides `AudiobookPlayRequestFactory` (mediaType = AUDIOBOOK): loads the
-  book + chapters, reads the book's resume position, delegates to the existing `QueueBuilder`.
-- `feature:podcasts` provides `EpisodePlayRequestFactory` (mediaType = PODCAST): loads the
-  episode + its podcast, reads `episode.positionMs`, delegates to existing `EpisodeQueueBuilder`.
-- `feature:playlists` consumes `Set<PlayRequestFactory>` and indexes by `mediaType`. It builds
-  no `PlayRequest` itself and never imports the other features.
+- `feature:audiobooks` provides `AudiobookPlayRequestFactory` + `AudiobookPlaylistItemResolver`
+  (mediaType = AUDIOBOOK). The factory loads the book + chapters, reads the book's resume
+  position, delegates to existing `QueueBuilder`; the resolver returns title/author/cover/total
+  duration. Both parse `ref.id` back to the book's `Long` PK (`toLongOrNull()`); a malformed or
+  missing id → `null` (consistent with "unresolvable").
+- `feature:podcasts` provides `EpisodePlayRequestFactory` + `EpisodePlaylistItemResolver`
+  (mediaType = PODCAST). The factory loads the episode + its podcast, reads `episode.positionMs`,
+  delegates to existing `EpisodeQueueBuilder`; the resolver returns episode title / show name /
+  artwork / duration.
+- `feature:playlists` consumes `Set<PlayRequestFactory>` and `Set<PlaylistItemResolver>`, each
+  indexed by `mediaType`. It builds no `PlayRequest` and resolves no entity itself, and never
+  imports the other features.
 
 ### 4. Playback orchestration — `PlaylistPlaybackController` (Singleton, `feature:playlists`)
 
@@ -175,12 +201,23 @@ Operations:
 - `playFromTop(playlistId)` — set active; build the **top** item's `PlayRequest` via the factory
   set; `connection.play(req)`. If the playlist is empty, no-op.
 - `playItem(playlistId, itemId)` — move that item to position 0 (DB), then `playFromTop`.
-- **Advance on completion.** Observe `connection.state`. On the **rising edge of `isEnded`**
-  while a playlist is active: delete the top row, then play the new top; if none remain, clear
-  `activePlaylistId` and stop.
-- **Self-deactivation.** If the currently-playing `mediaId` no longer matches the active
+- **Advance on completion.** Observe `connection.state`, tracking the previous `isEnded` value.
+  On a **rising edge of `isEnded`** (false→true) while a playlist is active: delete the top row,
+  then play the new top; if none remain, clear `activePlaylistId` and stop.
+  - **Re-arm invariant:** the next `connection.play(...)` calls `setMediaItems` + `prepare()`,
+    which moves the player out of `STATE_ENDED`, so `isEnded` falls back to false and the edge
+    detector re-arms for the *next* item's completion. The controller must therefore key off the
+    transition, not the level. (Test: two consecutive completions each advance.)
+- **Self-deactivation.** If the currently-playing `mediaId` no longer corresponds to the active
   playlist's top item (the user played a standalone book/episode), the controller stands down
   (`activePlaylistId = null`). No cross-feature "cancel playlist" wiring required.
+  - **Matching rule (concrete).** `PlaybackUiState.mediaId` is an *encoded* id, not the raw
+    `MediaRef.id`, so equivalence is computed per type via the existing codecs — a small pure,
+    testable helper (`MediaRefMatch.matches(ref, encodedMediaId)`):
+    - PODCAST: `PodcastMediaId.parse(mediaId) == ref.id`
+    - AUDIOBOOK: `AudiobookMediaId.parse(mediaId)?.bookId == ref.id` — **ignore `fileIndex`**, so
+      a multi-file book stays "matched" across its internal file→file transitions (otherwise the
+      controller would wrongly stand down mid-book).
 
 > **Completion signal — critical subtlety.** In `PlaybackService`, an internal file→file jump
 > inside a multi-file book is a Media3 `AUTO` transition that reports `onItemEnded(completed=true)`
@@ -192,21 +229,32 @@ Additive support needed in `core:playback`:
 - `PlaybackUiState` gains `isEnded: Boolean` (true when player state is `STATE_ENDED`), derived
   in `PlaybackConnection.updateState()` from `Player.STATE_ENDED`. Existing features ignore it.
 
+**Relationship to existing history recording.** `PlaybackService` already fires
+`onItemEnded(completed=true)` to `PlaybackEventListener`s (the history recorder) on `STATE_ENDED`.
+The controller advances off the **UI-side** `connection.state.isEnded` instead — a different
+object observing the same end-of-queue moment. There is no shared mutable state between them, and
+they touch disjoint tables (history rows / episode-position vs. `playlist_items`), with no foreign
+key linking them — so deleting the drained playlist row cannot race or corrupt the finished item's
+history/position write. The finished item is still recorded in history exactly as it is today.
+
 ### 5. Repository + ordering — `feature:playlists`
 
-- `PlaylistRepository` wraps `PlaylistDao` + read access to books/episodes (via `core:database`
-  DAOs) to hydrate `PlaylistItemEntity` rows into UI rows and prune dangling refs:
+- `PlaylistRepository` wraps `PlaylistDao` and the injected `Set<PlaylistItemResolver>` (§2) to
+  hydrate `PlaylistItemEntity` rows into UI rows. It does **not** read books/episodes directly —
+  resolution is delegated to the per-type resolver, keeping `feature:playlists` free of other
+  features' schemas.
 
   ```kotlin
   data class PlaylistItemUi(
       val itemId: Long, val ref: MediaRef,
-      val title: String, val subtitle: String,
-      val artworkUri: String?, val durationMs: Long,
+      val content: PlaylistItemContent,   // title / subtitle / artworkUri / durationMs (§2)
   )
   ```
 
-  A `PlaylistContentResolver` (per media type, or a small internal map) resolves a `MediaRef`
-  to display fields; an unresolvable ref → row dropped (and optionally deleted).
+  For each `PlaylistItemEntity`, the repository picks the resolver matching `mediaType` and calls
+  `resolve(ref)`; a `null` result (entity deleted — unsubscribed podcast, removed book) → the row
+  is **pruned**: dropped from the emitted list and its DB row deleted, so the playlist
+  self-heals.
 - `PlaylistOrdering` — a **pure object** (no Android, fully unit-testable): given current ordered
   items and an operation (append, remove, move-to-top, move(from,to)), returns the new
   `(itemId → position)` assignment. DAO persists in a transaction.
@@ -220,13 +268,22 @@ Additive support needed in `core:playback`:
   **tap = play from top** (promotes tapped item to top then plays), **swipe = remove**,
   **long-press drag = reorder**. Empty state when drained.
 - **AddToPlaylistSheet** — destination `CommonRoutes.AddToPlaylist` taking `{mediaType}/{mediaId}`
-  args. Lists playlists to add into (with create-new). Invoked from the **podcast episode
-  overflow** and **audiobook overflow** via `navController.navigate(...)` built from a
-  `CommonRoutes` helper — those features gain "Add to playlist" with no module dependency on
-  `feature:playlists`.
+  args. Lists playlists to add into (with create-new), inserts via the DAO (ignore-on-conflict),
+  and pops. **New per-item affordance in each feature (neither has an overflow menu today):**
+  - Podcasts: episode rows currently expose a left-swipe "Delete ✕" only. Add an **overflow
+    (⋮) icon** to the row that navigates to `CommonRoutes.AddToPlaylist` for that episode.
+  - Audiobooks: book tiles are tap-to-open today. Add the same **⋮ overflow** affordance to the
+    tile (or its detail header) navigating to `AddToPlaylist` for that book.
+  - Both navigate via a `CommonRoutes.addToPlaylist(type, id)` string builder — the features gain
+    the action with **no** module dependency on `feature:playlists`. (If the ⋮ proves awkward in
+    a list row during implementation, fall back to a long-press context action — same navigation,
+    no data/model change.)
 - `PlaylistsFeatureEntry : FeatureEntry` registers all three destinations (collected by the
-  app's existing `Set<FeatureEntry>` multibinding). Add a **Playlists** entry to the
-  `OratorShell` top-level surface (drawer/nav), matching the existing tabs.
+  app's existing `Set<FeatureEntry>` multibinding).
+- **`app` change (explicit):** add a **Playlists** entry as a **4th bottom tab** in
+  `OratorShell`'s hardcoded `TABS` list (it's a primary, user-managed surface — better
+  discoverability than the drawer). This references the `CommonRoutes.Playlists` string only, so
+  `app` still names no feature module — consistent with the existing Podcasts/Audiobooks tabs.
 - New `CommonRoutes` constants: `Playlists`, `PlaylistDetail` (with `{playlistId}`),
   `AddToPlaylist` (with `{mediaType}/{mediaId}`), plus small `route(...)` builder helpers.
 
@@ -250,18 +307,24 @@ for that book; the controller sees the playing `mediaId` no longer matches P's t
 
 - **`PlaylistOrdering`** (pure): append, remove, move-to-top, move(from,to); positions stay
   dense and ordered; idempotent move-to-top of the current top.
-- **`PlaylistRepository`** hydration: mixed episode+book rows resolve to UI rows in order;
-  dangling ref (entity missing) is pruned; duplicate add is ignored (unique index).
+- **`PlaylistRepository`** hydration: mixed episode+book rows resolve (via fake resolvers) to UI
+  rows in order; a resolver returning `null` prunes that row (dropped + deleted); duplicate add
+  is ignored (unique index).
+- **`MediaRefMatch`** (pure): PODCAST id round-trips through `PodcastMediaId`; AUDIOBOOK matches
+  on `bookId` while **ignoring `fileIndex`** (a `audiobook/<id>/3` mediaId still matches
+  `MediaRef(AUDIOBOOK, <id>)`); type mismatch and malformed ids → no match.
 - **`PlaylistPlaybackController`** against a small `PlaylistPlayback` seam (fake connection +
   fake factories): play-from-top builds top item; `isEnded` rising edge → pop top + play next;
-  empty → stop + clear active; `playItem` promotes then plays; self-deactivation when playing
-  mediaId diverges; no advance while inactive; multi-file book's internal transitions do **not**
-  advance the playlist (only end-of-queue does).
-- **Factories** (thin): each maps a `MediaRef` to the same `PlayRequest` its existing builder
-  produces; unresolvable ref → null.
+  **two consecutive completions each advance** (re-arm invariant); empty → stop + clear active;
+  `playItem` promotes then plays; self-deactivation when playing mediaId diverges; no advance
+  while inactive; a multi-file book's internal file→file transitions (mediaId keeps the same
+  `bookId`, different `fileIndex`; no `isEnded`) do **not** advance the playlist.
+- **Factories + resolvers** (thin): each factory maps a `MediaRef` to the same `PlayRequest` its
+  existing builder produces; each resolver maps a `MediaRef` to expected display fields;
+  unresolvable / malformed ref → `null`.
 - **DAO**: dedupe via unique index; ordered query; cascade delete of items with playlist.
-  Tested at whatever level `core:database` already uses (confirm Robolectric vs. keeping logic
-  in pure objects during planning).
+  Tested at whatever level `core:database` already uses — **confirm Robolectric vs. keeping
+  logic in pure objects as the plan's first task** (the one decision deferred to planning).
 - Per-chunk gate (project standard): `./gradlew test lint assembleDebug`; report build times.
 
 ## Risks / mitigations
@@ -275,6 +338,9 @@ for that book; the controller sees the playing `mediaId` no longer matches P's t
   controller re-derives the top from the DB.
 - **Modularity regressions** — enforced by the dependency direction above; `feature:playlists`
   must not import the other features, and vice versa.
+- **Position drift** — `position` (Long, top = smallest) is reassigned densely by `PlaylistOrdering`
+  and written only through the DAO's single transactional batch-update, so concurrent edits can't
+  produce duplicate or sparse positions.
 
 ## Out-of-scope follow-up (Phase 5b)
 
