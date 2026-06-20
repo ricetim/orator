@@ -133,7 +133,9 @@ data class PlaylistItemEntity(
 )
 ```
 
-- `MediaType` Room `@TypeConverter` (stored as its name string) added to the database.
+- No `@TypeConverter` needed: Room persists enums natively as their constant name, exactly as
+  `BookEntity.sourceKind: SourceKind` already does (there is no converter in the module today).
+  `PlaylistItemEntity.mediaType: MediaType` just works.
 - `PlaylistDao`: observe playlists (with item counts), observe a playlist's items ordered by
   `position`, insert/rename/delete playlist, insert item (ignore-on-conflict for dedupe),
   delete item, batch-update positions (transaction), delete top item.
