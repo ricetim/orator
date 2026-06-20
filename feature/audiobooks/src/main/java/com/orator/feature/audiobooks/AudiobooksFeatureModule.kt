@@ -1,10 +1,14 @@
 package com.orator.feature.audiobooks
 
 import com.orator.core.designsystem.contract.SettingsSection
+import com.orator.core.model.PlaylistItemResolver
 import com.orator.core.navigation.FeatureEntry
 import com.orator.core.playback.PlaybackPositionListener
+import com.orator.core.playback.PlayRequestFactory
 import com.orator.core.playback.SpeedOverrideListener
 import com.orator.feature.audiobooks.data.AudiobookMetadataExtractor
+import com.orator.feature.audiobooks.data.AudiobookPlayRequestFactory
+import com.orator.feature.audiobooks.data.AudiobookPlaylistItemResolver
 import com.orator.feature.audiobooks.data.AudiobookPositionListener
 import com.orator.feature.audiobooks.data.BookSpeedOverrideListener
 import com.orator.feature.audiobooks.data.ContentResolverM4bChapterSource
@@ -31,6 +35,14 @@ interface AudiobooksFeatureModule {
     @Binds
     @IntoSet
     fun bindBookSpeedOverrideListener(listener: BookSpeedOverrideListener): SpeedOverrideListener
+
+    @Binds
+    @IntoSet
+    fun bindPlayRequestFactory(factory: AudiobookPlayRequestFactory): PlayRequestFactory
+
+    @Binds
+    @IntoSet
+    fun bindPlaylistItemResolver(resolver: AudiobookPlaylistItemResolver): PlaylistItemResolver
 
     @Binds
     fun bindMetadataExtractor(impl: MmrMetadataExtractor): AudiobookMetadataExtractor
