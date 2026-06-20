@@ -23,6 +23,46 @@ class PlayerChaptersTest {
         startMs = startMs, durationMs = durationMs,
     )
 
+    // MULTI_FILE flattened: file A = [c0 0..1000, c1 1000..3000], file B = [c2 0..1500]. Total 4500.
+    private fun mch(i: Int, file: String, startMs: Long, durationMs: Long) = ChapterEntity(
+        bookId = "b", chapterIndex = i, title = "Ch $i", fileUri = file,
+        startMs = startMs, durationMs = durationMs,
+    )
+    private val multi = listOf(
+        mch(0, "A", 0, 1_000), mch(1, "A", 1_000, 2_000), mch(2, "B", 0, 1_500),
+    )
+
+    @Test
+    fun `multi-file current is the global chapter, not the file`() {
+        // playing file A (item 0) at 1500ms in-file -> global 1500 -> second chapter
+        val c = PlayerChapters.current(multi, SourceKind.MULTI_FILE, 0, 1_500, 4_500)!!
+        assertEquals(1, c.index)
+        assertEquals(3, c.count)
+        assertEquals(500, c.positionInChapterMs)
+        assertEquals(2_000, c.chapterDurationMs)
+    }
+
+    @Test
+    fun `multi-file current while playing the second file`() {
+        // playing file B (item 1) at 200ms -> global 3200 -> third chapter
+        val c = PlayerChapters.current(multi, SourceKind.MULTI_FILE, 1, 200, 4_500)!!
+        assertEquals(2, c.index)
+    }
+
+    @Test
+    fun `multi-file tap maps chapter to file plus in-file offset`() {
+        // 2nd chapter is inside file A at offset 1000
+        assertEquals(PlayerChapters.SeekTarget(0, 1_000), PlayerChapters.tap(multi, SourceKind.MULTI_FILE, 1))
+        // 3rd chapter is the start of file B
+        assertEquals(PlayerChapters.SeekTarget(1, 0), PlayerChapters.tap(multi, SourceKind.MULTI_FILE, 2))
+    }
+
+    @Test
+    fun `multi-file ticks and item seek span files`() {
+        assertEquals(listOf(1_000f / 4_500f, 3_000f / 4_500f), PlayerChapters.ticks(multi, SourceKind.MULTI_FILE, 4_500))
+        assertEquals(PlayerChapters.SeekTarget(1, 600), PlayerChapters.itemSeek(multi, SourceKind.MULTI_FILE, 0.8f, 4_500))
+    }
+
     @Test
     fun `m4b current chapter from position`() {
         val c = PlayerChapters.current(
