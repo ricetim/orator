@@ -3,6 +3,8 @@ package com.orator.feature.playlists.playback
 import com.orator.core.playback.PlaybackConnection
 import com.orator.core.playback.PlaybackUiState
 import com.orator.core.playback.PlayRequest
+import com.orator.feature.playlists.data.ActivePlaylist
+import com.orator.feature.playlists.data.ActivePlaylistStore
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -30,4 +32,7 @@ class ConnectionPlaylistPlayback @Inject constructor(
 interface PlaylistPlaybackBindingModule {
     @Binds
     fun bindPlaylistPlayback(impl: ConnectionPlaylistPlayback): PlaylistPlayback
+
+    @Binds
+    fun bindActivePlaylist(impl: ActivePlaylistStore): ActivePlaylist
 }

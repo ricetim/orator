@@ -34,19 +34,29 @@ object PlaylistDataStoreModule {
         context.playlistDataStore
 }
 
-/** Which playlist is currently draining (null = none). Survives process death. */
+/**
+ * Which playlist is currently draining (null = none). An interface so the controller can be
+ * tested against a trivial in-memory fake without DataStore/file/scope coordination.
+ */
+interface ActivePlaylist {
+    suspend fun activePlaylistId(): Long?
+    suspend fun set(playlistId: Long)
+    suspend fun clear()
+}
+
+/** DataStore-backed [ActivePlaylist]. Survives process death. */
 @Singleton
 class ActivePlaylistStore @Inject constructor(
     @PlaylistDataStore private val store: DataStore<Preferences>,
-) {
-    suspend fun activePlaylistId(): Long? =
+) : ActivePlaylist {
+    override suspend fun activePlaylistId(): Long? =
         store.data.map { it[KEY_ACTIVE] }.first()?.takeIf { it >= 0 }
 
-    suspend fun set(playlistId: Long) {
+    override suspend fun set(playlistId: Long) {
         store.edit { it[KEY_ACTIVE] = playlistId }
     }
 
-    suspend fun clear() {
+    override suspend fun clear() {
         store.edit { it.remove(KEY_ACTIVE) }
     }
 }
