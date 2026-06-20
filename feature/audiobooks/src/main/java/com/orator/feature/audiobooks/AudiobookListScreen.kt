@@ -36,6 +36,7 @@ import java.io.File
 @Composable
 fun AudiobookListScreen(
     onOpenPlayer: () -> Unit,
+    onAddToPlaylist: (bookId: String) -> Unit,
     viewModel: AudiobookListViewModel = hiltViewModel(),
 ) {
     val books by viewModel.books.collectAsStateWithLifecycle()
@@ -94,6 +95,7 @@ fun AudiobookListScreen(
                             null
                         },
                         onClick = { viewModel.onPlayBook(book.id, onOpenPlayer) },
+                        onLongClick = { onAddToPlaylist(book.id) },
                     )
                 }
             }
