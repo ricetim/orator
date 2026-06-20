@@ -12,8 +12,9 @@ import androidx.room.RoomDatabase
     entities = [
         BookEntity::class, ChapterEntity::class, BookmarkEntity::class, HistoryEntity::class,
         PodcastEntity::class, EpisodeEntity::class,
+        PlaylistEntity::class, PlaylistItemEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class OratorDatabase : RoomDatabase() {
@@ -23,4 +24,5 @@ abstract class OratorDatabase : RoomDatabase() {
     abstract fun historyDao(): HistoryDao
     abstract fun podcastDao(): PodcastDao
     abstract fun episodeDao(): EpisodeDao
+    abstract fun playlistDao(): PlaylistDao
 }
