@@ -38,4 +38,7 @@ object DatabaseModule {
 
     @Provides
     fun provideEpisodeDao(db: OratorDatabase): EpisodeDao = db.episodeDao()
+
+    @Provides
+    fun providePlaylistDao(db: OratorDatabase): PlaylistDao = db.playlistDao()
 }
