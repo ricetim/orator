@@ -150,7 +150,7 @@ class PlaybackConnection @Inject constructor(
         val c = controller ?: return
         currentMediaType = request.mediaType
         currentOverride = request.speedOverride
-        activeQueueInfo.onNewQueue(request.chapterBoundariesMs)
+        activeQueueInfo.onNewQueue(request.chapterBoundariesMs, request.fileDurationsMs)
         val items = request.items.map { MediaItemFactory.from(it, request.mediaType) }
         c.setMediaItems(items, request.startIndex, request.startPositionMs)
         c.prepare()

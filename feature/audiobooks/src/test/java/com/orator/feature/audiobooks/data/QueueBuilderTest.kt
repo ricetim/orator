@@ -72,19 +72,35 @@ class QueueBuilderTest {
         // startMs == 0 must NOT appear: "pause at the next boundary" from position 0
         // would otherwise stop instantly.
         assertEquals(listOf(30_000L), request.chapterBoundariesMs)
+        assertEquals(listOf(60_000L), request.fileDurationsMs)
         assertEquals(1.3f, request.speedOverride)
     }
 
     @Test
-    fun `mp3 collection has no in-item boundaries but keeps the override`() {
+    fun `mp3 collection carries global chapter boundaries and per-file durations`() {
         val chapters = listOf(chapter(0, "uri://f1", 0, 30_000), chapter(1, "uri://f2", 0, 30_000))
 
         val request = QueueBuilder.build(
             book(SourceKind.MULTI_FILE, speedOverride = 0.9f), chapters, startAtMs = 0,
         )
 
-        assertEquals(emptyList<Long>(), request.chapterBoundariesMs)
+        assertEquals(listOf(30_000L), request.chapterBoundariesMs) // global start of file 2 (0 excluded)
+        assertEquals(listOf(30_000L, 30_000L), request.fileDurationsMs)
         assertEquals(0.9f, request.speedOverride)
+    }
+
+    @Test
+    fun `multi-file carries per-file durations and global chapter boundaries`() {
+        val chapters = listOf(
+            chapter(0, "uri://A", 0, 1_000),
+            chapter(1, "uri://A", 1_000, 2_000),
+            chapter(2, "uri://B", 0, 1_500),
+        )
+
+        val request = QueueBuilder.build(book(SourceKind.MULTI_FILE), chapters, startAtMs = 0)
+
+        assertEquals(listOf(3_000L, 1_500L), request.fileDurationsMs)
+        assertEquals(listOf(1_000L, 3_000L), request.chapterBoundariesMs)
     }
 
     @Test

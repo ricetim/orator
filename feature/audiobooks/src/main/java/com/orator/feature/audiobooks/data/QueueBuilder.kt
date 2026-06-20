@@ -33,6 +33,7 @@ object QueueBuilder {
                 startPositionMs = startAtMs,
                 mediaType = MediaType.AUDIOBOOK,
                 chapterBoundariesMs = chapters.map { it.startMs }.filter { it > 0 },
+                fileDurationsMs = listOf(book.durationMs),
                 speedOverride = book.speedOverride,
             )
 
@@ -54,6 +55,10 @@ object QueueBuilder {
                     startIndex = start.fileIndex,
                     startPositionMs = start.offsetMs,
                     mediaType = MediaType.AUDIOBOOK,
+                    chapterBoundariesMs = chapters.indices
+                        .map { ChapterTimeline.globalStartOf(chapters, it) }
+                        .filter { it > 0 },
+                    fileDurationsMs = fileDurations,
                     speedOverride = book.speedOverride,
                 )
             }

@@ -10,6 +10,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.orator.core.model.MediaType
+import com.orator.core.playback.ids.PositionMapper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -141,12 +142,20 @@ class PlaybackService : MediaSessionService() {
             }
 
             SleepTimerState.EndOfBoundary -> scope.launch {
+                // Boundaries are global; the playhead is (item, in-item position). Convert so an
+                // end-of-chapter boundary that falls INSIDE a file (multi-file book) is honored.
+                val fileDurations = activeQueueInfo.fileDurationsMs.value
+                fun globalNow(): Long =
+                    if (fileDurations.isEmpty()) player.currentPosition
+                    else PositionMapper.toGlobal(
+                        fileDurations, player.currentMediaItemIndex, player.currentPosition,
+                    )
                 val target = SleepTimer.nextBoundary(
                     activeQueueInfo.chapterBoundariesMs.value,
-                    player.currentPosition,
+                    globalNow(),
                 )
                 if (target != null) {
-                    while (isActive && player.currentPosition < target) delay(500)
+                    while (isActive && globalNow() < target) delay(500)
                 } else {
                     val startItem = player.currentMediaItemIndex
                     while (isActive && player.currentMediaItemIndex == startItem &&
