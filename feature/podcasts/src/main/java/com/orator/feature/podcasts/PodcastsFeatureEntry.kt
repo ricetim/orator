@@ -6,9 +6,21 @@ import androidx.navigation.compose.composable
 import com.orator.core.model.MediaType
 import com.orator.core.navigation.CommonRoutes
 import com.orator.core.navigation.FeatureEntry
+import com.orator.feature.podcasts.data.RefreshScheduler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Inject
 
-class PodcastsFeatureEntry @Inject constructor() : FeatureEntry {
+class PodcastsFeatureEntry @Inject constructor(
+    scheduler: RefreshScheduler,
+) : FeatureEntry {
+
+    init {
+        // Eagerly constructed at app start (app injects Set<FeatureEntry>), so background refresh
+        // is scheduled per the saved interval and an app-open refresh kicks off immediately.
+        scheduler.start(CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
+    }
 
     override val route: String = PodcastsRoute
 
