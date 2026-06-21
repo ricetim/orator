@@ -44,6 +44,7 @@ private data class TabSpec(val route: String, val icon: ImageVector, val label: 
 private val TABS = listOf(
     TabSpec(CommonRoutes.Podcasts, OnyxIcons.Mic, null),
     TabSpec(CommonRoutes.Audiobooks, OnyxIcons.Book, null),
+    TabSpec(CommonRoutes.Playlists, OnyxIcons.Playlists, "Lists"),
     TabSpec(CommonRoutes.Queue, OnyxIcons.Queue, "Queue"),
 )
 

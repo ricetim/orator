@@ -3,6 +3,7 @@ package com.orator.feature.podcasts
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.orator.core.model.MediaType
 import com.orator.core.navigation.CommonRoutes
 import com.orator.core.navigation.FeatureEntry
 import javax.inject.Inject
@@ -25,6 +26,11 @@ class PodcastsFeatureEntry @Inject constructor() : FeatureEntry {
                 onOpenPlayer = { navController.navigate(CommonRoutes.Player) },
                 onBack = { navController.popBackStack() },
                 onUnsubscribed = { navController.popBackStack() },
+                onAddToPlaylist = { episodeId ->
+                    navController.navigate(
+                        CommonRoutes.addToPlaylist(MediaType.PODCAST.name, episodeId),
+                    )
+                },
             )
         }
     }

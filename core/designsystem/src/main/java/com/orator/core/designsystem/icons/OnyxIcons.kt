@@ -112,4 +112,49 @@ object OnyxIcons {
             }
         }
     }
+
+    /** Playlists tab: three list lines + a plus (playlist_add feel). */
+    val Playlists: ImageVector by lazy {
+        materialIcon(name = "Onyx.Playlists") {
+            materialPath {
+                moveTo(3.0f, 6.0f); horizontalLineTo(17.0f); verticalLineTo(8.0f)
+                horizontalLineTo(3.0f); close()
+                moveTo(3.0f, 11.0f); horizontalLineTo(17.0f); verticalLineTo(13.0f)
+                horizontalLineTo(3.0f); close()
+                moveTo(3.0f, 16.0f); horizontalLineTo(11.0f); verticalLineTo(18.0f)
+                horizontalLineTo(3.0f); close()
+                // plus (bottom-right)
+                moveTo(16.0f, 15.0f); horizontalLineTo(18.0f); verticalLineTo(17.0f)
+                horizontalLineTo(20.0f); verticalLineTo(19.0f); horizontalLineTo(18.0f)
+                verticalLineTo(21.0f); horizontalLineTo(16.0f); verticalLineTo(19.0f)
+                horizontalLineTo(14.0f); verticalLineTo(17.0f); horizontalLineTo(16.0f); close()
+            }
+        }
+    }
+
+    /** Plus / add. */
+    val Add: ImageVector by lazy {
+        materialIcon(name = "Onyx.Add") {
+            materialPath {
+                moveTo(11.0f, 5.0f); horizontalLineTo(13.0f); verticalLineTo(11.0f)
+                horizontalLineTo(19.0f); verticalLineTo(13.0f); horizontalLineTo(13.0f)
+                verticalLineTo(19.0f); horizontalLineTo(11.0f); verticalLineTo(13.0f)
+                horizontalLineTo(5.0f); verticalLineTo(11.0f); horizontalLineTo(11.0f); close()
+            }
+        }
+    }
+
+    /** Overflow (vertical three-dot). */
+    val More: ImageVector by lazy {
+        materialIcon(name = "Onyx.More") {
+            materialPath {
+                moveTo(10.0f, 4.0f); horizontalLineTo(14.0f); verticalLineTo(8.0f)
+                horizontalLineTo(10.0f); close()
+                moveTo(10.0f, 10.0f); horizontalLineTo(14.0f); verticalLineTo(14.0f)
+                horizontalLineTo(10.0f); close()
+                moveTo(10.0f, 16.0f); horizontalLineTo(14.0f); verticalLineTo(20.0f)
+                horizontalLineTo(10.0f); close()
+            }
+        }
+    }
 }

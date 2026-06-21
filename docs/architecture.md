@@ -620,8 +620,9 @@ flowchart LR
     P2 --> P3["P3<br/>Player UX +<br/>speed/silence/boost/timer"]
     P3 --> P4A["✅ P4a<br/>Podcasts: subscribe +<br/>downloads + show notes"]
     P4A --> P4B["✅ P4b<br/>Discovery +<br/>transcripts"]
-    P4B --> P5["P5<br/>Playlists +<br/>auto-insert"]
-    P5 --> P6["P6<br/>audiobookshelf"]
+    P4B --> P5A["✅ P5a<br/>Playlists"]
+    P5A --> P5B["P5b<br/>auto-insert +<br/>bg refresh"]
+    P5B --> P6["P6<br/>audiobookshelf"]
     P6 --> P7["P7<br/>Billing +<br/>entitlements"]
     P7 --> P8["P8<br/>Premium set<br/>(TBD)"]
     P8 --> P9["P9<br/>Polish, profiles,<br/>Play release"]
@@ -635,7 +636,8 @@ flowchart LR
 | **3** ✅ | Player experience | Now-Playing screen; speed (global/type/item), silence-trim, volume boost, sleep timer, play history all working — plus smart rewind on resume and the intro/outro clip mechanism; *verified on device 2026-06-10* | `feature-settings` (extends `feature-player`) |
 | **4a** ✅ | Podcasts: subscribe/cache/play | Subscribe via pasted URL or OPML import, refresh (parallel, conditional GETs), stream + explicit download, human-readable cache tree, show notes with tappable timestamps, per-show intro/outro clips + speed (applied live) — *verified on device 2026-06-10* | `feature-podcasts`, `core-network` |
 | **4b** ✅ | Podcasts: discovery + transcripts | Search via Podcast Index (key in local.properties) / iTunes fallback; subscribe from results; `podcast:transcript` fetch (on demand + with downloads) with plain-text viewer; unsubscribe with tree cleanup — *verified on device 2026-06-11* | (extends both) |
-| **5** | Playlists | Mixed playlist; new episodes auto-insert per rule | `feature-playlists` |
+| **5a** ✅ | Playlists | Multiple user-named playlists mixing podcast episodes + whole audiobooks; create/rename/delete, add via ＋ (episode row) / long-press (book tile), reorder (▲/▼), swipe-remove, tap-to-top; queue-drain playback (current = top) with auto-advance + resume, orchestrated above the unchanged single-entity core — *verified on device 2026-06-20* | `feature-playlists` |
+| **5b** | Playlists: background refresh + auto-insert | WorkManager periodic feed refresh; new episodes auto-insert into a playlist per rule (top/bottom) | (extends `feature-podcasts`/`feature-playlists`) |
 | **6** | audiobookshelf | Add ABS server; browse + play + two-way progress sync (launch feature) | (extends `core-network`/`feature-audiobooks`) |
 | **7** | Paywall plumbing | Billing wired; `EntitlementRepository` gates a dummy premium toggle end-to-end | `core-billing` |
 | **8** | Premium features | The premium set (TBD) shipping behind the gate | (depends on the chosen set) |
@@ -644,11 +646,22 @@ flowchart LR
 **Status:** Phases 1–4b are merged (PRs #1, #3, #4, #5, #6). The **Onyx UI redesign**
 (Solarized Dark, Jetpack Compose — single-token design system, modular per-component files) is
 merged (PR #7, 2026-06-18, device-verified on a Pixel 7a), replacing the placeholder screens
-across every feature — so UI/design iteration is **no longer deferred**. Before Phase 5, a P2
-audiobook-scanner bugfix is in progress: multi-part `.m4b` books (a directory of several `.m4b`
-files) were being split into separate library entries; the fix groups all audio files in a
-directory into one book ("directory = book", matching the existing `.mp3` behaviour).
-**Next: audiobook grouping bugfix → Phase 5 (playlists).**
+across every feature — so UI/design iteration is **no longer deferred**. The P2 **audiobook
+multi-file grouping** bugfix is merged (PR #8, 2026-06-19): a directory of audio files is one
+book ("directory = book", matching the existing `.mp3` behaviour), with each file's chapters
+flattened contiguously across the book.
+
+**Phase 5a (playlists)** is complete and device-verified on a Pixel 7a (2026-06-20): multiple
+user-named playlists mixing podcast episodes and whole audiobooks, with queue-drain playback
+(current = top, auto-advance on completion, next item resumes at its saved position). It is
+contributed entirely through `core` seams — per-type `PlayRequestFactory` (playback) and
+`PlaylistItemResolver` (display), plus `MediaRef` and `CommonRoutes` strings — so
+`feature:playlists` never imports the other features and `PlayRequest` stays single-entity and
+unchanged. Reorder ships as ▲/▼ move buttons (long-press drag was starved by the row's stacked
+tap/swipe gestures on-device).
+
+**Next: Phase 5b — WorkManager background feed refresh + auto-insert rules** (auto-insert needs
+periodic refresh to have anything to insert, so they ship together).
 
 ---
 

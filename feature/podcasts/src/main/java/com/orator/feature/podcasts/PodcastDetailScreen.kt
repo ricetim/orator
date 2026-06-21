@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,6 +45,7 @@ import com.orator.core.designsystem.components.EffectsSheet
 import com.orator.core.designsystem.components.EffectsSheetState
 import com.orator.core.designsystem.components.EpisodeRow
 import com.orator.core.designsystem.components.OnyxTopBar
+import com.orator.core.designsystem.icons.OnyxIcons
 import com.orator.core.designsystem.components.SwipeActionRow
 import com.orator.core.designsystem.text.TimeFormats
 import com.orator.core.designsystem.theme.OnyxTokens
@@ -59,6 +61,7 @@ fun PodcastDetailScreen(
     onOpenPlayer: () -> Unit,
     onBack: () -> Unit,
     onUnsubscribed: () -> Unit,
+    onAddToPlaylist: (episodeId: String) -> Unit,
     viewModel: PodcastDetailViewModel = hiltViewModel(),
 ) {
     val podcast by viewModel.podcast.collectAsStateWithLifecycle()
@@ -92,6 +95,7 @@ fun PodcastDetailScreen(
                     onDownload = { viewModel.onDownload(episode.id) },
                     onCancel = { viewModel.onCancelDownload(episode.id) },
                     onDeleteDownload = { viewModel.onDeleteDownload(episode.id) },
+                    onAddToPlaylist = { onAddToPlaylist(episode.id) },
                 )
             }
         }
@@ -231,6 +235,7 @@ private fun EpisodeListRow(
     onDownload: () -> Unit,
     onCancel: () -> Unit,
     onDeleteDownload: () -> Unit,
+    onAddToPlaylist: () -> Unit,
 ) {
     val downloaded = episode.audioPath != null
     SwipeActionRow(
@@ -258,12 +263,17 @@ private fun EpisodeListRow(
                 )
             },
             trailing = {
-                DownloadControl(
-                    downloaded = downloaded,
-                    progress = progress,
-                    onDownload = onDownload,
-                    onCancel = onCancel,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    DownloadControl(
+                        downloaded = downloaded,
+                        progress = progress,
+                        onDownload = onDownload,
+                        onCancel = onCancel,
+                    )
+                    IconButton(onClick = onAddToPlaylist) {
+                        Icon(OnyxIcons.Add, contentDescription = "Add to playlist", tint = OnyxTokens.TextDim)
+                    }
+                }
             },
         )
     }

@@ -30,6 +30,10 @@ android {
 }
 
 dependencies {
+    // api, not implementation: entities expose core:model enums (e.g. PlaylistItemEntity.mediaType)
+    // on their public API, so consumers need MediaType on their compile classpath too.
+    api(project(":core:model"))
+
     // api, not implementation: OratorDatabase extends RoomDatabase, so consumers (and their
     // Robolectric tests, which call Room.inMemoryDatabaseBuilder) need Room on their compile
     // classpath too.

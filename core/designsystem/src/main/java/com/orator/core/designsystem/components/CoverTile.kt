@@ -1,7 +1,8 @@
 package com.orator.core.designsystem.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -26,6 +27,7 @@ import com.orator.core.designsystem.theme.OnyxTokens
  * along the bottom edge. Mockup .tile/.cap/.pprog — zero gaps, zero corner radius.
  * Caption colors stay white/light-gray: they sit on imagery, not on theme surfaces.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CoverTile(
     artworkModel: Any?,
@@ -34,8 +36,9 @@ fun CoverTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     progress: Float? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
-    Box(modifier = modifier.aspectRatio(1f).clickable(onClick = onClick)) {
+    Box(modifier = modifier.aspectRatio(1f).combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
         ArtworkImage(model = artworkModel, title = title, modifier = Modifier.fillMaxSize())
         Box(
             modifier = Modifier

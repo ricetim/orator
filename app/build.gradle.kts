@@ -44,6 +44,7 @@ dependencies {
     implementation(project(":feature:audiobooks"))
     implementation(project(":feature:settings"))
     implementation(project(":feature:podcasts"))
+    implementation(project(":feature:playlists"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:navigation"))
     implementation(project(":core:playback"))
