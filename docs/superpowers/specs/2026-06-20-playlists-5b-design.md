@@ -120,8 +120,15 @@ val newIds = entities.zip(rowIds).filter { it.second != -1L }.map { it.first.id 
 return newIds
 ```
 
-After all DB writes for a refresh pass complete, notify the seam **once** with the aggregated new
-ids (so the playlist side does its own per-episode podcast lookup).
+After all DB writes for a refresh pass complete — **including the `updateMetadata` backfill loop**,
+so `PlaylistAutoInserter`'s `episodeDao.getById` sees fully-populated rows — notify the seam
+**once** with the aggregated new ids (so the playlist side does its own per-episode podcast lookup).
+
+Touch-points for the `insertIgnore: Unit → List<Long>` change: the sole production caller is
+`upsertEpisodes`; five test files call it directly (`EpisodeDaoTest`,
+`EpisodePlaylistContributionsTest`, `EpisodeSpeedOverrideListenerTest`, `TranscriptFetcherTest`,
+`PodcastPositionListenerTest`) and all discard the return — source-compatible, no test changes
+required.
 
 ### 3. Auto-insert seam + evaluator
 
@@ -142,8 +149,10 @@ refresh pass (skip when empty).
 - If `podcast.autoInsertPlaylistId != null` and the playlist still exists: build
   `MediaRef(PODCAST, episodeId)` and insert a `PlaylistItemEntity` per `autoInsertRule`:
   - `NEW_TO_BOTTOM`: position = `(maxPosition ?: 0) + 10` (append).
-  - `NEW_TO_TOP`: position = `(minPosition ?: 0) - 10` (prepend; negative positions are fine —
-    ordering is relative, and the next reindex normalizes them). Add a `PlaylistDao.minPosition`.
+  - `NEW_TO_TOP`: position = `minPosition?.minus(10) ?: 10` (prepend; on an empty playlist use
+    `+10` for symmetry with append). Negative positions are safe — `getTopItem`/`observeItems`
+    `ORDER BY position ASC` so the smallest sorts first, and the next `PlaylistOrdering.reindex`
+    normalizes to dense positive values. Add a `PlaylistDao.minPosition`.
 - Dedupe is automatic (the playlist's unique `(playlistId, mediaType, mediaId)` index → insert
   ignored if already present).
 - A dangling `autoInsertPlaylistId` (playlist deleted) → skip (treat as off). Optionally clear it.
@@ -173,19 +182,40 @@ class FeedRefreshWorker @AssistedInject constructor(
   `PeriodicWorkRequest` (interval = `intervalMinutes`, `Constraints` = `NetworkType.CONNECTED`)
   with `ExistingPeriodicWorkPolicy.UPDATE` under a unique name so interval changes replace cleanly.
 - Driven by `RefreshPreferences.intervalMinutes` (collect → reconcile on change). Wired at app
-  start via the same eager-`FeatureEntry` mechanism 5a used for the playlist controller (the
-  podcasts `FeatureEntry` already exists — have it kick `RefreshScheduler`).
-- **Refresh-on-app-open:** a one-shot `OneTimeWorkRequest` (or a direct `refreshAll()` call from
-  app start, network permitting) enqueued once per cold start, independent of the interval.
+  start via the same eager-`FeatureEntry` mechanism 5a used for the playlist controller —
+  `PodcastsFeatureEntry` already exists and is eagerly constructed (the app injects
+  `Set<FeatureEntry>` in `MainActivity.onCreate`); have it kick `RefreshScheduler.start(scope)`.
+- **Refresh-on-app-open:** the eager `RefreshScheduler.start` also triggers a **direct**
+  `repository.refreshAll()` once per cold start (in a try/catch, network permitting) — simpler than
+  enqueuing a second worker and it reuses the same seam path. Independent of the interval.
 
-WorkManager initialization: provide a custom `Configuration` via Hilt's
-`androidx.hilt:hilt-work` (`HiltWorkerFactory`) and disable the default initializer in the app
-manifest (standard `@HiltAndroidApp` + `Configuration.Provider` setup, in `app`).
+WorkManager + Hilt initialization (in `app`):
+- A custom `Application` already exists — **`OratorApplication`** (`@HiltAndroidApp`, already
+  implements Coil's `SingletonImageLoader.Factory` and injects `okHttpClient`). Add
+  `Configuration.Provider` to it and inject `HiltWorkerFactory` (`@Inject lateinit var workerFactory`;
+  `override val workManagerConfiguration = Configuration.Builder().setWorkerFactory(workerFactory).build()`)
+  **without disturbing** the existing Coil/OkHttp setup.
+- **Disable the default WorkManager initializer** in `app/src/main/AndroidManifest.xml`. The
+  manifest currently has no `<provider>` block and no `xmlns:tools`; add both:
+  ```xml
+  <!-- on <manifest>: xmlns:tools="http://schemas.android.com/tools" -->
+  <provider
+      android:name="androidx.startup.InitializationProvider"
+      android:authorities="${applicationId}.androidx-startup"
+      android:exported="false"
+      tools:node="merge">
+      <meta-data
+          android:name="androidx.work.WorkManagerInitializer"
+          android:value="androidx.startup"
+          tools:node="remove" />
+  </provider>
+  ```
 
 ### 5. Refresh-interval settings (`feature:settings`)
 
-`RefreshPreferences` (DataStore, `core:playback` or `feature:podcasts` — wherever fits the
-existing prefs pattern): `intervalMinutes: Int` (0 = Off; 15/60/180/360/720/1440), default 360.
+`RefreshPreferences` (DataStore, **in `feature:podcasts`** — `RefreshScheduler` is the sole
+consumer, so co-locate; follow the `PlayerPreferences` qualifier + `preferencesDataStore` + typed
+wrapper pattern): `intervalMinutes: Int` (0 = Off; 15/60/180/360/720/1440), default 360.
 
 A `SettingsSection` row (the existing pluggable settings mechanism) cycles
 **Off → 15m → 1h → 3h → 6h → 12h → daily**, persisting to `RefreshPreferences`; `RefreshScheduler`
@@ -196,8 +226,8 @@ reacts to the change.
 On the podcast show screen (where intro/outro clips + speed already live), add an **"Auto-add new
 episodes"** control showing the current target ("Off" or the playlist name). Tapping opens a
 dialog:
-- A list of existing playlists (read via `PlaylistDao` — `core:database`, no feature import) +
-  an "Off" choice.
+- A list of existing playlists (read via `PlaylistDao.observePlaylists()` — already returns
+  `PlaylistSummary` with names; `core:database`, no feature import) + an "Off" choice.
 - A **Top / Bottom** toggle (the `AutoInsertRule`).
 - Confirm → `podcastDao.updateAutoInsert(id, playlistId, rule)`.
 
