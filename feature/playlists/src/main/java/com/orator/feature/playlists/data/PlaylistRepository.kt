@@ -40,6 +40,15 @@ class PlaylistRepository @Inject constructor(
         )
     }
 
+    /** Prepend a ref to the top (for NEW_TO_TOP auto-insert). Negative positions are fine — order is
+     *  relative and the next reindex normalizes them. Dedupe enforced by the DAO's unique index. */
+    suspend fun addAtTop(playlistId: Long, ref: MediaRef) {
+        val pos = dao.minPosition(playlistId)?.minus(10) ?: 10L
+        dao.insertItem(
+            PlaylistItemEntity(playlistId = playlistId, mediaType = ref.type, mediaId = ref.id, position = pos),
+        )
+    }
+
     /** Hydrate to UI rows; prune (drop + delete) rows whose entity no longer resolves. */
     suspend fun items(playlistId: Long): List<PlaylistItemUi> = buildList {
         for (row in dao.getItems(playlistId)) {
