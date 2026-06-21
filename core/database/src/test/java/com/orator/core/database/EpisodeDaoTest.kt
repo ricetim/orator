@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -30,6 +31,16 @@ class EpisodeDaoTest {
         id = id, podcastId = podcastId, title = "Ep $id", pubDateUtc = pubDate,
         enclosureUrl = "https://x/$id.mp3",
     )
+
+    @Test
+    fun `insertIgnore returns rowids for new rows and -1 for duplicates`() = runBlocking {
+        val first = dao.insertIgnore(listOf(episode("e1"), episode("e2")))
+        assertTrue(first.all { it != -1L }) // both new
+
+        val second = dao.insertIgnore(listOf(episode("e1"), episode("e3")))
+        assertEquals(-1L, second[0]) // e1 duplicate
+        assertTrue(second[1] != -1L) // e3 new
+    }
 
     @Test
     fun `latestPubDates returns newest episode per podcast`() = runBlocking {
