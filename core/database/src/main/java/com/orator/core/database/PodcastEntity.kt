@@ -23,4 +23,8 @@ data class PodcastEntity(
     val clipOutroMs: Long = 0,
     /** Per-show speed; null = fall back to per-type/global defaults. */
     val speedOverride: Float? = null,
+    /** Auto-insert target playlist for newly-discovered episodes; null = off. */
+    val autoInsertPlaylistId: Long? = null,
+    /** How new episodes enter [autoInsertPlaylistId]; null = off. */
+    val autoInsertRule: com.orator.core.model.AutoInsertRule? = null,
 )
