@@ -2,7 +2,6 @@ package com.orator.feature.playlists
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,19 +24,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.orator.core.designsystem.components.EpisodeRow
@@ -48,7 +44,6 @@ import com.orator.core.designsystem.icons.OnyxIcons
 import com.orator.core.designsystem.text.TimeFormats
 import com.orator.core.designsystem.theme.OnyxTokens
 import com.orator.feature.playlists.data.PlaylistItemUi
-import kotlin.math.roundToInt
 
 private val RowHeight = 64.dp
 
@@ -62,11 +57,6 @@ fun PlaylistDetailScreen(
     val items by viewModel.items.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
-
-    // Lift-and-drop reorder state.
-    var draggingId by remember { mutableStateOf<Long?>(null) }
-    var dragDelta by remember { mutableFloatStateOf(0f) }
-    val rowHeightPx = with(LocalDensity.current) { RowHeight.toPx() }
 
     Column(Modifier.fillMaxWidth().background(OnyxTokens.Background)) {
         OnyxTopBar(
@@ -102,26 +92,15 @@ fun PlaylistDetailScreen(
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(bottom = OnyxTokens.OverlayBottomPadding),
             ) {
-                itemsIndexed(items, key = { _, it -> it.itemId }) { _, ui ->
+                itemsIndexed(items, key = { _, it -> it.itemId }) { index, ui ->
                     PlaylistItemRow(
                         ui = ui,
-                        dragging = ui.itemId == draggingId,
-                        dragDelta = dragDelta,
-                        gesturesEnabled = draggingId == null,
+                        canMoveUp = index > 0,
+                        canMoveDown = index < items.lastIndex,
                         onTap = { viewModel.playItem(ui.itemId) },
                         onRemove = { viewModel.remove(ui.itemId) },
-                        onDragStart = { draggingId = ui.itemId; dragDelta = 0f },
-                        onDrag = { dragDelta += it },
-                        onDragEnd = {
-                            val from = items.indexOfFirst { it.itemId == ui.itemId }
-                            if (from >= 0) {
-                                val to = (from + (dragDelta / rowHeightPx).roundToInt())
-                                    .coerceIn(0, items.lastIndex)
-                                if (to != from) viewModel.move(from, to)
-                            }
-                            draggingId = null; dragDelta = 0f
-                        },
-                        onDragCancel = { draggingId = null; dragDelta = 0f },
+                        onMoveUp = { viewModel.move(index, index - 1) },
+                        onMoveDown = { viewModel.move(index, index + 1) },
                     )
                 }
             }
@@ -156,15 +135,12 @@ private fun PlayFromTopBar(enabled: Boolean, onClick: () -> Unit) {
 @Composable
 private fun PlaylistItemRow(
     ui: PlaylistItemUi,
-    dragging: Boolean,
-    dragDelta: Float,
-    gesturesEnabled: Boolean,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
     onTap: () -> Unit,
     onRemove: () -> Unit,
-    onDragStart: () -> Unit,
-    onDrag: (Float) -> Unit,
-    onDragEnd: () -> Unit,
-    onDragCancel: () -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
 ) {
     val subLine = if (ui.content.durationMs > 0) {
         "${ui.content.subtitle} · ${TimeFormats.clock(ui.content.durationMs)}"
@@ -172,39 +148,40 @@ private fun PlaylistItemRow(
         ui.content.subtitle
     }
 
-    val rowModifier = if (dragging) {
-        Modifier.graphicsLayer { translationY = dragDelta; shadowElevation = 12f }.zIndex(1f)
-    } else {
-        Modifier
-    }
-
     SwipeActionRow(
-        enabled = gesturesEnabled,
+        enabled = true,
         actionLabel = "Remove ✕",
         onSwipeLeft = onRemove,
-        modifier = rowModifier,
     ) {
         EpisodeRow(
             title = ui.content.title,
             subLine = subLine,
-            onClick = { if (gesturesEnabled) onTap() },
+            onClick = onTap,
             modifier = Modifier.height(RowHeight),
             leading = { RowArt(ui.content.artworkUri, ui.content.title) },
             trailing = {
-                Box(
-                    Modifier.size(40.dp).pointerInput(ui.itemId) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { onDragStart() },
-                            onDrag = { change, drag -> change.consume(); onDrag(drag.y) },
-                            onDragEnd = { onDragEnd() },
-                            onDragCancel = { onDragCancel() },
-                        )
-                    },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("≡", color = OnyxTokens.TextFaint, fontSize = 20.sp)
+                Column {
+                    ReorderArrow("▲", enabled = canMoveUp, desc = "Move up", onClick = onMoveUp)
+                    ReorderArrow("▼", enabled = canMoveDown, desc = "Move down", onClick = onMoveDown)
                 }
             },
+        )
+    }
+}
+
+@Composable
+private fun ReorderArrow(glyph: String, enabled: Boolean, desc: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(width = 40.dp, height = 28.dp)
+            .semantics { contentDescription = desc }
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            glyph,
+            color = if (enabled) OnyxTokens.TextDim else OnyxTokens.SurfaceBorder,
+            fontSize = 14.sp,
         )
     }
 }
