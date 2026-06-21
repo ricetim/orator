@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,8 +52,15 @@ class RefreshScheduler @Inject constructor(
             .enqueueUniqueWork(REFRESH_NOW_WORK, ExistingWorkPolicy.KEEP, request)
     }
 
-    /** Production wiring: collect the interval pref (reconcile on change) + one app-open refresh. */
+    private val started = AtomicBoolean(false)
+
+    /**
+     * Production wiring: collect the interval pref (reconcile on change) + one app-open refresh.
+     * Idempotent — PodcastsFeatureEntry is reconstructed on every Activity recreation, so guard
+     * against launching a duplicate forever-collector each time.
+     */
     fun start(scope: CoroutineScope) {
+        if (!started.compareAndSet(false, true)) return
         scope.launch { preferences.intervalMinutes.collect { reconcile(it) } }
         refreshNow()
     }

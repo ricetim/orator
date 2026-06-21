@@ -26,9 +26,15 @@ class PlaylistPlaybackController @Inject constructor(
 ) {
     private val factoryByType = factories.associateBy { it.mediaType }
     private var wasEnded = false
+    private val started = java.util.concurrent.atomic.AtomicBoolean(false)
 
-    /** Production wiring: call once at app start (from PlaylistsFeatureEntry). */
+    /**
+     * Production wiring: collect playback state once at app start (from PlaylistsFeatureEntry).
+     * Idempotent — the entry is reconstructed on every Activity recreation, and a second collector
+     * sharing the mutable advance state ([wasEnded]) could double-advance the playlist.
+     */
     fun start(scope: CoroutineScope) {
+        if (!started.compareAndSet(false, true)) return
         scope.launch { playback.state.collect { onState(it) } }
     }
 
