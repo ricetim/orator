@@ -111,7 +111,12 @@ suspend fun insertIgnore(episodes: List<EpisodeEntity>): List<Long>
 
 ### Task 1.4: `PlaylistDao.minPosition`
 
-**Files:** Modify `PlaylistDao.kt`; test `PlaylistDaoTest.kt`.
+**Files:** Modify `PlaylistDao.kt`, `feature/playlists/src/test/.../data/FakePlaylistDao.kt`; test `PlaylistDaoTest.kt`.
+
+> ⚠️ `FakePlaylistDao` (feature:playlists test double) implements the **full** `PlaylistDao`
+> interface. Adding `minPosition` to the interface breaks its compilation — and the Chunk 1 gate
+> (`./gradlew test`) compiles every module's tests — unless you add the override below in the
+> SAME task.
 
 - [ ] **Step 1: Write the failing test**
 ```kotlin
@@ -124,13 +129,18 @@ suspend fun insertIgnore(episodes: List<EpisodeEntity>): List<Long>
 }
 ```
 - [ ] **Step 2:** Run, expect FAIL. Report build time.
-- [ ] **Step 3: Add**:
+- [ ] **Step 3: Add to `PlaylistDao`**:
 ```kotlin
 @Query("SELECT MIN(position) FROM playlist_items WHERE playlistId = :playlistId")
 suspend fun minPosition(playlistId: Long): Long?
 ```
-- [ ] **Step 4:** Run, expect PASS. Report build time.
-- [ ] **Step 5: Commit** (paths: PlaylistDao.kt, PlaylistDaoTest.kt)
+- [ ] **Step 4: Add the `FakePlaylistDao` override** (mirrors its existing `maxPosition`):
+```kotlin
+override suspend fun minPosition(playlistId: Long): Long? = itemsFor(playlistId).minOfOrNull { it.position }
+```
+- [ ] **Step 5:** Run the test, expect PASS. Then `./gradlew :feature:playlists:compileDebugUnitTestKotlin`
+  to confirm the fake still satisfies the interface. Report build time.
+- [ ] **Step 6: Commit** (paths: PlaylistDao.kt, FakePlaylistDao.kt, PlaylistDaoTest.kt)
 `feat(db): PlaylistDao.minPosition (for NEW_TO_TOP auto-insert)`
 
 ### Task 1.5: `NewEpisodeListener` seam (`core:playback`)
@@ -203,10 +213,10 @@ Outcome: refresh fires the seam with new episode ids, and `feature:playlists` in
 
 **Files:** Create `feature/playlists/.../data/PlaylistAutoInserter.kt`; modify `PlaylistRepository.kt` (add `addAtTop`/`addAtBottom`); modify `PlaylistsFeatureModule.kt` (bind `@IntoSet`); test `PlaylistAutoInserterTest.kt`.
 
-- [ ] **Step 1: Add repository insert helpers** (reuse `FakePlaylistDao` in tests):
+- [ ] **Step 1: Add the top-insert helper** to `PlaylistRepository` (`addToBottom` already exists —
+  reuse it directly for `NEW_TO_BOTTOM`; only `addAtTop` is new):
 ```kotlin
-// in PlaylistRepository
-suspend fun addAtBottom(playlistId: Long, ref: MediaRef) = addToBottom(playlistId, ref) // existing
+// in PlaylistRepository (alongside the existing addToBottom)
 suspend fun addAtTop(playlistId: Long, ref: MediaRef) {
     val pos = (dao.minPosition(playlistId)?.minus(10)) ?: 10L
     dao.insertItem(PlaylistItemEntity(playlistId = playlistId, mediaType = ref.type, mediaId = ref.id, position = pos))
@@ -239,7 +249,7 @@ class PlaylistAutoInserter @Inject constructor(
             val ref = MediaRef(MediaType.PODCAST, id)
             when (rule) {
                 AutoInsertRule.NEW_TO_TOP -> repository.addAtTop(target, ref)
-                AutoInsertRule.NEW_TO_BOTTOM -> repository.addAtBottom(target, ref)
+                AutoInsertRule.NEW_TO_BOTTOM -> repository.addToBottom(target, ref)
             }
         }
     }
