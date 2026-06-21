@@ -5,8 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.orator.core.database.EpisodeDao
 import com.orator.core.database.EpisodeEntity
+import com.orator.core.database.PlaylistDao
+import com.orator.core.database.PlaylistSummary
 import com.orator.core.database.PodcastDao
 import com.orator.core.database.PodcastEntity
+import com.orator.core.model.AutoInsertRule
 import com.orator.core.model.MediaType
 import com.orator.core.playback.PlaybackConnection
 import com.orator.core.playback.PlaybackUiState
@@ -30,6 +33,7 @@ class PodcastDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val podcastDao: PodcastDao,
     private val episodeDao: EpisodeDao,
+    private val playlistDao: PlaylistDao,
     private val playbackConnection: PlaybackConnection,
     private val repository: PodcastRepository,
     private val downloader: EpisodeDownloader,
@@ -50,6 +54,15 @@ class PodcastDetailViewModel @Inject constructor(
 
     val prefs: StateFlow<PlayerPrefs> = playerPreferences.flow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlayerPrefs())
+
+    /** Playlists offered as auto-insert targets (read via core:database — no feature import). */
+    val playlists: StateFlow<List<PlaylistSummary>> = playlistDao.observePlaylists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Set (or clear, with nulls) this podcast's auto-insert target + rule. */
+    fun setAutoInsert(playlistId: Long?, rule: AutoInsertRule?) {
+        viewModelScope.launch { podcastDao.updateAutoInsert(podcastId, playlistId, rule) }
+    }
 
     fun onDownload(episodeId: String) = downloader.enqueue(episodeId)
 

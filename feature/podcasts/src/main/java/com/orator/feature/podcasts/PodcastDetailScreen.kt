@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.orator.core.database.EpisodeEntity
+import com.orator.core.database.PlaylistSummary
 import com.orator.core.database.PodcastEntity
 import com.orator.core.designsystem.components.ArtworkImage
 import com.orator.core.designsystem.components.DateBlock
@@ -49,6 +51,7 @@ import com.orator.core.designsystem.icons.OnyxIcons
 import com.orator.core.designsystem.components.SwipeActionRow
 import com.orator.core.designsystem.text.TimeFormats
 import com.orator.core.designsystem.theme.OnyxTokens
+import com.orator.core.model.AutoInsertRule
 import com.orator.core.model.MediaType
 import com.orator.core.playback.PlayerPrefs
 import java.time.Instant
@@ -68,8 +71,10 @@ fun PodcastDetailScreen(
     val episodes by viewModel.episodes.collectAsStateWithLifecycle()
     val progressMap by viewModel.downloadProgress.collectAsStateWithLifecycle()
     val prefs by viewModel.prefs.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     var showEffects by remember { mutableStateOf(false) }
     var confirmUnsubscribe by remember { mutableStateOf(false) }
+    var showAutoInsert by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().background(OnyxTokens.Background)) {
         OnyxTopBar(
@@ -83,8 +88,10 @@ fun PodcastDetailScreen(
                     podcast = podcast,
                     episodeCount = episodes.size,
                     prefs = prefs,
+                    autoInsertLabel = autoInsertLabel(podcast?.autoInsertPlaylistId, playlists),
                     onSubscribedClick = { confirmUnsubscribe = true },
                     onEffectsClick = { showEffects = true },
+                    onAutoInsertClick = { showAutoInsert = true },
                 )
             }
             items(episodes, key = { it.id }) { episode ->
@@ -147,6 +154,87 @@ fun PodcastDetailScreen(
             onClip = { intro, outro -> viewModel.onClipChange(intro, outro) },
         )
     }
+
+    if (showAutoInsert && p != null) {
+        AutoInsertDialog(
+            playlists = playlists,
+            currentTarget = p.autoInsertPlaylistId,
+            currentRule = p.autoInsertRule,
+            onDismiss = { showAutoInsert = false },
+            onConfirm = { target, rule ->
+                viewModel.setAutoInsert(target, rule)
+                showAutoInsert = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun AutoInsertDialog(
+    playlists: List<PlaylistSummary>,
+    currentTarget: Long?,
+    currentRule: AutoInsertRule?,
+    onDismiss: () -> Unit,
+    onConfirm: (target: Long?, rule: AutoInsertRule?) -> Unit,
+) {
+    var target by remember { mutableStateOf(currentTarget) }
+    var rule by remember { mutableStateOf(currentRule ?: AutoInsertRule.NEW_TO_TOP) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Auto-add new episodes") },
+        text = {
+            Column {
+                if (playlists.isEmpty()) {
+                    Text(
+                        "Create a playlist first, then come back to choose it here.",
+                        color = OnyxTokens.TextDim,
+                        fontSize = 13.sp,
+                    )
+                } else {
+                    ChoiceRow("Off", selected = target == null) { target = null }
+                    playlists.forEach { pl ->
+                        ChoiceRow(pl.name, selected = target == pl.id) { target = pl.id }
+                    }
+                    if (target != null) {
+                        Row(Modifier.padding(top = 10.dp)) {
+                            Pill(
+                                "Top",
+                                filled = rule == AutoInsertRule.NEW_TO_TOP,
+                                onClick = { rule = AutoInsertRule.NEW_TO_TOP },
+                            )
+                            Pill(
+                                "Bottom",
+                                filled = rule == AutoInsertRule.NEW_TO_BOTTOM,
+                                onClick = { rule = AutoInsertRule.NEW_TO_BOTTOM },
+                                modifier = Modifier.padding(start = 6.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = playlists.isNotEmpty(),
+                onClick = { onConfirm(target, target?.let { rule }) },
+            ) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Text(
+        (if (selected) "● " else "○ ") + label,
+        color = if (selected) OnyxTokens.Accent else OnyxTokens.TextDim,
+        fontSize = 14.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+    )
 }
 
 @Composable
@@ -154,8 +242,10 @@ private fun ShowHeader(
     podcast: PodcastEntity?,
     episodeCount: Int,
     prefs: PlayerPrefs,
+    autoInsertLabel: String,
     onSubscribedClick: () -> Unit,
     onEffectsClick: () -> Unit,
+    onAutoInsertClick: () -> Unit,
 ) {
     podcast ?: return
     Row(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp, top = 4.dp)) {
@@ -191,8 +281,17 @@ private fun ShowHeader(
                     modifier = Modifier.padding(start = 5.dp),
                 )
             }
+            Row(Modifier.padding(top = 5.dp)) {
+                Pill(text = autoInsertLabel, filled = false, onClick = onAutoInsertClick)
+            }
         }
     }
+}
+
+/** "Auto: <playlist>" or "Auto: off". A dangling target (deleted playlist) reads as off. */
+private fun autoInsertLabel(targetId: Long?, playlists: List<PlaylistSummary>): String {
+    val name = targetId?.let { id -> playlists.firstOrNull { it.id == id }?.name }
+    return "Auto: " + (name ?: "off")
 }
 
 private fun effectsSummary(podcast: PodcastEntity, prefs: PlayerPrefs): String {
