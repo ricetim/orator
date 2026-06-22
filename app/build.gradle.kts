@@ -68,6 +68,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.hilt.work)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)

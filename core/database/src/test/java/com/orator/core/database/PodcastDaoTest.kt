@@ -3,6 +3,7 @@ package com.orator.core.database
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.orator.core.model.AutoInsertRule
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -77,5 +78,22 @@ class PodcastDaoTest {
         assertEquals("\"v2\"", row.etag)
         assertEquals(5_000L, row.clipIntroMs) // untouched by feed refresh
         assertTrue(row.lastRefreshUtc == 99L)
+    }
+
+    @Test
+    fun `updateAutoInsert sets and clears the target + rule`() = runBlocking {
+        dao.insertIgnore(podcast("p1"))
+
+        dao.updateAutoInsert("p1", playlistId = 5L, rule = AutoInsertRule.NEW_TO_TOP)
+        dao.getById("p1")!!.let {
+            assertEquals(5L, it.autoInsertPlaylistId)
+            assertEquals(AutoInsertRule.NEW_TO_TOP, it.autoInsertRule)
+        }
+
+        dao.updateAutoInsert("p1", playlistId = null, rule = null)
+        dao.getById("p1")!!.let {
+            assertNull(it.autoInsertPlaylistId)
+            assertNull(it.autoInsertRule)
+        }
     }
 }

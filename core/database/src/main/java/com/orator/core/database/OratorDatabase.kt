@@ -14,7 +14,7 @@ import androidx.room.RoomDatabase
         PodcastEntity::class, EpisodeEntity::class,
         PlaylistEntity::class, PlaylistItemEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 abstract class OratorDatabase : RoomDatabase() {

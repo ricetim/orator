@@ -73,6 +73,8 @@ class FakePlaylistDao : PlaylistDao {
 
     override suspend fun maxPosition(playlistId: Long): Long? = itemsFor(playlistId).maxOfOrNull { it.position }
 
+    override suspend fun minPosition(playlistId: Long): Long? = itemsFor(playlistId).minOfOrNull { it.position }
+
     override suspend fun updatePositions(positions: List<PlaylistItemPosition>) {
         positions.forEach { pos -> items[pos.id]?.let { items[pos.id] = it.copy(position = pos.position) } }
         bump()

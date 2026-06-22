@@ -8,9 +8,13 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface EpisodeDao {
-    /** Insert new rows only; existing rows are untouched (positions/downloads survive refresh). */
+    /**
+     * Insert new rows only; existing rows are untouched (positions/downloads survive refresh).
+     * Returns the rowid per input (in order); -1 marks a row that was ignored as a duplicate —
+     * callers use this to detect genuinely-new episodes.
+     */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertIgnore(episodes: List<EpisodeEntity>)
+    suspend fun insertIgnore(episodes: List<EpisodeEntity>): List<Long>
 
     /**
      * Refresh metadata for an existing row WITHOUT touching positionMs/audioPath/

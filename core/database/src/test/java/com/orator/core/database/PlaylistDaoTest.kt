@@ -90,6 +90,14 @@ class PlaylistDaoTest {
         assertEquals(mapOf("Mix" to 2, "Empty" to 0), counts)
     }
 
+    @Test fun `minPosition returns the smallest position, null when empty`() = runBlocking {
+        val p = newPlaylist("Mix")
+        assertNull(dao.minPosition(p))
+        dao.insertItem(item(p, "a", pos = 30))
+        dao.insertItem(item(p, "b", pos = 10))
+        assertEquals(10L, dao.minPosition(p))
+    }
+
     @Test fun `getTopItem returns the smallest-position row`() = runBlocking {
         val p = newPlaylist("Mix")
         assertNull(dao.getTopItem(p))

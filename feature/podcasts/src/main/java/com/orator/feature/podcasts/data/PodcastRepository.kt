@@ -6,6 +6,7 @@ import com.orator.core.database.PodcastDao
 import com.orator.core.database.PodcastEntity
 import com.orator.core.network.FeedFetcher
 import com.orator.core.network.FetchResult
+import com.orator.core.playback.NewEpisodeListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -36,6 +37,7 @@ class PodcastRepository @Inject constructor(
     private val episodeDao: EpisodeDao,
     private val cacheWriter: EpisodeCacheWriter,
     private val client: OkHttpClient,
+    private val newEpisodeListeners: Set<@JvmSuppressWildcards NewEpisodeListener>,
 ) {
 
     data class RefreshSummary(val refreshed: Int, val failed: Int)
@@ -96,20 +98,27 @@ class PodcastRepository @Inject constructor(
     suspend fun refreshAll(): RefreshSummary = withContext(Dispatchers.IO) {
         val all = podcastDao.getAll()
         val done = AtomicInteger(0)
-        val failed = AtomicInteger(0)
         val gate = Semaphore(REFRESH_CONCURRENCY)
-        coroutineScope {
+        // Each feed returns its new-episode ids, or null on failure. Aggregate after — no shared
+        // mutable state across the parallel refreshes.
+        val results: List<List<String>?> = coroutineScope {
             all.map { podcast ->
                 async {
                     gate.withPermit {
-                        if (!refresh(podcast)) failed.incrementAndGet()
+                        val newIds = refresh(podcast)
                         _busy.value = "Refreshing ${done.incrementAndGet()}/${all.size}"
+                        newIds
                     }
                 }
             }.awaitAll()
         }
         _busy.value = null
-        RefreshSummary(all.size - failed.get(), failed.get())
+        val newIds = results.filterNotNull().flatten()
+        if (newIds.isNotEmpty()) {
+            newEpisodeListeners.forEach { it.onNewEpisodes(newIds) } // auto-insert etc.
+        }
+        val failed = results.count { it == null }
+        RefreshSummary(all.size - failed, failed)
     }
 
     /** User decision: deletes everything, downloads included (UI confirms first). */
@@ -120,14 +129,15 @@ class PodcastRepository @Inject constructor(
         cacheWriter.deleteShowDir(podcast) // after DB: rows must go even if the tree op fails
     }
 
-    private suspend fun refresh(podcast: PodcastEntity): Boolean {
+    /** Returns the new-episode ids discovered (empty if none); null signals a refresh failure. */
+    private suspend fun refresh(podcast: PodcastEntity): List<String>? {
         return when (val result = fetcher.fetch(podcast.feedUrl, podcast.etag, podcast.lastModified)) {
             is FetchResult.NotModified -> {
                 podcastDao.touchRefresh(podcast.id, System.currentTimeMillis())
-                true
+                emptyList()
             }
             is FetchResult.Success -> {
-                val parsed = RssParser.parse(result.body) ?: return false
+                val parsed = RssParser.parse(result.body) ?: return null
                 podcastDao.updateFeedMeta(
                     id = podcast.id,
                     title = parsed.title,
@@ -138,16 +148,20 @@ class PodcastRepository @Inject constructor(
                     etag = result.etag,
                     lastModified = result.lastModified,
                 )
-                upsertEpisodes(podcast.id, parsed)
+                val newIds = upsertEpisodes(podcast.id, parsed)
                 writeTree(podcastDao.getById(podcast.id) ?: podcast)
-                true
+                newIds
             }
-            is FetchResult.Failure -> false
+            is FetchResult.Failure -> null
         }
     }
 
-    /** Insert-then-update keeps positions/downloads intact (EpisodeDao contract). */
-    private suspend fun upsertEpisodes(podcastId: String, parsed: ParsedFeed) {
+    /**
+     * Insert-then-update keeps positions/downloads intact (EpisodeDao contract). Returns the ids of
+     * the genuinely-new episodes (from the insert rowids) for the auto-insert seam — reported after
+     * the metadata backfill so listeners see fully-populated rows.
+     */
+    private suspend fun upsertEpisodes(podcastId: String, parsed: ParsedFeed): List<String> {
         val entities = parsed.items.map { item ->
             EpisodeEntity(
                 id = PodcastIds.episodeId(podcastId, item.guid ?: item.enclosureUrl),
@@ -161,7 +175,7 @@ class PodcastRepository @Inject constructor(
                 transcriptType = item.transcriptType,
             )
         }
-        episodeDao.insertIgnore(entities)
+        val rowIds = episodeDao.insertIgnore(entities)
         entities.forEach { e ->
             episodeDao.updateMetadata(
                 id = e.id,
@@ -174,6 +188,7 @@ class PodcastRepository @Inject constructor(
                 durationMs = e.durationMs,
             )
         }
+        return NewEpisodeIds.from(entities, rowIds)
     }
 
     /** Best-effort mirror: show.json + cover + latest N episode dirs. Never throws. */

@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.orator.core.database.OratorDatabase
 import com.orator.core.network.FeedFetcher
 import com.orator.core.network.FetchResult
+import com.orator.core.playback.NewEpisodeListener
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.After
@@ -45,6 +46,12 @@ class PodcastRepositoryTest {
             responses[url] ?: FetchResult.Failure("no stub for $url")
     }
 
+    /** Records every onNewEpisodes(...) call so tests can assert the auto-insert seam fired. */
+    private val newEpisodeCalls = mutableListOf<List<String>>()
+    private val recordingListener = object : NewEpisodeListener {
+        override suspend fun onNewEpisodes(episodeIds: List<String>) { newEpisodeCalls += episodeIds }
+    }
+
     @Before
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -57,6 +64,7 @@ class PodcastRepositoryTest {
             episodeDao = db.episodeDao(),
             cacheWriter = EpisodeCacheWriter(context, PodcastsFolderStore(context)),
             client = OkHttpClient(),
+            newEpisodeListeners = setOf(recordingListener),
         )
     }
 
@@ -179,6 +187,31 @@ class PodcastRepositoryTest {
         repository.unsubscribe(id)
         repository.unsubscribe(id) // second call must not throw
         assertEquals(0, db.podcastDao().getAll().size)
+    }
+
+    @Test
+    fun `refresh fires NewEpisodeListener with only the new episode ids`() = runBlocking {
+        responses[FEED_A] = FetchResult.Success(rss("Show A", "g1" to "One"), null, null)
+        val id = repository.subscribe(FEED_A).getOrThrow()
+        assertTrue(newEpisodeCalls.isEmpty()) // subscribe does not auto-insert (future-only)
+
+        responses[FEED_A] =
+            FetchResult.Success(rss("Show A", "g1" to "One", "g2" to "Two"), null, null)
+        repository.refreshAll()
+
+        assertEquals(1, newEpisodeCalls.size)
+        assertEquals(listOf(PodcastIds.episodeId(id, "g2")), newEpisodeCalls.single())
+    }
+
+    @Test
+    fun `a refresh with no new episodes does not fire the listener`() = runBlocking {
+        responses[FEED_A] = FetchResult.Success(rss("Show A", "g1" to "One"), "\"v1\"", null)
+        repository.subscribe(FEED_A).getOrThrow()
+        responses[FEED_A] = FetchResult.NotModified // 304 — nothing new
+
+        repository.refreshAll()
+
+        assertTrue(newEpisodeCalls.isEmpty())
     }
 
     @Test

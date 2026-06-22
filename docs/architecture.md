@@ -621,7 +621,7 @@ flowchart LR
     P3 --> P4A["✅ P4a<br/>Podcasts: subscribe +<br/>downloads + show notes"]
     P4A --> P4B["✅ P4b<br/>Discovery +<br/>transcripts"]
     P4B --> P5A["✅ P5a<br/>Playlists"]
-    P5A --> P5B["P5b<br/>auto-insert +<br/>bg refresh"]
+    P5A --> P5B["✅ P5b<br/>auto-insert +<br/>bg refresh"]
     P5B --> P6["P6<br/>audiobookshelf"]
     P6 --> P7["P7<br/>Billing +<br/>entitlements"]
     P7 --> P8["P8<br/>Premium set<br/>(TBD)"]
@@ -637,7 +637,7 @@ flowchart LR
 | **4a** ✅ | Podcasts: subscribe/cache/play | Subscribe via pasted URL or OPML import, refresh (parallel, conditional GETs), stream + explicit download, human-readable cache tree, show notes with tappable timestamps, per-show intro/outro clips + speed (applied live) — *verified on device 2026-06-10* | `feature-podcasts`, `core-network` |
 | **4b** ✅ | Podcasts: discovery + transcripts | Search via Podcast Index (key in local.properties) / iTunes fallback; subscribe from results; `podcast:transcript` fetch (on demand + with downloads) with plain-text viewer; unsubscribe with tree cleanup — *verified on device 2026-06-11* | (extends both) |
 | **5a** ✅ | Playlists | Multiple user-named playlists mixing podcast episodes + whole audiobooks; create/rename/delete, add via ＋ (episode row) / long-press (book tile), reorder (▲/▼), swipe-remove, tap-to-top; queue-drain playback (current = top) with auto-advance + resume, orchestrated above the unchanged single-entity core — *verified on device 2026-06-20* | `feature-playlists` |
-| **5b** | Playlists: background refresh + auto-insert | WorkManager periodic feed refresh; new episodes auto-insert into a playlist per rule (top/bottom) | (extends `feature-podcasts`/`feature-playlists`) |
+| **5b** ✅ | Playlists: background refresh + auto-insert | WorkManager periodic feed refresh (configurable interval Off/15m…daily + on app open); each podcast can auto-insert its new episodes into a chosen playlist at top/bottom, wired via a `NewEpisodeListener` core seam (future-only) — *verified on device 2026-06-22* | (extends `feature-podcasts`/`feature-playlists`) |
 | **6** | audiobookshelf | Add ABS server; browse + play + two-way progress sync (launch feature) | (extends `core-network`/`feature-audiobooks`) |
 | **7** | Paywall plumbing | Billing wired; `EntitlementRepository` gates a dummy premium toggle end-to-end | `core-billing` |
 | **8** | Premium features | The premium set (TBD) shipping behind the gate | (depends on the chosen set) |
@@ -660,8 +660,18 @@ contributed entirely through `core` seams — per-type `PlayRequestFactory` (pla
 unchanged. Reorder ships as ▲/▼ move buttons (long-press drag was starved by the row's stacked
 tap/swipe gestures on-device).
 
-**Next: Phase 5b — WorkManager background feed refresh + auto-insert rules** (auto-insert needs
-periodic refresh to have anything to insert, so they ship together).
+**Phase 5b (background refresh + auto-insert)** is complete and device-verified on a Pixel 7a
+(2026-06-22): WorkManager refreshes subscribed feeds on a configurable interval (Off/15m/1h/3h/6h/
+12h/daily, default 6h) and once on app open; a podcast can auto-insert its newly-discovered
+episodes into a chosen playlist at top or bottom (future-only). The cross-feature wiring is a
+`NewEpisodeListener` `core` seam — `feature:podcasts` emits new-episode ids (detected from the
+`insertIgnore` rowids) on any refresh; `feature:playlists` (`PlaylistAutoInserter`) routes each into
+its podcast's configured playlist, reading the per-podcast config via shared `core:database` DAOs —
+so neither feature imports the other. WorkManager uses on-demand init (`HiltWorkerFactory`) so the
+`@HiltWorker` gets injected dependencies; the runtime init was device-verified (worker ran
+`refreshAll` to success).
+
+**Next: Phase 6 — audiobookshelf** (add an ABS server; browse + play + two-way progress sync).
 
 ---
 

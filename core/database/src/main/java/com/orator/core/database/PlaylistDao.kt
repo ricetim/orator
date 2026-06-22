@@ -60,6 +60,9 @@ interface PlaylistDao {
     @Query("SELECT MAX(position) FROM playlist_items WHERE playlistId = :playlistId")
     suspend fun maxPosition(playlistId: Long): Long?
 
+    @Query("SELECT MIN(position) FROM playlist_items WHERE playlistId = :playlistId")
+    suspend fun minPosition(playlistId: Long): Long?
+
     /** Partial-entity update: rewrites only [PlaylistItemEntity.position] for each id, in one txn. */
     @Update(entity = PlaylistItemEntity::class)
     suspend fun updatePositions(positions: List<PlaylistItemPosition>)

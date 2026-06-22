@@ -20,8 +20,11 @@ import androidx.lifecycle.viewModelScope
 import com.orator.core.designsystem.components.SettingsRow
 import com.orator.core.designsystem.contract.SettingsSection
 import com.orator.core.designsystem.theme.OnyxTokens
+import com.orator.feature.podcasts.data.DEFAULT_REFRESH_INTERVAL_MINUTES
 import com.orator.feature.podcasts.data.PodcastRepository
 import com.orator.feature.podcasts.data.PodcastsFolderStore
+import com.orator.feature.podcasts.data.RefreshPreferences
+import com.orator.feature.podcasts.data.RefreshPresets
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +49,7 @@ class PodcastsSettingsSection @Inject constructor() : SettingsSection {
         val viewModel: PodcastsSettingsViewModel = hiltViewModel()
         val hasFolder by viewModel.hasFolder.collectAsStateWithLifecycle()
         val lastResult by viewModel.lastResult.collectAsStateWithLifecycle()
+        val refreshInterval by viewModel.refreshIntervalMinutes.collectAsStateWithLifecycle()
         val context = LocalContext.current
 
         val pickOpml = rememberLauncherForActivityResult(
@@ -75,6 +79,12 @@ class PodcastsSettingsSection @Inject constructor() : SettingsSection {
             value = if (hasFolder) "set" else "not set",
             onClick = { pickFolder.launch(null) },
         )
+        SettingsRow(
+            glyph = "↻",
+            label = "Background refresh",
+            value = RefreshPresets.label(refreshInterval),
+            onClick = viewModel::onCycleRefreshInterval,
+        )
         lastResult?.let {
             Text(
                 it,
@@ -91,10 +101,21 @@ class PodcastsSettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val repository: PodcastRepository,
     private val folderStore: PodcastsFolderStore,
+    private val refreshPreferences: RefreshPreferences,
 ) : ViewModel() {
 
     val hasFolder: StateFlow<Boolean> = folderStore.treeUri.map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** Background-refresh interval (minutes; 0 = Off). The Settings row cycles through presets. */
+    val refreshIntervalMinutes: StateFlow<Int> = refreshPreferences.intervalMinutes
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DEFAULT_REFRESH_INTERVAL_MINUTES)
+
+    fun onCycleRefreshInterval() {
+        viewModelScope.launch {
+            refreshPreferences.setIntervalMinutes(RefreshPresets.next(refreshIntervalMinutes.value))
+        }
+    }
 
     /** One-shot result line ("Imported 42, 1 failed"); cleared on the next action. */
     private val _lastResult = MutableStateFlow<String?>(null)

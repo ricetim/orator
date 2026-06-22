@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.orator.core.model.AutoInsertRule
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -48,6 +49,9 @@ interface PodcastDao {
 
     @Query("UPDATE podcasts SET speedOverride = :speed WHERE id = :id")
     suspend fun updateSpeedOverride(id: String, speed: Float?)
+
+    @Query("UPDATE podcasts SET autoInsertPlaylistId = :playlistId, autoInsertRule = :rule WHERE id = :id")
+    suspend fun updateAutoInsert(id: String, playlistId: Long?, rule: AutoInsertRule?)
 
     @Query("DELETE FROM podcasts WHERE id = :id")
     suspend fun delete(id: String)
