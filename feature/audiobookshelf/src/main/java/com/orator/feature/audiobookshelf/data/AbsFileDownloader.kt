@@ -40,7 +40,14 @@ class AbsFileDownloader @Inject constructor(
         val plan = AbsDownloadPlan.from(book.sourceUri, chapters)
         val localByRemote = mutableMapOf<String, String>()
         for (file in plan.files) {
-            val dest = downloadOne(file.remoteUrl, bookDir, file.localName) ?: return@withContext false
+            val dest = downloadOne(file.remoteUrl, bookDir, file.localName)
+            if (dest == null) {
+                // A mid-sequence failure leaves earlier renamed tracks behind and they are not yet
+                // DB-referenced (rewrite below never ran), so delete the whole per-book dir to avoid
+                // orphaning bytes. The book stays NONE on its original stream sourceUri.
+                bookDir.delete()
+                return@withContext false
+            }
             localByRemote[file.remoteUrl] = dest
         }
         val rewrite = plan.rewrite(chapters, book.sourceUri, localByRemote)
