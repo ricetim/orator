@@ -18,7 +18,14 @@ import javax.inject.Inject
 class AbsApi @Inject constructor(
     private val client: OkHttpClient,
     private val json: Json,
-) {
+) : AbsCatalogSource {
+
+    override suspend fun libraries(baseUrl: String, token: String): List<AbsLibrary> =
+        getLibraries(baseUrl, token)
+
+    override suspend fun items(baseUrl: String, libraryId: String, token: String): List<AbsLibraryItem> =
+        getLibraryItems(baseUrl, libraryId, token).results
+
     suspend fun login(baseUrl: String, username: String, password: String): AbsUser =
         withContext(Dispatchers.IO) {
             val body = json.encodeToString(LoginBody.serializer(), LoginBody(username, password))
