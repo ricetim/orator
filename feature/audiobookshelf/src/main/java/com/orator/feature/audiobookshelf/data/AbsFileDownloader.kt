@@ -73,4 +73,13 @@ class AbsFileDownloader @Inject constructor(
             .filter { it.startsWith("content://") }.distinct()
         uris.forEach { runCatching { DocumentFile.fromSingleUri(context, Uri.parse(it))?.delete() } }
     }
+
+    /** Remove a download: delete files, clear chapters, revert to stream-only (next play re-resolves). */
+    suspend fun removeDownload(bookId: String) = withContext(Dispatchers.IO) {
+        deleteFiles(bookId)
+        chapterDao.replaceForBook(bookId, emptyList())
+        bookDao.getById(bookId)?.let {
+            bookDao.upsert(listOf(it.copy(sourceUri = "", downloadState = DownloadState.NONE)))
+        }
+    }
 }
