@@ -133,9 +133,10 @@ data class AbsServerConfig(
 **`AbsCredentialStore`:** the token is stored in `EncryptedSharedPreferences`
 (AndroidKeyStore-backed `MasterKey`). Because the auth interceptor runs on OkHttp I/O threads and
 must read the token **synchronously per request**, the store loads the config once into an in-memory
-`AtomicReference<AbsServerConfig?>` at startup; login/logout update both the encrypted store and the
-reference. The interceptor reads the `AtomicReference` (lock-free); the UI observes a
-`StateFlow<AbsConnectionState>` derived from it.
+`AtomicReference<AbsSession?>` at startup, where `AbsSession` bundles the `AbsServerConfig` with the
+**pre-parsed base `HttpUrl`** (so the interceptor matches host+port without re-parsing on every
+request). Login/logout update both the encrypted store and the reference. The interceptor reads the
+`AtomicReference` (lock-free); the UI observes a `StateFlow<AbsConnectionState>` derived from it.
 
 ```kotlin
 sealed interface AbsConnectionState {
@@ -171,16 +172,19 @@ class AbsAuthInterceptor @Inject constructor(
     private val store: AbsCredentialStore,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val cfg = store.current()                 // AtomicReference — no suspend, no blocking
+        val session = store.current()              // AtomicReference — no suspend, no blocking
         val req = chain.request()
-        return if (cfg != null && req.url.host == cfg.baseUrl.toHttpUrl().host) {
-            chain.proceed(req.newBuilder().header("Authorization", "Bearer ${cfg.token}").build())
-        } else chain.proceed(req)                  // never decorates non-ABS hosts
+        val base = session?.baseUrl                 // pre-parsed HttpUrl
+        // Match host AND port so a bearer never leaks to a different service sharing the host.
+        return if (base != null && req.url.host == base.host && req.url.port == base.port) {
+            chain.proceed(req.newBuilder().header("Authorization", "Bearer ${session.config.token}").build())
+        } else chain.proceed(req)                   // never decorates non-ABS hosts
     }
 }
 ```
 
-This single class authenticates API + covers (Coil) + streaming (§8), all scoped to the ABS host.
+This single class authenticates API + covers (Coil) + streaming (§8), all scoped to the ABS
+host+port.
 
 **`AbsApi`** — suspend functions over the shared `OkHttpClient` + `Json { ignoreUnknownKeys = true }`
 (so ABS version drift never breaks parsing). No Retrofit/Moshi.
@@ -328,6 +332,13 @@ and the ABS interceptor never matches their host.
 + logout) also deletes downloaded SAF files. The Audiobooks/ABS UI observes `downloadState` straight
 off `BookDao`.
 
+**File resolution for deletion (both paths):** downloaded files are deleted by resolving the
+**stored `content://` URIs** held in `BookEntity.sourceUri` / `ChapterEntity.fileUri` (these were
+rewritten at download time), never by recomputing stream URLs. So before deleting a book's rows,
+read its `downloadState`; if `DOWNLOADED`, collect the `content://` URIs from the book + its chapters
+and `DocumentFile.fromSingleUri(...).delete()` each. This ensures a downloaded-then-removed-on-server
+book never orphans SAF files.
+
 ## 10. UI surface (modular, deferred-styling)
 
 Minimal, consistent with the deferred/modular UI principle. A `feature:audiobookshelf`
@@ -375,8 +386,9 @@ has no meaningful JVM test and each has a working sibling already (`EpisodeDownl
   `EncryptedSharedPreferences`; password never persisted.
 - JSON test fixtures and any logs must use `example.com` + fake tokens — **never commit real
   server URLs or tokens.**
-- The auth interceptor adds the bearer **only** to the configured ABS host, never to podcast feeds
-  or artwork hosts.
+- The auth interceptor adds the bearer **only** to the configured ABS host **and port**, never to
+  podcast feeds or artwork hosts (host+port matching prevents leaking the token to another service
+  sharing the host on a different port).
 
 ## 13. Out of scope (→ 6b or later)
 
