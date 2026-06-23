@@ -1104,7 +1104,7 @@ object AbsBookMapper {
             id = "abs:${item.id}",
             title = md.title.ifBlank { item.id },
             author = md.authorName,
-            coverPath = "$baseUrl".trimEnd('/') + "/api/items/${item.id}/cover",
+            coverPath = AbsUrl.endpoint(baseUrl, "api/items/${item.id}/cover"),
             sourceUri = "",                                   // filled lazily on first play (Chunk 4)
             sourceKind = if (multi) SourceKind.MULTI_FILE else SourceKind.SINGLE_FILE,
             durationMs = (item.media.duration * 1000).toLong(),
@@ -1193,20 +1193,18 @@ Create `FakeBookDao` in test sources implementing `BookDao` (only the methods us
 
 - [ ] **Step 3: Run it — fails** (Expected: compile error — `AbsRepository` missing).
 
-- [ ] **Step 4: Implement `AbsRepository`** (`AbsRepository.kt`):
+- [ ] **Step 4: Implement `AbsRepository`** (`AbsRepository.kt`) — a **plain class provided via `@Provides`** (NOT `@Inject`). It carries a `deleteFiles` function seam (defaulting to a no-op now; Chunk 5 Task 5.6 wires it to `AbsFileDownloader.deleteFiles` by editing only the provider). This avoids a mid-plan `@Inject`→`@Provides` switch (which would be a duplicate binding):
 ```kotlin
 package com.orator.feature.audiobookshelf.data
 
 import com.orator.core.database.BookDao
 import com.orator.core.model.BookOrigin
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class AbsRepository @Inject constructor(
+class AbsRepository(
     private val source: AbsCatalogSource,
     private val store: AbsCredentialStore,
     private val bookDao: BookDao,
+    private val deleteFiles: suspend (String) -> Unit = {},
 ) {
     /** One reconcile pass; no-op when disconnected. */
     suspend fun sync() {
@@ -1218,18 +1216,30 @@ class AbsRepository @Inject constructor(
         val existing = bookDao.getByOrigin(BookOrigin.ABS)
         val result = AbsCatalogReconciler.reconcile(existing, incoming)
         bookDao.upsert(result.upserts)
-        if (result.deletes.isNotEmpty()) bookDao.deleteByIds(result.deletes)
-        // NOTE: deletion of downloaded SAF files for stale rows is handled in Chunk 5 (deleteAbsBooks).
+        if (result.deletes.isNotEmpty()) {
+            result.deletes.forEach { deleteFiles(it) }      // no-op until Chunk 5 wires it
+            bookDao.deleteByIds(result.deletes)
+        }
     }
 
     suspend fun logout() {
         val ids = bookDao.getIdsByOrigin(BookOrigin.ABS)
-        if (ids.isNotEmpty()) bookDao.deleteByIds(ids)
+        if (ids.isNotEmpty()) {
+            ids.forEach { deleteFiles(it) }
+            bookDao.deleteByIds(ids)
+        }
         store.clear()
     }
 }
 ```
-(`AbsCredentialStore` reads/writes are synchronous and safe to call from a coroutine.)
+Add the provider to `AbsNetworkModule` (no-op `deleteFiles` for now):
+```kotlin
+@Provides
+@Singleton
+fun provideAbsRepository(source: AbsCatalogSource, store: AbsCredentialStore, bookDao: BookDao): AbsRepository =
+    AbsRepository(source, store, bookDao)
+```
+(Add `import javax.inject.Singleton`. `AbsCredentialStore` reads/writes are synchronous and safe from a coroutine.)
 
 - [ ] **Step 5: Run the test — passes** (Expected: PASS).
 
@@ -1542,7 +1552,20 @@ class AbsBookDetailResolverTest {
 
 - [ ] **Step 2: Run it — fails** (Expected: compile error).
 
-- [ ] **Step 3: Implement** (`AbsBookDetailResolver.kt`):
+- [ ] **Step 2b: Add chapter-replace to `ChapterDao`** — the real DAO (`core/database/.../ChapterDao.kt`) has ONLY `upsertAll`, `getForBook`, `observeForBook`. Add a delete query plus a default-method replace. **Do not use `@Transaction`** (that would force converting the `interface` to an `abstract class`); replacing one book's chapters need not be atomic. Add inside `interface ChapterDao`:
+```kotlin
+    @Query("DELETE FROM chapters WHERE bookId = :bookId")
+    suspend fun deleteForBook(bookId: String)
+
+    /** Default DAO method (Room supports these on interfaces): swap a book's chapters wholesale. */
+    suspend fun replaceForBook(bookId: String, chapters: List<ChapterEntity>) {
+        deleteForBook(bookId)
+        upsertAll(chapters)
+    }
+```
+(`ChapterEntity` does not need importing — it is in the same package.)
+
+- [ ] **Step 3: Implement** (`AbsBookDetailResolver.kt`) — a **plain class, NOT `@Inject`**: the `detail` function param is supplied by a `@Provides` in Chunk 6 (an `@Inject` constructor with a function-type param is unsatisfiable and, combined with the Chunk-6 `@Provides`, would be a duplicate binding):
 ```kotlin
 package com.orator.feature.audiobookshelf.data
 
@@ -1550,9 +1573,8 @@ import com.orator.core.database.BookDao
 import com.orator.core.database.ChapterDao
 import com.orator.core.model.BookDetailResolver
 import com.orator.core.model.BookOrigin
-import javax.inject.Inject
 
-class AbsBookDetailResolver @Inject constructor(
+class AbsBookDetailResolver(
     private val detail: suspend (baseUrl: String, itemId: String) -> AbsBookDetail,
     private val store: AbsCredentialStore,
     private val bookDao: BookDao,
@@ -1572,21 +1594,16 @@ class AbsBookDetailResolver @Inject constructor(
     }
 }
 ```
-The `detail` lambda is bound to `AbsApi.getItemExpanded` + the mapper via Hilt (Chunk 6 provider). `chapterDao.replaceForBook` — verify it exists; if `ChapterDao` lacks a replace, add:
-```kotlin
-@Transaction
-suspend fun replaceForBook(bookId: String, chapters: List<ChapterEntity>) {
-    deleteForBook(bookId); insert(chapters)
-}
-```
-(Use the existing insert/delete methods; check `ChapterDao` and reuse what's there.)
+The `detail` lambda is wired to `AbsApi.getItemExpanded` + `AbsItemDetailMapper` via the Chunk-6 `@Provides provideBookDetailResolver`.
+
+**`FakeChapterDao` (test source)** must override **all** `ChapterDao` members — `upsertAll`, `getForBook` (returning rows **sorted by `chapterIndex`**), `observeForBook` (may `throw NotImplementedError()`), `deleteForBook`, and `replaceForBook` (it is a default method, but override it to call the fake's own delete+upsert so the test is in-memory). Model it on `feature:playlists`' `FakePlaylistDao`.
 
 - [ ] **Step 4: Run the test — passes** (Expected: PASS).
 
 - [ ] **Step 5: Commit**
 ```bash
-git add feature/audiobookshelf/src/main/java/com/orator/feature/audiobookshelf/data/AbsBookDetailResolver.kt feature/audiobookshelf/src/test/java/com/orator/feature/audiobookshelf/data/AbsBookDetailResolverTest.kt feature/audiobookshelf/src/test/java/com/orator/feature/audiobookshelf/data/FakeChapterDao.kt
-git commit -m "feat(audiobookshelf): idempotent ABS BookDetailResolver (lazy expand)"
+git add core/database/src/main/java/com/orator/core/database/ChapterDao.kt feature/audiobookshelf/src/main/java/com/orator/feature/audiobookshelf/data/AbsBookDetailResolver.kt feature/audiobookshelf/src/test/java/com/orator/feature/audiobookshelf/data/AbsBookDetailResolverTest.kt feature/audiobookshelf/src/test/java/com/orator/feature/audiobookshelf/data/FakeChapterDao.kt
+git commit -m "feat(audiobookshelf): idempotent ABS BookDetailResolver (lazy expand) + ChapterDao.replaceForBook"
 ```
 
 ### Task 4.4: Call resolvers from `AudiobookPlayRequestFactory`
@@ -1621,9 +1638,12 @@ class AudiobookPlayRequestResolverTest {
     }
 }
 ```
-(Reuse/extend the audiobooks test fakes; `absBook("abs:1")` returns a book with `origin=ABS` and a non-blank `sourceUri` so `QueueBuilder` succeeds.)
+**Test fakes do not exist in `feature:audiobooks` yet** (the `feature:audiobookshelf` fakes are in a different module's test source set and are NOT visible here). Create, in `feature/audiobooks/src/test/java/com/orator/feature/audiobooks/data/`:
+- `FakeBookDao.kt` — implements `BookDao`, overriding **every** member (it is an interface): back `upsert`/`getById`/`getByOrigin`/`getIdsByOrigin`/`deleteByIds`/`updateProgress`/`updateSpeedOverride`/`getAllIds` with an in-memory `MutableMap<String, BookEntity>`; `observeAll`/`observeById` may `throw NotImplementedError()`. Model on `feature:playlists`' `FakePlaylistDao`.
+- `FakeChapterDao.kt` — implements `ChapterDao`, overriding all members; `getForBook` returns rows sorted by `chapterIndex`.
+- `AudiobookTestFixtures.kt` — `fun absBook(id: String, sourceUri: String = "content://x") = BookEntity(id=id, title=id, author=null, coverPath=null, sourceUri=sourceUri, sourceKind=SourceKind.SINGLE_FILE, durationMs=0, addedAtUtc=0, origin=BookOrigin.ABS, absItemId=id.removePrefix("abs:"))` (non-blank `sourceUri` so `QueueBuilder` succeeds without a resolver round-trip).
 
-- [ ] **Step 2: Run it — fails** — `./gradlew :feature:audiobooks:testDebugUnitTest --tests "*AudiobookPlayRequestResolverTest*"` (Expected: compile error — constructor has no resolver set).
+- [ ] **Step 2: Run it — fails** — `./gradlew :feature:audiobooks:testDebugUnitTest --tests "*AudiobookPlayRequestResolverTest*"` (Expected: compile error — constructor has no resolver set, fakes missing).
 
 - [ ] **Step 3: Modify `AudiobookPlayRequestFactory`** — inject the resolver set and call it:
 ```kotlin
@@ -1661,12 +1681,13 @@ abstract class AudiobookSeamsModule {
     @Multibinds abstract fun bookDetailResolvers(): Set<BookDetailResolver>
 }
 ```
+**Cross-chunk contract:** `@Multibinds` for a given set may be declared **exactly once** in the whole app graph. This `AudiobookSeamsModule` is the sole declarer of `Set<BookDetailResolver>` (and, in Chunk 6, `Set<BookDownloadController>`). `feature:audiobookshelf` must contribute **only** via `@Binds @IntoSet` / `@Provides @IntoSet` and must **never** re-declare `@Multibinds`, or the build fails with a duplicate-multibinding error.
 
 - [ ] **Step 5: Run the test — passes** (Expected: PASS). Then run the whole audiobooks suite to catch regressions: `./gradlew :feature:audiobooks:testDebugUnitTest`.
 
 - [ ] **Step 6: Commit**
 ```bash
-git add feature/audiobooks/src/main/java/com/orator/feature/audiobooks/data/AudiobookPlayRequestFactory.kt feature/audiobooks/src/main/java/com/orator/feature/audiobooks/AudiobookSeamsModule.kt feature/audiobooks/src/test/java/com/orator/feature/audiobooks/data/AudiobookPlayRequestResolverTest.kt
+git add feature/audiobooks/src/main/java/com/orator/feature/audiobooks/data/AudiobookPlayRequestFactory.kt feature/audiobooks/src/main/java/com/orator/feature/audiobooks/AudiobookSeamsModule.kt feature/audiobooks/src/test/java/com/orator/feature/audiobooks/data/AudiobookPlayRequestResolverTest.kt feature/audiobooks/src/test/java/com/orator/feature/audiobooks/data/FakeBookDao.kt feature/audiobooks/src/test/java/com/orator/feature/audiobooks/data/FakeChapterDao.kt feature/audiobooks/src/test/java/com/orator/feature/audiobooks/data/AudiobookTestFixtures.kt
 git commit -m "feat(audiobooks): resolve lazy book detail before building the play request"
 ```
 
@@ -2021,7 +2042,9 @@ git commit -m "feat(audiobookshelf): AbsDownloadWorker + unique-work enqueue"
 
 ### Task 5.5: `AbsDownloadController` seam (remove reverts to stream)
 
-**Files:** Modify `data/AbsDownloadManager.kt` (add `remove`); create `data/AbsDownloadController.kt`. Test: `.../data/AbsDownloadControllerTest.kt`
+**Files:** Modify `data/AbsFileDownloader.kt` (add `removeDownload`); create `data/AbsDownloadController.kt`. Test: `.../data/AbsDownloadControllerTest.kt`
+
+> **Why not put `remove` on `AbsDownloadManager`?** Expanding `AbsDownloadManager`'s constructor would break Task 5.4's `AbsDownloadManager(context)` test (and the Chunk-5 gate). `AbsDownloadManager` stays **context-only** (WorkManager `enqueue`/`cancel`); the file-deletion + DB-revert lives on `AbsFileDownloader`, which already holds `context`/`bookDao`/`chapterDao`.
 
 - [ ] **Step 1: Write the failing test** — remove deletes files + chapters and reverts the book to stream-only:
 ```kotlin
@@ -2060,19 +2083,17 @@ class AbsDownloadControllerTest {
 
 - [ ] **Step 2: Run it — fails** (Expected: compile error).
 
-- [ ] **Step 3: Add `remove` to `AbsDownloadManager`** (deletes files via the downloader, then reverts the row):
+- [ ] **Step 3: Add `removeDownload` to `AbsFileDownloader`** (deletes files, clears chapters, reverts the row to stream-only). `AbsFileDownloader` already injects `context`/`bookDao`/`chapterDao`, so no constructor change:
 ```kotlin
-// add ctor deps: private val downloader: AbsFileDownloader, private val bookDao: BookDao,
-//                private val chapterDao: ChapterDao
-    suspend fun remove(bookId: String) {
-        cancel(bookId)
-        downloader.deleteFiles(bookId)
+    suspend fun removeDownload(bookId: String) = withContext(Dispatchers.IO) {
+        deleteFiles(bookId)
         chapterDao.replaceForBook(bookId, emptyList())
         bookDao.getById(bookId)?.let {
             bookDao.upsert(listOf(it.copy(sourceUri = "", downloadState = DownloadState.NONE)))
         }
     }
 ```
+(`DownloadState` is already imported in `AbsFileDownloader`.) The WorkManager `cancel` is handled by the controller's `removeFn` (Chunk 6 provider: `{ manager.cancel(it); downloader.removeDownload(it) }`).
 
 - [ ] **Step 4: Implement the seam** (`AbsDownloadController.kt`) — bridges `BookDownloadController` to the manager (constructor-injectable for the test; Hilt provider in Chunk 6):
 ```kotlin
@@ -2099,15 +2120,17 @@ Hilt provider (Chunk 6, in `AudiobookshelfFeatureModule`) wires `enqueueFn = man
 
 - [ ] **Step 6: Commit**
 ```bash
-git add feature/audiobookshelf/src/main/java/com/orator/feature/audiobookshelf/data/AbsDownloadManager.kt feature/audiobookshelf/src/main/java/com/orator/feature/audiobookshelf/data/AbsDownloadController.kt feature/audiobookshelf/src/test/java/com/orator/feature/audiobookshelf/data/AbsDownloadControllerTest.kt
+git add feature/audiobookshelf/src/main/java/com/orator/feature/audiobookshelf/data/AbsFileDownloader.kt feature/audiobookshelf/src/main/java/com/orator/feature/audiobookshelf/data/AbsDownloadController.kt feature/audiobookshelf/src/test/java/com/orator/feature/audiobookshelf/data/AbsDownloadControllerTest.kt
 git commit -m "feat(audiobookshelf): download remove reverts to stream; BookDownloadController seam"
 ```
 
-### Task 5.6: Stale/logout file cleanup in `AbsRepository`
+### Task 5.6: Wire real file cleanup into `AbsRepository`
 
-**Files:** Modify `data/AbsRepository.kt` (inject `AbsFileDownloader`; delete files for stale + logout). Test: extend `AbsRepositoryTest`.
+**Files:** Modify `data/AbsNetworkModule.kt` (provider now injects `AbsFileDownloader`). Test: extend `AbsRepositoryTest`.
 
-- [ ] **Step 1: Write the failing test** — logout deletes downloaded files for ABS books (assert via a fake downloader recording deleted ids):
+`AbsRepository` already *calls* `deleteFiles` for stale rows (`sync`) and all ABS rows (`logout`) — the seam was front-loaded in Task 3.3 with a no-op default. This task only swaps the no-op for the real downloader in the Hilt provider and locks the behavior with a test.
+
+- [ ] **Step 1: Write the test** (the `deleteFiles` seam already exists, so this is a behavior-locking test that passes — construct the repo with a recording lambda):
 ```kotlin
     @Test fun `logout deletes downloaded files for abs books`() = runBlocking {
         val deleted = mutableListOf<String>()
@@ -2117,36 +2140,28 @@ git commit -m "feat(audiobookshelf): download remove reverts to stream; BookDown
         assertEquals(listOf("abs:li1"), deleted)
     }
 ```
-(Add a `deleteFiles: suspend (String) -> Unit` constructor seam to `AbsRepository`, defaulting in the Hilt provider to `AbsFileDownloader::deleteFiles`.)
 
-- [ ] **Step 2: Run it — fails** (Expected: compile error / signature mismatch).
+- [ ] **Step 2: Run it — passes** — `./gradlew :feature:audiobookshelf:testDebugUnitTest --tests "*AbsRepositoryTest*"` (Expected: PASS — the seam is invoked already).
 
-- [ ] **Step 3: Modify `AbsRepository`** — add the `deleteFiles` seam and call it for stale rows in `sync()` and all ABS rows in `logout()`:
+- [ ] **Step 3: Wire the real downloader** — replace the no-op provider from Task 3.3 in `AbsNetworkModule`:
 ```kotlin
-class AbsRepository(
-    private val source: AbsCatalogSource,
-    private val store: AbsCredentialStore,
-    private val bookDao: BookDao,
-    private val deleteFiles: suspend (String) -> Unit = {},
-) {
-    // ...sync(): before deleteByIds(result.deletes): result.deletes.forEach { deleteFiles(it) }
-    // ...logout(): ids.forEach { deleteFiles(it) } before deleteByIds(ids)
-}
+@Provides
+@Singleton
+fun provideAbsRepository(
+    source: AbsCatalogSource,
+    store: AbsCredentialStore,
+    bookDao: BookDao,
+    downloader: AbsFileDownloader,
+): AbsRepository = AbsRepository(source, store, bookDao, deleteFiles = { downloader.deleteFiles(it) })
 ```
-Provide it via Hilt (`AbsNetworkModule`):
-```kotlin
-@Provides @Singleton
-fun provideAbsRepository(source: AbsCatalogSource, store: AbsCredentialStore, dao: BookDao, dl: AbsFileDownloader) =
-    AbsRepository(source, store, dao, deleteFiles = { dl.deleteFiles(it) })
-```
-(Remove the `@Inject` constructor annotation from `AbsRepository` if switching to a provider, or keep `@Inject` and inject `AbsFileDownloader` directly — choose one; provider keeps the test seam clean.)
+(There must be exactly ONE `provideAbsRepository` — edit the existing one, do not add a second.)
 
-- [ ] **Step 4: Run the test — passes** (Expected: PASS). Re-run the whole module suite.
+- [ ] **Step 4: Build** — `./gradlew :feature:audiobookshelf:assembleDebug` (Expected: SUCCESSFUL).
 
 - [ ] **Step 5: Commit**
 ```bash
-git add feature/audiobookshelf/src/main/java/com/orator/feature/audiobookshelf/data/AbsRepository.kt feature/audiobookshelf/src/main/java/com/orator/feature/audiobookshelf/data/AbsNetworkModule.kt feature/audiobookshelf/src/test/java/com/orator/feature/audiobookshelf/data/AbsRepositoryTest.kt
-git commit -m "feat(audiobookshelf): delete downloaded files on stale-sync + logout"
+git add feature/audiobookshelf/src/main/java/com/orator/feature/audiobookshelf/data/AbsNetworkModule.kt feature/audiobookshelf/src/test/java/com/orator/feature/audiobookshelf/data/AbsRepositoryTest.kt
+git commit -m "feat(audiobookshelf): wire real SAF file deletion into stale-sync + logout"
 ```
 
 ### Chunk 5 gate
@@ -2188,20 +2203,29 @@ interface AudiobookshelfFeatureModule {
 - [ ] **Step 2: Provide `AbsBookDetailResolver`'s `detail` lambda + the `BookDownloadController`** in `AbsNetworkModule` (object module for the function/constructor providers):
 ```kotlin
 @Provides
-fun provideBookDetailResolver(api: AbsApi, store: AbsCredentialStore, bookDao: BookDao, chapterDao: ChapterDao): AbsBookDetailResolver =
+@Singleton
+fun provideBookDetailResolver(
+    api: AbsApi, store: AbsCredentialStore, bookDao: BookDao, chapterDao: ChapterDao,
+): AbsBookDetailResolver =
     AbsBookDetailResolver(
-        detail = { base, itemId -> AbsItemDetailMapper.map(api.getItemExpanded(base, itemId, store.current()?.config?.token ?: ""), base) },
+        detail = { base, itemId ->
+            AbsItemDetailMapper.map(api.getItemExpanded(base, itemId, store.current()?.config?.token ?: ""), base)
+        },
         store = store, bookDao = bookDao, chapterDao = chapterDao,
     )
 
 @Provides @IntoSet
-fun provideDownloadController(manager: AbsDownloadManager): BookDownloadController =
+fun provideDownloadController(
+    manager: AbsDownloadManager, downloader: AbsFileDownloader,
+): BookDownloadController =
     AbsDownloadController(
         handlesOrigin = BookOrigin.ABS,
-        enqueueFn = manager::enqueue, cancelFn = manager::cancel, removeFn = { manager.remove(it) },
+        enqueueFn = manager::enqueue,
+        cancelFn = manager::cancel,
+        removeFn = { manager.cancel(it); downloader.removeDownload(it) },
     )
 ```
-(Add the necessary imports + `@IntoSet`/`@Provides` from Dagger. Note `AbsBookDetailResolver` thus has a provider, so remove its `@Inject` ctor annotation, or keep `@Inject` and instead provide the `detail` lambda separately — pick the provider approach for clarity.)
+This is the single binding for `AbsBookDetailResolver` (consumed by both the `@Binds @IntoSet ... BookDetailResolver` above and `AbsFileDownloader`'s `@Inject` constructor — one binding, no duplicate). `AbsBookDetailResolver` and `AbsRepository` are plain classes (no `@Inject`); they exist **only** as these `@Provides`. Add Dagger imports (`@Provides`, `@IntoSet`, `javax.inject.Singleton`) and `com.orator.core.model.BookOrigin`.
 
 - [ ] **Step 3: Add a `@Multibinds Set<BookDownloadController>` in `feature:audiobooks`** (so the list can inject it even if ABS is absent) — extend `AudiobookSeamsModule`:
 ```kotlin
@@ -2220,7 +2244,9 @@ git commit -m "feat(audiobookshelf): Hilt bindings for interceptor/resolver/cont
 
 **Files:** Create `AudiobookshelfSettingsSection.kt`. (UI; verified on device.)
 
-- [ ] **Step 1: Implement** the section + ViewModel, modeled on `AudiobooksSettingsSection` + `PodcastsSettingsSection`. It shows: a connect form (URL/username/password inline fields or a dialog) bound to `AbsAuthRepository.login`, the current `AbsConnectionState`, a "Refresh library" row calling `AbsRepository.sync`, and a "Log out" row calling `AbsRepository.logout`. `order = 30` (after Audiobooks `20`), `title = "Audiobookshelf"`. Use `SettingsRow` from designsystem. Inject `AbsAuthRepository` + `AbsRepository` via a `@HiltViewModel`.
+- [ ] **Step 1: Implement** the section + ViewModel, modeled on `AudiobooksSettingsSection` + `PodcastsSettingsSection`. `order = 30` (after Audiobooks `20`), `title = "Audiobookshelf"`. Inject `AbsAuthRepository` + `AbsRepository` via a `@HiltViewModel`; observe `AbsAuthRepository.state` as `AbsConnectionState`.
+  - **`SettingsRow` has no text-input affordance** (glyph/label/value/onClick only). When **disconnected**: show a "Connect to server" `SettingsRow` whose `onClick` opens an `AlertDialog` containing three `OutlinedTextField`s (URL, username, password — password with `PasswordVisualTransformation`) and a Connect button that calls `viewModel.onConnect(url, user, pass)` → `AbsAuthRepository.login` in `viewModelScope`. Reflect `Connecting`/`Error` in the dialog or row `value`.
+  - When **connected** (`AbsConnectionState.Connected`): show the server URL as the row `value`, a "Refresh library" `SettingsRow` (`onClick` → `AbsRepository.sync` in `viewModelScope`), and a "Log out" `SettingsRow` (`onClick` → `AbsRepository.logout`).
 
 - [ ] **Step 2: Build** — `./gradlew :feature:audiobookshelf:assembleDebug` (Expected: SUCCESSFUL).
 
@@ -2234,16 +2260,24 @@ git commit -m "feat(audiobookshelf): settings section (connect/refresh/logout)"
 
 **Files:** Modify `feature/audiobooks/.../AudiobookListViewModel.kt`, `feature/audiobooks/.../AudiobookListScreen.kt`. (UI; verified on device.)
 
-- [ ] **Step 1: Inject `Set<BookDownloadController>`** into `AudiobookListViewModel`; expose `onDownload(book)`/`onRemoveDownload(book)` that pick `controllers.firstOrNull { it.handles(book.origin) }` and call `enqueue`/`remove`. The list already observes `BookDao`, so `origin`/`downloadState` are on each row.
+- [ ] **Step 1: Fix the cover model for ABS books** — `AudiobookListScreen.kt:84` currently does `artworkModel = book.coverPath?.let(::File)`. For ABS books `coverPath` is an `https://…/cover` **URL**, and wrapping a URL in `java.io.File` makes Coil fail (covers fall back to initials). Coil accepts a raw URL `String`, a `File`, or a content URI, so branch on origin:
+```kotlin
+artworkModel = book.coverPath?.let { path ->
+    if (book.origin == com.orator.core.model.BookOrigin.ABS) path else java.io.File(path)
+},
+```
+(The shared `OkHttpClient` + `AbsAuthInterceptor` authenticate the cover request for the ABS host.)
 
-- [ ] **Step 2: Show the affordance** in `AudiobookListScreen` only when `book.origin == BookOrigin.ABS`: a download icon when `downloadState == NONE`, a spinner/label when `DOWNLOADING`, a "downloaded" check + remove action when `DOWNLOADED`.
+- [ ] **Step 2: Inject `Set<BookDownloadController>`** into `AudiobookListViewModel`; expose `onDownload(book)`/`onRemoveDownload(book)` that pick `controllers.firstOrNull { it.handles(book.origin) }` and call `enqueue` / `remove` (wrap `remove` in `viewModelScope.launch` — it is `suspend`). The list already observes `BookDao`, so `origin`/`downloadState` are on each row.
 
-- [ ] **Step 3: Build + run the audiobooks suite** — `./gradlew :feature:audiobooks:testDebugUnitTest :feature:audiobooks:assembleDebug` (Expected: SUCCESSFUL; no regressions).
+- [ ] **Step 3: Show the affordance** in `AudiobookListScreen` only when `book.origin == BookOrigin.ABS`: download icon when `downloadState == NONE`, a spinner/label when `DOWNLOADING`, a "downloaded" check + remove action when `DOWNLOADED`. **`CoverTile` has no trailing slot** (only `onClick`/`onLongClick`) — render the affordance as a small overlay `Box` aligned to a corner of the tile (wrap `CoverTile` in a `Box` and place an `IconButton` with `Modifier.align(Alignment.TopEnd)`), rather than changing `CoverTile`'s signature.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Build + run the audiobooks suite** — `./gradlew :feature:audiobooks:testDebugUnitTest :feature:audiobooks:assembleDebug` (Expected: SUCCESSFUL; no regressions).
+
+- [ ] **Step 5: Commit**
 ```bash
 git add feature/audiobooks/src/main/java/com/orator/feature/audiobooks/AudiobookListViewModel.kt feature/audiobooks/src/main/java/com/orator/feature/audiobooks/AudiobookListScreen.kt
-git commit -m "feat(audiobooks): per-book ABS download/remove affordance via seam"
+git commit -m "feat(audiobooks): ABS cover loading + per-book download/remove affordance via seam"
 ```
 
 ### Task 6.4: Wire the module into the app
@@ -2288,3 +2322,5 @@ git commit -m "build(app): include feature:audiobookshelf in the DI graph"
 - **Destructive DB bump:** v8 drops all tables on upgrade (pre-release convention). Acceptable now; real migrations arrive in roadmap Phase 9.
 - **Pagination:** `getLibraryItems` uses `limit=0` (all items) for 6a simplicity; real pagination is a later refinement.
 - **Reuse, don't reinvent:** `AbsFileDownloader` deliberately mirrors `EpisodeDownloader`; `AbsPrefs` mirrors `AudiobooksPrefs`; DAO tests mirror `EpisodeDaoTest`; worker tests mirror `RefreshSchedulerTest`.
+- **Hilt validation timing:** `feature:audiobookshelf` is a library with no `@HiltAndroidApp`/component, so Dagger's missing-binding validation does NOT run when the module compiles alone (Chunks 1–5). KSP only generates per-class factories. The full graph is validated when `:app` aggregates the module in **Task 6.4** — so a missing `@Provides` (e.g. for `AbsBookDetailResolver`, consumed by `AbsFileDownloader`'s `@Inject`) surfaces as an error only at `:app` assembly after Task 6.4, not at the Chunk-5 gate. Don't expect a standalone Hilt-validating build of the module to fail before Chunk 6.
+- **Provider-only classes:** `AbsRepository` and `AbsBookDetailResolver` are plain classes with **no** `@Inject` constructor — they exist solely via `@Provides` (their function-type params can't be injected). Never add `@Inject` to them; that creates a duplicate binding with the `@Provides`.
