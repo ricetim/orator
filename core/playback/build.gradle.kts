@@ -31,11 +31,13 @@ android {
 
 dependencies {
     implementation(project(":core:model"))
+    implementation(project(":core:network"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.session)
+    implementation(libs.media3.datasource.okhttp)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
