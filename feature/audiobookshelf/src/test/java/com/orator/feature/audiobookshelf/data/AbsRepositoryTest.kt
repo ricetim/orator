@@ -36,4 +36,12 @@ class AbsRepositoryTest {
         assertEquals(emptyList<BookEntity>(), fakeDao.getByOrigin(BookOrigin.ABS))
         assertEquals(null, store.current())
     }
+
+    @Test fun `logout deletes downloaded files for abs books`() = runBlocking {
+        val deleted = mutableListOf<String>()
+        val repo = AbsRepository(source, store, fakeDao, deleteFiles = { deleted += it })
+        repo.sync()
+        repo.logout()
+        assertEquals(listOf("abs:li1"), deleted)
+    }
 }

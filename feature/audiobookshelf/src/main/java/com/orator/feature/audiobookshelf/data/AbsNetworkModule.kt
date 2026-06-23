@@ -21,7 +21,8 @@ object AbsNetworkModule {
         source: AbsCatalogSource,
         store: AbsCredentialStore,
         bookDao: BookDao,
-    ): AbsRepository = AbsRepository(source, store, bookDao)
+        downloader: AbsFileDownloader,
+    ): AbsRepository = AbsRepository(source, store, bookDao, deleteFiles = { downloader.deleteFiles(it) })
 
     @Provides
     @Singleton
