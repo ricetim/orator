@@ -3,6 +3,7 @@ package com.orator.feature.audiobooks
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.orator.core.database.BookEntity
+import com.orator.core.model.BookDownloadController
 import com.orator.core.model.MediaType
 import com.orator.core.playback.PlaybackConnection
 import com.orator.core.playback.PlayerPreferences
@@ -24,10 +25,21 @@ class AudiobookListViewModel @Inject constructor(
     private val repository: AudiobookRepository,
     private val playbackConnection: PlaybackConnection,
     private val playerPreferences: PlayerPreferences,
+    private val downloadControllers: Set<@JvmSuppressWildcards BookDownloadController>,
 ) : ViewModel() {
 
     val books: StateFlow<List<BookEntity>> = repository.observeBooks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Offline download actions for non-local books, dispatched to the controller for their origin. */
+    fun onDownload(book: BookEntity) {
+        downloadControllers.firstOrNull { it.handles(book.origin) }?.enqueue(book.id)
+    }
+
+    fun onRemoveDownload(book: BookEntity) {
+        val controller = downloadControllers.firstOrNull { it.handles(book.origin) } ?: return
+        viewModelScope.launch { controller.remove(book.id) }
+    }
 
     val hasFolder: StateFlow<Boolean> = repository.treeUri
         .map { it != null }
