@@ -16,6 +16,7 @@ object AbsCatalogReconciler {
                 lastPlayedAtMs = prev.lastPlayedAtMs,
                 speedOverride = prev.speedOverride,
                 downloadState = prev.downloadState,
+                addedAtUtc = prev.addedAtUtc,        // device-owned: keep first-seen time across re-syncs
                 sourceUri = if (prev.downloadState == DownloadState.DOWNLOADED) prev.sourceUri else fresh.sourceUri,
             )
         }
