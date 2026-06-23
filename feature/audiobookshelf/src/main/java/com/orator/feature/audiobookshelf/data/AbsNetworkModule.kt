@@ -22,4 +22,16 @@ object AbsNetworkModule {
         store: AbsCredentialStore,
         bookDao: BookDao,
     ): AbsRepository = AbsRepository(source, store, bookDao)
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(
+        api: AbsApi,
+        store: AbsCredentialStore,
+        repo: AbsRepository,
+    ): AbsAuthRepository = AbsAuthRepository(
+        loginFn = { base, u, p -> api.login(base, u, p) },
+        store = store,
+        onConnected = { repo.sync() },
+    )
 }
