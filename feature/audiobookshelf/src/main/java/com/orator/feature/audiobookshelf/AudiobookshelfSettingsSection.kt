@@ -4,17 +4,22 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -87,22 +92,29 @@ class AudiobookshelfSettingsSection @Inject constructor() : SettingsSection {
         }
 
         if (showConnect) {
+            // Auto-close only on success; a failed login keeps the dialog open with inputs intact.
+            LaunchedEffect(state) {
+                if (state is AbsConnectionState.Connected) showConnect = false
+            }
             ConnectDialog(
+                state = state,
                 onDismiss = { showConnect = false },
-                onConnect = { url, user, pass ->
-                    vm.onConnect(url, user, pass)
-                    showConnect = false
-                },
+                onConnect = { url, user, pass -> vm.onConnect(url, user, pass) },
             )
         }
     }
 }
 
 @Composable
-private fun ConnectDialog(onDismiss: () -> Unit, onConnect: (String, String, String) -> Unit) {
+private fun ConnectDialog(
+    state: AbsConnectionState,
+    onDismiss: () -> Unit,
+    onConnect: (String, String, String) -> Unit,
+) {
     var url by remember { mutableStateOf("") }
     var user by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
+    val connecting = state is AbsConnectionState.Connecting
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Connect to audiobookshelf") },
@@ -110,26 +122,34 @@ private fun ConnectDialog(onDismiss: () -> Unit, onConnect: (String, String, Str
             Column {
                 OutlinedTextField(
                     value = url, onValueChange = { url = it },
-                    label = { Text("Server URL (https://…)") }, singleLine = true,
+                    label = { Text("Server URL (https://…)") }, singleLine = true, enabled = !connecting,
                 )
                 OutlinedTextField(
                     value = user, onValueChange = { user = it },
-                    label = { Text("Username") }, singleLine = true,
+                    label = { Text("Username") }, singleLine = true, enabled = !connecting,
                 )
                 OutlinedTextField(
                     value = pass, onValueChange = { pass = it },
-                    label = { Text("Password") }, singleLine = true,
+                    label = { Text("Password") }, singleLine = true, enabled = !connecting,
                     visualTransformation = PasswordVisualTransformation(),
                 )
+                // Failed login keeps the dialog + inputs; show why so the user can correct them.
+                if (state is AbsConnectionState.Error) {
+                    Text(
+                        state.message,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = { onConnect(url.trim(), user.trim(), pass) },
-                enabled = url.isNotBlank() && user.isNotBlank() && pass.isNotBlank(),
-            ) { Text("Connect") }
+                enabled = !connecting && url.isNotBlank() && user.isNotBlank() && pass.isNotBlank(),
+            ) { Text(if (connecting) "Connecting…" else "Connect") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !connecting) { Text("Cancel") } },
     )
 }
 
