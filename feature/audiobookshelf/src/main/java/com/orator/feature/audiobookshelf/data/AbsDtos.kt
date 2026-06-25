@@ -27,6 +27,13 @@ import kotlinx.serialization.Serializable
 @Serializable data class AbsMetadata(
     val title: String = "",
     @SerialName("authorName") val authorName: String? = null,
+    val description: String? = null,
+    val series: List<AbsSeries> = emptyList(),
+)
+
+@Serializable data class AbsSeries(
+    val name: String = "",
+    val sequence: String? = null,            // ABS sends sequence as a string, e.g. "2" or "2.5"
 )
 
 @Serializable data class AbsAudioFile(
