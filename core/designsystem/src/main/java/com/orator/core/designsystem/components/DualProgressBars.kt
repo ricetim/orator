@@ -37,8 +37,8 @@ data class BarSpec(
 )
 
 /**
- * The player's stacked progress bars (mockup .dual): an optional chapter bar (bright accent,
- * thumb) above the whole-item bar (accent, tick marks). [onChapterSeek]/[onItemSeek] receive
+ * The player's stacked progress bars: the whole-item (book) bar (accent, tick marks) on top, with
+ * an optional chapter bar (bright accent, thumb) below it. [onChapterSeek]/[onItemSeek] receive
  * the tapped/dragged fraction 0..1.
  */
 @Composable
@@ -50,6 +50,15 @@ fun DualProgressBars(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 26.dp)) {
+        // Whole-item (book) bar on top, carrying the chapter ticks; optional chapter bar below.
+        BarLabels(item)
+        SeekBar(
+            fraction = item.fraction,
+            ticks = item.ticks,
+            fillColor = OnyxTokens.Accent,
+            showThumb = chapter == null,
+            onSeek = onItemSeek,
+        )
         if (chapter != null) {
             BarLabels(chapter)
             SeekBar(
@@ -60,14 +69,6 @@ fun DualProgressBars(
                 onSeek = onChapterSeek,
             )
         }
-        BarLabels(item)
-        SeekBar(
-            fraction = item.fraction,
-            ticks = item.ticks,
-            fillColor = OnyxTokens.Accent,
-            showThumb = chapter == null,
-            onSeek = onItemSeek,
-        )
     }
 }
 
