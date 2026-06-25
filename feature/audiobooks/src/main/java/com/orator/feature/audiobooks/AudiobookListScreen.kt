@@ -4,15 +4,12 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
@@ -23,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,12 +32,11 @@ import com.orator.core.designsystem.shell.LocalShellControls
 import com.orator.core.designsystem.text.TimeFormats
 import com.orator.core.designsystem.theme.OnyxTokens
 import com.orator.core.model.BookOrigin
-import com.orator.core.model.DownloadState
 import java.io.File
 
 @Composable
 fun AudiobookListScreen(
-    onOpenPlayer: () -> Unit,
+    onOpenBook: (bookId: String) -> Unit,
     onAddToPlaylist: (bookId: String) -> Unit,
     viewModel: AudiobookListViewModel = hiltViewModel(),
 ) {
@@ -86,74 +81,33 @@ fun AudiobookListScreen(
                 contentPadding = PaddingValues(bottom = OnyxTokens.OverlayBottomPadding),
             ) {
                 items(books, key = { it.id }) { book ->
-                    Box {
-                        CoverTile(
-                            // ABS covers are remote URLs (Coil fetches them, authed); local covers
-                            // are file paths. Wrapping a URL in File would make Coil fail.
-                            artworkModel = if (book.origin == BookOrigin.ABS) {
-                                book.coverPath
-                            } else {
-                                book.coverPath?.let(::File)
-                            },
-                            title = book.title,
-                            subLine = when {
-                                book.positionMs <= 0 -> "not started"
-                                else -> TimeFormats.timeLeft(
-                                    (book.durationMs - book.positionMs).coerceAtLeast(0),
-                                )
-                            },
-                            progress = if (book.durationMs > 0) {
-                                book.positionMs.toFloat() / book.durationMs
-                            } else {
-                                null
-                            },
-                            onClick = { viewModel.onPlayBook(book.id, onOpenPlayer) },
-                            onLongClick = { onAddToPlaylist(book.id) },
-                        )
-                        if (book.origin == BookOrigin.ABS) {
-                            DownloadBadge(
-                                state = book.downloadState,
-                                onDownload = { viewModel.onDownload(book) },
-                                onRemove = { viewModel.onRemoveDownload(book) },
-                                modifier = Modifier.align(Alignment.TopEnd),
-                            )
-                        }
-                    }
+                    CoverTile(
+                        // ABS covers are remote URLs (Coil fetches them, authed); local covers
+                        // are file paths. Wrapping a URL in File would make Coil fail.
+                        artworkModel = if (book.origin == BookOrigin.ABS) {
+                            book.coverPath
+                        } else {
+                            book.coverPath?.let(::File)
+                        },
+                        title = book.title,
+                        // Time-left only once started; no "not started" label (it lives on the detail screen).
+                        subLine = if (book.positionMs > 0) {
+                            TimeFormats.timeLeft((book.durationMs - book.positionMs).coerceAtLeast(0))
+                        } else {
+                            null
+                        },
+                        progress = if (book.durationMs > 0) {
+                            book.positionMs.toFloat() / book.durationMs
+                        } else {
+                            null
+                        },
+                        onClick = { onOpenBook(book.id) },
+                        onLongClick = { onAddToPlaylist(book.id) },
+                    )
                 }
             }
         }
     }
-}
-
-/** Corner badge on ABS tiles: tap to download (⬇), shows progress (…), or remove a download (✓). */
-@Composable
-private fun DownloadBadge(
-    state: DownloadState,
-    onDownload: () -> Unit,
-    onRemove: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val glyph = when (state) {
-        DownloadState.DOWNLOADED -> "✓"
-        DownloadState.DOWNLOADING -> "…"
-        DownloadState.NONE -> "⬇"
-    }
-    Text(
-        text = glyph,
-        color = Color.White,
-        fontSize = 13.sp,
-        modifier = modifier
-            .padding(4.dp)
-            .background(Color.Black.copy(alpha = 0.55f), CircleShape)
-            .clickable {
-                when (state) {
-                    DownloadState.NONE -> onDownload()
-                    DownloadState.DOWNLOADED -> onRemove()
-                    DownloadState.DOWNLOADING -> Unit
-                }
-            }
-            .padding(horizontal = 7.dp, vertical = 3.dp),
-    )
 }
 
 /** Empty-state message + action, vertically centered (user preference). */
