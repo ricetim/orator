@@ -40,6 +40,15 @@ class BookDaoOriginTest {
         assertEquals(listOf("abs:1"), dao.getIdsByOrigin(BookOrigin.ABS))
     }
 
+    @Test fun `description and series round-trip`() = runBlocking {
+        dao.upsert(listOf(
+            book("abs:9", BookOrigin.ABS).copy(description = "A focused life.", series = "Foundation #2"),
+        ))
+        val row = dao.getById("abs:9")!!
+        assertEquals("A focused life.", row.description)
+        assertEquals("Foundation #2", row.series)
+    }
+
     @Test fun `defaults are LOCAL and NONE`() = runBlocking {
         dao.upsert(listOf(BookEntity(
             id = "l", title = "l", author = null, coverPath = null, sourceUri = "",

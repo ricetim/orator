@@ -40,4 +40,8 @@ data class BookEntity(
     val absItemId: String? = null,
     /** Stream-only ABS books are NONE; flips to DOWNLOADED when bytes are local. LOCAL books stay NONE. */
     val downloadState: DownloadState = DownloadState.NONE,
+    /** ABS book description/synopsis, filled on first resolve; null for LOCAL or when absent. */
+    val description: String? = null,
+    /** ABS series display string, e.g. "Foundation #2"; null when the book isn't in a series. */
+    val series: String? = null,
 )
