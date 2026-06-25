@@ -45,6 +45,7 @@ import com.orator.core.designsystem.components.PagerDots
 import com.orator.core.designsystem.icons.OnyxIcons
 import com.orator.core.designsystem.text.TimeFormats
 import com.orator.core.designsystem.theme.OnyxTokens
+import com.orator.core.model.BookOrigin
 import com.orator.core.playback.PlaybackUiState
 import com.orator.core.playback.SleepTimerState
 import com.orator.feature.player.pages.BookmarksPage
@@ -192,7 +193,13 @@ private fun PlayerPager(
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth().height(348.dp)) { page ->
             when (content) {
                 is NowPlayingContent.Book -> when (page) {
-                    0 -> CoverPage(content.book.coverPath?.let(::File), content.book.title)
+                    0 -> CoverPage(
+                        // ABS covers are URLs (Coil loads them directly); local covers are file paths.
+                        content.book.coverPath?.let {
+                            if (content.book.origin == BookOrigin.ABS) it else File(it)
+                        },
+                        content.book.title,
+                    )
                     1 -> BookmarksPage(
                         bookmarks = content.bookmarks,
                         chapters = content.chapters,

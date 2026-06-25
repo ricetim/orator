@@ -2,6 +2,8 @@ package com.orator.core.database
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.orator.core.model.BookOrigin
+import com.orator.core.model.DownloadState
 
 /**
  * How a book's audio is laid out; determines how a playback queue is built.
@@ -30,4 +32,12 @@ data class BookEntity(
     val lastPlayedAtMs: Long = 0,
     /** Per-book speed; null = fall back to per-type/global defaults. */
     val speedOverride: Float? = null,
+    /** LOCAL (SAF/device) or ABS (audiobookshelf server). */
+    val origin: BookOrigin = BookOrigin.LOCAL,
+    /** ABS server this book came from; null for LOCAL. One server in 6a, kept for future multi-server. */
+    val serverId: String? = null,
+    /** ABS libraryItem id; null for LOCAL. Lets sync (6b) and re-streaming find the server item. */
+    val absItemId: String? = null,
+    /** Stream-only ABS books are NONE; flips to DOWNLOADED when bytes are local. LOCAL books stay NONE. */
+    val downloadState: DownloadState = DownloadState.NONE,
 )

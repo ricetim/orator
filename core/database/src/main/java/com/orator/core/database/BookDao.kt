@@ -3,6 +3,7 @@ package com.orator.core.database
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
+import com.orator.core.model.BookOrigin
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -21,6 +22,12 @@ interface BookDao {
 
     @Query("SELECT id FROM books")
     suspend fun getAllIds(): List<String>
+
+    @Query("SELECT * FROM books WHERE origin = :origin")
+    suspend fun getByOrigin(origin: BookOrigin): List<BookEntity>
+
+    @Query("SELECT id FROM books WHERE origin = :origin")
+    suspend fun getIdsByOrigin(origin: BookOrigin): List<String>
 
     @Query("UPDATE books SET positionMs = :positionMs, lastPlayedAtMs = :lastPlayedAtMs WHERE id = :id")
     suspend fun updateProgress(id: String, positionMs: Long, lastPlayedAtMs: Long)

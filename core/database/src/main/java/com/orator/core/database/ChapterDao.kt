@@ -15,4 +15,13 @@ interface ChapterDao {
 
     @Query("SELECT * FROM chapters WHERE bookId = :bookId ORDER BY chapterIndex")
     fun observeForBook(bookId: String): Flow<List<ChapterEntity>>
+
+    @Query("DELETE FROM chapters WHERE bookId = :bookId")
+    suspend fun deleteForBook(bookId: String)
+
+    /** Default DAO method (Room supports these on interfaces): swap a book's chapters wholesale. */
+    suspend fun replaceForBook(bookId: String, chapters: List<ChapterEntity>) {
+        deleteForBook(bookId)
+        upsertAll(chapters)
+    }
 }

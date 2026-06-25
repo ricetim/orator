@@ -2,6 +2,7 @@ package com.orator.feature.audiobooks.data
 
 import com.orator.core.database.BookDao
 import com.orator.core.database.ChapterDao
+import com.orator.core.model.BookDetailResolver
 import com.orator.core.model.MediaRef
 import com.orator.core.model.MediaType
 import com.orator.core.playback.PlayRequest
@@ -16,12 +17,16 @@ import javax.inject.Inject
 class AudiobookPlayRequestFactory @Inject constructor(
     private val bookDao: BookDao,
     private val chapterDao: ChapterDao,
+    private val detailResolvers: Set<@JvmSuppressWildcards BookDetailResolver>,
 ) : PlayRequestFactory {
     override val mediaType = MediaType.AUDIOBOOK
 
     override suspend fun create(ref: MediaRef): PlayRequest? {
         val book = bookDao.getById(ref.id) ?: return null
+        // ABS books are mirrored as metadata only; resolve sourceUri + chapters on first play.
+        detailResolvers.firstOrNull { it.handles(book.origin) }?.ensureDetails(book.id)
+        val fresh = bookDao.getById(ref.id) ?: return null
         val chapters = chapterDao.getForBook(ref.id)
-        return QueueBuilder.build(book, chapters, startAtMs = book.positionMs)
+        return QueueBuilder.build(fresh, chapters, startAtMs = fresh.positionMs)
     }
 }

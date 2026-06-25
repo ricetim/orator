@@ -5,10 +5,14 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import okhttp3.OkHttpClient
 import com.orator.core.model.MediaType
 import com.orator.core.playback.ids.PositionMapper
 import dagger.hilt.android.AndroidEntryPoint
@@ -44,6 +48,9 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var activeQueueInfo: ActiveQueueInfo
     @Inject lateinit var rewindController: SmartRewindController
 
+    /** Shared client from core:network; ABS streams ride it (auth via AbsAuthInterceptor). */
+    @Inject lateinit var okHttpClient: OkHttpClient
+
     private var mediaSession: MediaSession? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var reportJob: Job? = null
@@ -56,7 +63,13 @@ class PlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        val player = ExoPlayer.Builder(this, silenceTrim.renderersFactory(this)).build()
+        // http(s) URIs (ABS streams) go through OkHttp (interceptor adds the bearer); file://
+        // and content:// (local + downloaded books) stay on the built-in data sources.
+        val httpFactory = OkHttpDataSource.Factory(okHttpClient)
+        val dataSourceFactory = DefaultDataSource.Factory(this, httpFactory)
+        val player = ExoPlayer.Builder(this, silenceTrim.renderersFactory(this))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+            .build()
 
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {

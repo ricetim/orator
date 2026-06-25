@@ -27,7 +27,7 @@ class AudiobookPlaylistContributionsTest {
         OratorDatabase::class.java,
     ).allowMainThreadQueries().build()
 
-    private val factory = AudiobookPlayRequestFactory(db.bookDao(), db.chapterDao())
+    private val factory = AudiobookPlayRequestFactory(db.bookDao(), db.chapterDao(), emptySet())
     private val resolver = AudiobookPlaylistItemResolver(db.bookDao())
 
     @After fun tearDown() = db.close()
