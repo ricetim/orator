@@ -38,14 +38,14 @@
 ```kotlin
 @Test fun `description and series round-trip`() = runBlocking {
     dao.upsert(listOf(
-        bookFixture(id = "abs:9").copy(description = "A focused life.", series = "Foundation #2"),
+        book("abs:9", BookOrigin.ABS).copy(description = "A focused life.", series = "Foundation #2"),
     ))
     val row = dao.getById("abs:9")!!
     assertEquals("A focused life.", row.description)
     assertEquals("Foundation #2", row.series)
 }
 ```
-(If `BookDaoOriginTest` has no `bookFixture` helper, build a `BookEntity` inline mirroring the existing inserts in that file.)
+`BookDaoOriginTest` already has a `book(id, origin)` builder (it lacks `description`/`series`, hence the `.copy(...)`). Match the file's actual DAO field name (it may not be `dao`) and reuse its existing imports.
 
 - [ ] **Step 2: Run it — expect FAIL (compile error: no `description`/`series`).**
 Run: `ANDROID_HOME=~/Android/Sdk ./gradlew :core:database:testDebugUnitTest --tests "com.orator.core.database.BookDaoOriginTest"`
@@ -576,6 +576,8 @@ class AudiobookDetailViewModel @Inject constructor(
 ```
 *Verify against the codebase:* `BookDownloadController` exposes `handles`/`enqueue`/`cancel`/`remove` (the ABS provider wires `enqueueFn`/`cancelFn`/`removeFn`); `PlaybackConnection` exposes `state`, `playPause()`, `play(PlayRequest)`; `repository.observeChapters` exists.
 
+*Nav-decode caution:* reading `savedStateHandle["bookId"]` raw relies on Navigation-Compose's default `StringType` percent-decoding the path arg (the route is built with `Uri.encode` in Task 3.3). No existing in-repo route exercises this, so **device-verify the decoded id is `abs:<uuid>`, not `abs%3A...`**. If it ever arrives still-encoded, the one-line fix is `private val bookId: String = Uri.decode(checkNotNull(savedStateHandle["bookId"]))`.
+
 - [ ] **Step 2: Build to confirm it compiles.**
 Run: `ANDROID_HOME=~/Android/Sdk ./gradlew :feature:audiobooks:compileDebugKotlin`
 Expected: success.
@@ -674,7 +676,7 @@ navGraphBuilder.composable(AudiobookDetailRoutePattern) {
 
 - [ ] **Step 5: Build the whole app** (this is the cross-cutting wiring change).
 Run: `ANDROID_HOME=~/Android/Sdk ./gradlew :app:assembleDebug`
-Expected: success. (If `AudiobookListViewModel`/`AudiobookPlaylistContributionsTest` or other tests referenced the removed members, fix them — e.g. tests that constructed the VM with the dropped args.)
+Expected: success. (No in-repo test constructs `AudiobookListViewModel` — `AudiobookPlaylistContributionsTest` builds the factory/resolver, not the VM — so the slimming is test-safe; this build is the safety check.)
 
 - [ ] **Step 6: Commit.**
 ```bash
@@ -772,6 +774,8 @@ Column(modifier = modifier.fillMaxWidth().padding(horizontal = 26.dp)) {
 }
 ```
 Update the KDoc on `DualProgressBars` to describe the new order ("whole-item bar with ticks above an optional chapter bar"). The `PlayerScreen` call site does not change (still passes `chapter`/`item`); only this component's internal order does. The chapter ticks remain on the `item` (book) bar via `item.ticks`, as before.
+
+*Thumb note:* today only one thumb shows (chapter bar always; item bar only when `chapter == null`). The snippet above sets `showThumb = true` on both, giving two thumbs. Device-verify this reads well; if it looks busy, keep the thumb on the book bar (`item`) and set the chapter bar's `showThumb = false`.
 
 - [ ] **Step 2: Build.**
 Run: `ANDROID_HOME=~/Android/Sdk ./gradlew :core:designsystem:compileDebugKotlin`
