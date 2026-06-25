@@ -200,7 +200,31 @@ private fun PlayerPager(
                         },
                         content.book.title,
                     )
-                    1 -> BookmarksPage(
+                    // Order: cover -> chapters -> bookmarks. With no chapters, pageCount is 2,
+                    // so page 1 must be Bookmarks (otherwise an empty Chapters page shows).
+                    1 -> if (content.chapters.isEmpty()) {
+                        BookmarksPage(
+                            bookmarks = content.bookmarks,
+                            chapters = content.chapters,
+                            sourceKind = content.book.sourceKind,
+                            currentGlobalMs = viewModel.currentGlobalMs(content),
+                            onBookmarkTap = viewModel::onBookmarkTap,
+                            onDeleteBookmark = viewModel::onDeleteBookmark,
+                            onAddBookmark = viewModel::onAddBookmark,
+                        )
+                    } else {
+                        ChaptersPage(
+                            chapters = content.chapters,
+                            sourceKind = content.book.sourceKind,
+                            currentChapterIndex = chapterUi?.index,
+                            onChapterTap = { i ->
+                                viewModel.onSeekTarget(
+                                    PlayerChapters.tap(content.chapters, content.book.sourceKind, i),
+                                )
+                            },
+                        )
+                    }
+                    else -> BookmarksPage(   // page 2 only exists when chapters are present
                         bookmarks = content.bookmarks,
                         chapters = content.chapters,
                         sourceKind = content.book.sourceKind,
@@ -208,16 +232,6 @@ private fun PlayerPager(
                         onBookmarkTap = viewModel::onBookmarkTap,
                         onDeleteBookmark = viewModel::onDeleteBookmark,
                         onAddBookmark = viewModel::onAddBookmark,
-                    )
-                    else -> ChaptersPage(
-                        chapters = content.chapters,
-                        sourceKind = content.book.sourceKind,
-                        currentChapterIndex = chapterUi?.index,
-                        onChapterTap = { i ->
-                            viewModel.onSeekTarget(
-                                PlayerChapters.tap(content.chapters, content.book.sourceKind, i),
-                            )
-                        },
                     )
                 }
                 is NowPlayingContent.Episode -> when (page) {
