@@ -43,4 +43,27 @@ class AbsBookDetailResolverTest {
         r.ensureDetails("abs:li1")       // already populated
         assertEquals(1, calls)            // network not hit again
     }
+
+    @Test fun `ensureDetails persists description and series`() = runBlocking {
+        val books = FakeBookDao().apply { upsert(listOf(absBook("abs:li1", sourceUri = ""))) }
+        val r = AbsBookDetailResolver(
+            detail = { _, _ ->
+                AbsItemDetailMapper.map(
+                    AbsLibraryItem("li1", AbsMedia(
+                        metadata = AbsMetadata(
+                            description = "blurb", series = listOf(AbsSeries("Foundation", "2")),
+                        ),
+                        audioFiles = listOf(AbsAudioFile("100", 1, 60.0)),
+                        chapters = listOf(AbsChapter(start = 0.0, end = 60.0, title = "Ch1")),
+                    )),
+                    "https://abs.example.com",
+                )
+            },
+            store = connectedStore(), bookDao = books, chapterDao = FakeChapterDao(),
+        )
+        r.ensureDetails("abs:li1")
+        val row = books.getById("abs:li1")!!
+        assertEquals("blurb", row.description)
+        assertEquals("Foundation #2", row.series)
+    }
 }
