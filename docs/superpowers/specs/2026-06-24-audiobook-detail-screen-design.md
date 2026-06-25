@@ -16,9 +16,10 @@ audiobook playback, which fixes the Phase 6a streaming defect.
 
 Phase 6a shipped ABS connect + catalog mirror + download, but **streaming a never-downloaded
 ABS book is broken**: `AudiobookListViewModel.onPlayBook` builds the queue directly via
-`QueueBuilder`, bypassing `AudiobookPlayRequestFactory` — the only caller of
-`BookDetailResolver.ensureDetails`. So an un-resolved ABS book (sourceUri `""`) plays an empty
-URI → ExoPlayer `FileDataSource` ENOENT. On device, 540/541 mirrored books were never resolved.
+`QueueBuilder`, bypassing `AudiobookPlayRequestFactory` — the only **play-path** caller of
+`BookDetailResolver.ensureDetails` (the ABS downloader also resolves, but only when
+downloading). So an un-resolved ABS book (sourceUri `""`) plays an empty URI → ExoPlayer
+`FileDataSource` ENOENT. On device, 540/541 mirrored books were never resolved.
 
 The detail screen fixes this structurally: **opening it resolves the book** (the same
 `ensureDetails` call), and every play path then flows through a resolve step, so an empty-URI
@@ -90,6 +91,11 @@ seams that `feature:audiobooks` already injects.
   - ABS · DOWNLOADED → `[▶ Play/Resume] [✓ Remove download]`
   - Play and Stream are the same underlying action; the label only signals local vs network.
     Saved resume position is always honored.
+  - State source: `DownloadState` (`NONE`/`DOWNLOADING`/`DOWNLOADED` — `DOWNLOADING` is a real
+    enum value the worker sets and the old grid badge already rendered) drives which row shows;
+    Cancel is `BookDownloadController.cancel` (the seam already exposes enqueue/cancel/remove).
+    Resolver/controller are selected origin-matched (`firstOrNull { it.handles(book.origin) }`),
+    so local books no-op cleanly.
 
 ### 3. Library grid — `AudiobookListScreen` / `AudiobookListViewModel`
 
@@ -104,7 +110,11 @@ seams that `feature:audiobooks` already injects.
 ### 4. Folded-in player tweaks — `feature:player`
 
 - Pager order for books → **Cover → Chapters → Bookmarks** (swap pages 1↔2, update the dots).
-- `DualProgressBars` → **book bar on top, chapter bar on bottom** (swap the two `BarSpec`s).
+- `DualProgressBars` → **book bar on top, chapter bar on bottom**. NOT a trivial call-site
+  argument swap: the styling is parameter-bound — the *top* slot is hardcoded to the bright
+  accent + thumb, the *bottom* slot carries the chapter ticks (`item.ticks`). To put the book
+  bar on top without it inheriting the chapter styling (and without dropping the chapter ticks),
+  adjust the component's internal layout/styling, not just the call-site `BarSpec` order.
 
 ## Testing
 
