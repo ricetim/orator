@@ -120,10 +120,8 @@ and add `seriesName` to `AbsMetadata`:
   Run: `ANDROID_HOME=~/Android/Sdk ./gradlew :feature:audiobookshelf:testDebugUnitTest --tests "com.orator.feature.audiobookshelf.data.AbsBookMapperTest"`
   Expected: FAIL — `addedAtUtc` is `System.currentTimeMillis()`, `series` is unset (null but for the wrong reason; the seriesName tests fail because the field isn't read).
 
-- [ ] **Step 3: Implement.** In `AbsBookMapper.kt`, inside `toBook`, before the `return`:
+- [ ] **Step 3: Implement.** In `AbsBookMapper.kt`, inside `toBook`, before the `return`. **Note:** `val md = item.media.metadata` and `val multi = item.media.numAudioFiles > 1` already exist at the top of `toBook` — do **not** re-declare them; only add the `series` line:
 ```kotlin
-        val md = item.media.metadata
-        val multi = item.media.numAudioFiles > 1
         val series = md.seriesName?.substringBefore(",")?.trim()?.takeIf { it.isNotBlank() }
 ```
 and change the entity construction:
@@ -400,7 +398,7 @@ git commit -m "feat(audiobooks): BookExplore parseSeries + sort"
         else -> listOf(Section("", sort(books, mode)))
     }
 ```
-Add the import `import com.orator.feature.audiobooks.data.NaturalOrder` is already present. `toSortedMap(NaturalOrder)` requires the map key be `String` (it is).
+(`NaturalOrder` was already imported in Task 2.2; no new import needed.) `toSortedMap(NaturalOrder)` requires the map key be `String` (it is).
 
 - [ ] **Step 4: Run to verify pass.** Expected: PASS.
 - [ ] **Step 5: Commit.**
