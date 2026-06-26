@@ -1,7 +1,7 @@
 # Audiobook Exploration Restyle — Design
 
 **Date:** 2026-06-26
-**Status:** Approved (brainstorming)
+**Status:** Approved (design)
 **Branch:** `audiobook-exploration` (off `main`, post PR #12)
 
 ## Goal
