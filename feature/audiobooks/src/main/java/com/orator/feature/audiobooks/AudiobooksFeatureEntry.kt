@@ -15,12 +15,18 @@ class AudiobooksFeatureEntry @Inject constructor() : FeatureEntry {
     override fun register(navGraphBuilder: NavGraphBuilder, navController: NavController) {
         navGraphBuilder.composable(AudiobooksRoute) {
             AudiobookListScreen(
-                onOpenPlayer = { navController.navigate(CommonRoutes.Player) },
+                onOpenBook = { bookId -> navController.navigate(audiobookDetailRoute(bookId)) },
                 onAddToPlaylist = { bookId ->
                     navController.navigate(
                         CommonRoutes.addToPlaylist(MediaType.AUDIOBOOK.name, bookId),
                     )
                 },
+            )
+        }
+        navGraphBuilder.composable(AudiobookDetailRoutePattern) {
+            AudiobookDetailScreen(
+                onOpenPlayer = { navController.navigate(CommonRoutes.Player) },
+                onBack = { navController.popBackStack() },
             )
         }
     }

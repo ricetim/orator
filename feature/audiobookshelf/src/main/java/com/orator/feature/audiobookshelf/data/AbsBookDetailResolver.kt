@@ -26,6 +26,9 @@ class AbsBookDetailResolver(
         val itemId = book.absItemId ?: return
         val d = detail(cfg.baseUrl, itemId)
         chapterDao.replaceForBook(bookId, d.chapters)
-        bookDao.upsert(listOf(book.copy(sourceKind = d.sourceKind, sourceUri = d.sourceUri)))
+        bookDao.upsert(listOf(book.copy(
+            sourceKind = d.sourceKind, sourceUri = d.sourceUri,
+            description = d.description, series = d.series,
+        )))
     }
 }
