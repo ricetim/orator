@@ -7,16 +7,21 @@ data class ReconcileResult(val upserts: List<BookEntity>, val deletes: List<Stri
 
 /** Pure catalog merge: refresh server-owned metadata, preserve device-owned state, delete stale. */
 object AbsCatalogReconciler {
-    fun reconcile(existing: List<BookEntity>, incoming: List<BookEntity>): ReconcileResult {
+    fun reconcile(
+        existing: List<BookEntity>,
+        incoming: List<BookEntity>,
+        now: Long = System.currentTimeMillis(),
+    ): ReconcileResult {
         val old = existing.associateBy { it.id }
         val upserts = incoming.map { fresh ->
-            val prev = old[fresh.id] ?: return@map fresh
+            val serverAdded = fresh.addedAtUtc.takeIf { it > 0L }
+            val prev = old[fresh.id] ?: return@map fresh.copy(addedAtUtc = serverAdded ?: now)
             fresh.copy(
                 positionMs = prev.positionMs,
                 lastPlayedAtMs = prev.lastPlayedAtMs,
                 speedOverride = prev.speedOverride,
                 downloadState = prev.downloadState,
-                addedAtUtc = prev.addedAtUtc,        // device-owned: keep first-seen time across re-syncs
+                addedAtUtc = serverAdded ?: prev.addedAtUtc,   // prefer server; else keep first-seen
                 sourceUri = if (prev.downloadState == DownloadState.DOWNLOADED) prev.sourceUri else fresh.sourceUri,
             )
         }

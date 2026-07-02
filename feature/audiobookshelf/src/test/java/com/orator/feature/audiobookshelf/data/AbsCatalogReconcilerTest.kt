@@ -28,10 +28,22 @@ class AbsCatalogReconcilerTest {
         assertEquals(listOf("abs:2"), r.deletes)
     }
 
-    @Test fun `re-sync preserves the original addedAtUtc`() {
+    @Test fun `re-sync prefers the server addedAt`() {
         val existing = listOf(abs("abs:1", "T", added = 111))
-        val incoming = listOf(abs("abs:1", "T", added = 999))   // mapper would set this to "now"
+        val incoming = listOf(abs("abs:1", "T", added = 999))    // server value present
+        assertEquals(999, AbsCatalogReconciler.reconcile(existing, incoming).upserts.single().addedAtUtc)
+    }
+
+    @Test fun `re-sync keeps previous addedAt when server omits it`() {
+        val existing = listOf(abs("abs:1", "T", added = 111))
+        val incoming = listOf(abs("abs:1", "T", added = 0))      // 0 = server omitted
         assertEquals(111, AbsCatalogReconciler.reconcile(existing, incoming).upserts.single().addedAtUtc)
+    }
+
+    @Test fun `new item without server addedAt gets the injected now`() {
+        val incoming = listOf(abs("abs:1", "T", added = 0))
+        val r = AbsCatalogReconciler.reconcile(emptyList(), incoming, now = 12_345)
+        assertEquals(12_345, r.upserts.single().addedAtUtc)
     }
 
     @Test fun `downloaded books keep their local sourceUri and download state`() {
