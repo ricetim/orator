@@ -57,4 +57,34 @@ object BookExplore {
         }
         else -> listOf(Section("", sort(books, mode)))
     }
+
+    fun search(books: List<BookEntity>, term: String): SearchResults {
+        val q = term.trim().lowercase()
+        if (q.isEmpty()) return SearchResults(emptyList(), emptyList(), emptyList())
+
+        val titleHits = books.filter { it.title.lowercase().contains(q) }
+            .sortedWith(compareBy(NaturalOrder) { it.title })
+
+        val seriesHits = books.mapNotNull { it.series?.let { s -> parseSeries(s).first } }
+            .filter { it.lowercase().contains(q) }
+            .groupingBy { it }.eachCount()
+            .map { (name, count) -> NamedHit(name, count) }
+            .sortedWith(compareBy(NaturalOrder) { it.name })
+
+        val authorHits = books.mapNotNull { it.author?.takeIf { a -> a.isNotBlank() } }
+            .filter { it.lowercase().contains(q) }
+            .groupingBy { it.trim() }.eachCount()
+            .map { (name, count) -> NamedHit(name, count) }
+            .sortedWith(compareBy(NaturalOrder) { it.name })
+
+        return SearchResults(titleHits, seriesHits, authorHits)
+    }
+
+    fun filterSeries(books: List<BookEntity>, name: String): List<BookEntity> =
+        books.filter { it.series != null && parseSeries(it.series!!).first == name }
+            .sortedWith(compareBy(nullsLast()) { parseSeries(it.series!!).second })
+
+    fun filterAuthor(books: List<BookEntity>, name: String): List<BookEntity> =
+        books.filter { it.author?.trim() == name }
+            .sortedWith(compareBy(NaturalOrder) { it.title })
 }

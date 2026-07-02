@@ -68,4 +68,39 @@ class BookExploreTest {
         assertEquals(listOf("Foundation", "Standalone"), sections.map { it.header })
         assertEquals(listOf("c", "a"), sections.first().books.map { it.id })  // #1 before #2
     }
+
+    @Test fun `search matches title series and author case-insensitively`() {
+        val books = listOf(
+            book("a", "Redwall", author = "Brian Jacques", series = "Redwall #1"),
+            book("b", "Mossflower", author = "Brian Jacques", series = "Redwall #2"),
+            book("c", "Dune", author = "Herbert"),
+        )
+        val r = BookExplore.search(books, "red")
+        assertEquals(listOf("a"), r.books.map { it.id })                 // title contains
+        assertEquals(listOf(NamedHit("Redwall", 2)), r.series)           // distinct + count
+        assertEquals(emptyList<NamedHit>(), r.authors)                   // no author matches
+    }
+
+    @Test fun `blank search term yields all-empty results`() {
+        val r = BookExplore.search(listOf(book("a", "A")), "   ")
+        assertEquals(0, r.books.size + r.series.size + r.authors.size)
+    }
+
+    @Test fun `filterSeries returns that series ordered by sequence`() {
+        val books = listOf(
+            book("a", "Two", series = "Redwall #2"),
+            book("b", "One", series = "Redwall #1"),
+            book("c", "Other", series = "Dune #1"),
+        )
+        assertEquals(listOf("b", "a"), BookExplore.filterSeries(books, "Redwall").map { it.id })
+    }
+
+    @Test fun `filterAuthor returns that author ordered by title`() {
+        val books = listOf(
+            book("a", "Beta", author = "Jacques"),
+            book("b", "Alpha", author = "Jacques"),
+            book("c", "X", author = "Herbert"),
+        )
+        assertEquals(listOf("b", "a"), BookExplore.filterAuthor(books, "Jacques").map { it.id })
+    }
 }
