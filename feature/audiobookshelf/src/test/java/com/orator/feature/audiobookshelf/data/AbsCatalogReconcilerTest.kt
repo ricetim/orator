@@ -10,12 +10,12 @@ import org.junit.Test
 class AbsCatalogReconcilerTest {
     private fun abs(
         id: String, title: String, pos: Long = 0, dl: DownloadState = DownloadState.NONE,
-        uri: String = "", added: Long = 0,
+        uri: String = "", added: Long = 0, desc: String? = null, series: String? = null,
     ) = BookEntity(
         id = id, title = title, author = null, coverPath = null, sourceUri = uri,
         sourceKind = SourceKind.SINGLE_FILE, durationMs = 0, positionMs = pos, addedAtUtc = added,
         origin = BookOrigin.ABS, serverId = "s", absItemId = id.removePrefix("abs:"),
-        downloadState = dl,
+        downloadState = dl, description = desc, series = series,
     )
 
     @Test fun `new items are inserted, missing items deleted, metadata refreshed`() {
@@ -44,6 +44,25 @@ class AbsCatalogReconcilerTest {
         val incoming = listOf(abs("abs:1", "T", added = 0))
         val r = AbsCatalogReconciler.reconcile(emptyList(), incoming, now = 12_345)
         assertEquals(12_345, r.upserts.single().addedAtUtc)
+    }
+
+    @Test fun `re-sync keeps lazily-resolved description and series when sync payload lacks them`() {
+        val existing = listOf(abs("abs:1", "T", desc = "blurb", series = "Foundation #2"))
+        val incoming = listOf(abs("abs:1", "T"))                 // minified sync: both null
+        val merged = AbsCatalogReconciler.reconcile(existing, incoming).upserts.single()
+        assertEquals("blurb", merged.description)
+        assertEquals("Foundation #2", merged.series)
+    }
+
+    @Test fun `re-sync prefers fresh series from the server when present`() {
+        val existing = listOf(abs("abs:1", "T", series = "Old #1"))
+        val incoming = listOf(abs("abs:1", "T", series = "New #3"))
+        assertEquals("New #3", AbsCatalogReconciler.reconcile(existing, incoming).upserts.single().series)
+    }
+
+    @Test fun `new item keeps its server addedAt`() {
+        val incoming = listOf(abs("abs:1", "T", added = 777))
+        assertEquals(777, AbsCatalogReconciler.reconcile(emptyList(), incoming, now = 12_345).upserts.single().addedAtUtc)
     }
 
     @Test fun `downloaded books keep their local sourceUri and download state`() {

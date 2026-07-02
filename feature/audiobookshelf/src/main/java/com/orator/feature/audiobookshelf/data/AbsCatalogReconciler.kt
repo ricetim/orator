@@ -22,6 +22,8 @@ object AbsCatalogReconciler {
                 speedOverride = prev.speedOverride,
                 downloadState = prev.downloadState,
                 addedAtUtc = serverAdded ?: prev.addedAtUtc,   // prefer server; else keep first-seen
+                description = fresh.description ?: prev.description,
+                series = fresh.series ?: prev.series,
                 sourceUri = if (prev.downloadState == DownloadState.DOWNLOADED) prev.sourceUri else fresh.sourceUri,
             )
         }
