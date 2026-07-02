@@ -43,4 +43,29 @@ class BookExploreTest {
         )
         assertEquals(listOf("z", "y", "x"), out.map { it.id })   // Apple, book 2, Book 10
     }
+
+    @Test fun `group AUTHOR sections are alphabetical with Unknown last`() {
+        val sections = BookExplore.group(
+            listOf(
+                book("a", "A", author = "Zadie"),
+                book("b", "B", author = null),
+                book("c", "C", author = "Adichie"),
+            ),
+            BookSortMode.AUTHOR,
+        )
+        assertEquals(listOf("Adichie", "Zadie", "Unknown author"), sections.map { it.header })
+    }
+
+    @Test fun `group SERIES sub-sorts by sequence, Standalone last`() {
+        val sections = BookExplore.group(
+            listOf(
+                book("a", "Second", series = "Foundation #2"),
+                book("b", "Loner", series = null),
+                book("c", "First", series = "Foundation #1"),
+            ),
+            BookSortMode.SERIES,
+        )
+        assertEquals(listOf("Foundation", "Standalone"), sections.map { it.header })
+        assertEquals(listOf("c", "a"), sections.first().books.map { it.id })  // #1 before #2
+    }
 }

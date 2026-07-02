@@ -34,4 +34,27 @@ object BookExplore {
         BookSortMode.RECENT -> books.sortedByDescending { it.addedAtUtc }
         else -> books.sortedWith(compareBy(NaturalOrder) { it.title })
     }
+
+    fun group(books: List<BookEntity>, mode: BookSortMode): List<Section> = when (mode) {
+        BookSortMode.AUTHOR -> {
+            val (known, unknown) = books.partition { !it.author.isNullOrBlank() }
+            val sections = known.groupBy { it.author!!.trim() }
+                .toSortedMap(NaturalOrder)
+                .map { (name, group) -> Section(name, group.sortedWith(compareBy(NaturalOrder) { it.title })) }
+            if (unknown.isEmpty()) sections
+            else sections + Section(UNKNOWN_AUTHOR, unknown.sortedWith(compareBy(NaturalOrder) { it.title }))
+        }
+        BookSortMode.SERIES -> {
+            val (inSeries, standalone) = books.partition { !it.series.isNullOrBlank() }
+            val byName = inSeries.groupBy { parseSeries(it.series!!).first }
+            val sections = byName.toSortedMap(NaturalOrder).map { (name, group) ->
+                Section(name, group.sortedWith(
+                    compareBy(nullsLast()) { parseSeries(it.series!!).second },
+                ))
+            }
+            if (standalone.isEmpty()) sections
+            else sections + Section(STANDALONE, standalone.sortedWith(compareBy(NaturalOrder) { it.title }))
+        }
+        else -> listOf(Section("", sort(books, mode)))
+    }
 }
