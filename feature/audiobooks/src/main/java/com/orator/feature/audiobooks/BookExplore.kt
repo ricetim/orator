@@ -3,7 +3,10 @@ package com.orator.feature.audiobooks
 import com.orator.core.database.BookEntity
 import com.orator.feature.audiobooks.data.NaturalOrder
 
-/** A labelled run of books in AUTHOR/SERIES grouping. */
+/**
+ * A labelled run of books in AUTHOR/SERIES grouping. For RECENT/TITLE, [BookExplore.group]
+ * falls back to a single flat section with an empty header.
+ */
 data class Section(val header: String, val books: List<BookEntity>)
 
 /** A series/author match with how many books carry it. */
@@ -21,17 +24,21 @@ object BookExplore {
     private const val UNKNOWN_AUTHOR = "Unknown author"
     private const val STANDALONE = "Standalone"
 
-    /** "Foundation #2" -> ("Foundation", 2.0); "Name" -> ("Name", null). */
+    /**
+     * "Foundation #2" -> ("Foundation", 2.0); "Name" -> ("Name", null). The marker is the
+     * LAST " #"; if what follows it isn't numeric the whole string is the name (null sequence).
+     */
     fun parseSeries(stored: String): Pair<String, Double?> {
         val marker = stored.lastIndexOf(" #")
         if (marker < 0) return stored.trim() to null
-        val name = stored.substring(0, marker).trim()
         val seq = stored.substring(marker + 2).trim().toDoubleOrNull()
-        return name to seq
+            ?: return stored.trim() to null
+        return stored.substring(0, marker).trim() to seq
     }
 
     fun sort(books: List<BookEntity>, mode: BookSortMode): List<BookEntity> = when (mode) {
-        BookSortMode.RECENT -> books.sortedByDescending { it.addedAtUtc }
+        BookSortMode.RECENT ->
+            books.sortedWith(compareByDescending<BookEntity> { it.addedAtUtc }.thenBy(NaturalOrder) { it.title })
         else -> books.sortedWith(compareBy(NaturalOrder) { it.title })
     }
 
@@ -39,7 +46,7 @@ object BookExplore {
         BookSortMode.AUTHOR -> {
             val (known, unknown) = books.partition { !it.author.isNullOrBlank() }
             val sections = known.groupBy { it.author!!.trim() }
-                .toSortedMap(NaturalOrder)
+                .entries.sortedWith(compareBy(NaturalOrder) { it.key })
                 .map { (name, group) -> Section(name, group.sortedWith(compareBy(NaturalOrder) { it.title })) }
             if (unknown.isEmpty()) sections
             else sections + Section(UNKNOWN_AUTHOR, unknown.sortedWith(compareBy(NaturalOrder) { it.title }))
@@ -47,7 +54,7 @@ object BookExplore {
         BookSortMode.SERIES -> {
             val (inSeries, standalone) = books.partition { !it.series.isNullOrBlank() }
             val byName = inSeries.groupBy { parseSeries(it.series!!).first }
-            val sections = byName.toSortedMap(NaturalOrder).map { (name, group) ->
+            val sections = byName.entries.sortedWith(compareBy(NaturalOrder) { it.key }).map { (name, group) ->
                 Section(name, group.sortedWith(
                     compareBy(nullsLast()) { parseSeries(it.series!!).second },
                 ))
@@ -59,20 +66,20 @@ object BookExplore {
     }
 
     fun search(books: List<BookEntity>, term: String): SearchResults {
-        val q = term.trim().lowercase()
+        val q = term.trim()
         if (q.isEmpty()) return SearchResults(emptyList(), emptyList(), emptyList())
 
-        val titleHits = books.filter { it.title.lowercase().contains(q) }
+        val titleHits = books.filter { it.title.contains(q, ignoreCase = true) }
             .sortedWith(compareBy(NaturalOrder) { it.title })
 
         val seriesHits = books.mapNotNull { it.series?.let { s -> parseSeries(s).first } }
-            .filter { it.lowercase().contains(q) }
+            .filter { it.contains(q, ignoreCase = true) }
             .groupingBy { it }.eachCount()
             .map { (name, count) -> NamedHit(name, count) }
             .sortedWith(compareBy(NaturalOrder) { it.name })
 
         val authorHits = books.mapNotNull { it.author?.takeIf { a -> a.isNotBlank() } }
-            .filter { it.lowercase().contains(q) }
+            .filter { it.contains(q, ignoreCase = true) }
             .groupingBy { it.trim() }.eachCount()
             .map { (name, count) -> NamedHit(name, count) }
             .sortedWith(compareBy(NaturalOrder) { it.name })

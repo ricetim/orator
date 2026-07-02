@@ -103,4 +103,50 @@ class BookExploreTest {
         )
         assertEquals(listOf("b", "a"), BookExplore.filterAuthor(books, "Jacques").map { it.id })
     }
+
+    @Test fun `group AUTHOR keeps case-variant author groups separate`() {
+        val sections = BookExplore.group(
+            listOf(book("a", "A", author = "Zadie"), book("b", "B", author = "zadie")),
+            BookSortMode.AUTHOR,
+        )
+        assertEquals(2, sections.size)                          // nothing collapsed/dropped
+        assertEquals(2, sections.sumOf { it.books.size })
+    }
+
+    @Test fun `parseSeries keeps full name when suffix is not numeric`() {
+        assertEquals("Sharpe #TV" to null, BookExplore.parseSeries("Sharpe #TV"))
+    }
+
+    @Test fun `parseSeries uses the last marker for mid-string hashes`() {
+        assertEquals("A #1 Anthology" to 2.0, BookExplore.parseSeries("A #1 Anthology #2"))
+    }
+
+    @Test fun `sort RECENT tie-breaks equal addedAt by title`() {
+        val out = BookExplore.sort(
+            listOf(book("b", "B", added = 100), book("a", "A", added = 100)),
+            BookSortMode.RECENT,
+        )
+        assertEquals(listOf("a", "b"), out.map { it.id })
+    }
+
+    @Test fun `search matches authors with counts`() {
+        val books = listOf(
+            book("a", "Redwall", author = "Brian Jacques"),
+            book("b", "Mossflower", author = "Brian Jacques"),
+        )
+        assertEquals(listOf(NamedHit("Brian Jacques", 2)), BookExplore.search(books, "jacq").authors)
+    }
+
+    @Test fun `sequence digits are not searchable as series`() {
+        val books = listOf(book("a", "Redwall", series = "Redwall #2"))
+        assertEquals(emptyList<NamedHit>(), BookExplore.search(books, "2").series)
+    }
+
+    @Test fun `null-sequence book sorts last within its series section`() {
+        val sections = BookExplore.group(
+            listOf(book("a", "NoSeq", series = "Foundation"), book("c", "First", series = "Foundation #1")),
+            BookSortMode.SERIES,
+        )
+        assertEquals(listOf("c", "a"), sections.single().books.map { it.id })
+    }
 }
