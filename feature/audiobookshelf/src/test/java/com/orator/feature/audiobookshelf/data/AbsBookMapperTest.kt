@@ -32,4 +32,35 @@ class AbsBookMapperTest {
         val item = AbsLibraryItem(id = "li2", media = AbsMedia(numAudioFiles = 1))
         assertEquals(SourceKind.SINGLE_FILE, AbsBookMapper.toBook(item, "s", "https://x").sourceKind)
     }
+
+    @Test fun `maps server addedAt into addedAtUtc`() {
+        val item = AbsLibraryItem(id = "li1", addedAt = 1_700_000_000_000)
+        assertEquals(1_700_000_000_000, AbsBookMapper.toBook(item, "s", "https://x").addedAtUtc)
+    }
+
+    @Test fun `absent addedAt becomes the 0L sentinel`() {
+        val item = AbsLibraryItem(id = "li1")
+        assertEquals(0L, AbsBookMapper.toBook(item, "s", "https://x").addedAtUtc)
+    }
+
+    @Test fun `series taken from minified seriesName`() {
+        val item = AbsLibraryItem(
+            id = "li1",
+            media = AbsMedia(metadata = AbsMetadata(seriesName = "Foundation #2")),
+        )
+        assertEquals("Foundation #2", AbsBookMapper.toBook(item, "s", "https://x").series)
+    }
+
+    @Test fun `first series kept when book is in several`() {
+        val item = AbsLibraryItem(
+            id = "li1",
+            media = AbsMedia(metadata = AbsMetadata(seriesName = "Foundation #2, Empire #1")),
+        )
+        assertEquals("Foundation #2", AbsBookMapper.toBook(item, "s", "https://x").series)
+    }
+
+    @Test fun `blank seriesName yields null series`() {
+        val item = AbsLibraryItem(id = "li1", media = AbsMedia(metadata = AbsMetadata(seriesName = "  ")))
+        assertEquals(null, AbsBookMapper.toBook(item, "s", "https://x").series)
+    }
 }
