@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,12 +23,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.orator.core.designsystem.icons.OnyxIcons
 import com.orator.core.designsystem.theme.OnyxTokens
 
 /**
  * Flush square grid tile: artwork under a bottom caption scrim, optional progress strip
- * along the bottom edge. Mockup .tile/.cap/.pprog — zero gaps, zero corner radius.
- * Caption colors stay white/light-gray: they sit on imagery, not on theme surfaces.
+ * along the bottom edge, optional downloaded badge (top-start). Mockup .tile/.cap/.pprog —
+ * zero gaps, zero corner radius. Caption colors stay white/light-gray: they sit on imagery,
+ * not on theme surfaces.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -37,6 +42,7 @@ fun CoverTile(
     modifier: Modifier = Modifier,
     progress: Float? = null,
     onLongClick: (() -> Unit)? = null,
+    downloaded: Boolean = false,
 ) {
     Box(modifier = modifier.aspectRatio(1f).combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
         ArtworkImage(model = artworkModel, title = title, modifier = Modifier.fillMaxSize())
@@ -80,6 +86,19 @@ fun CoverTile(
                 Box(
                     Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).fillMaxSize()
                         .background(OnyxTokens.Accent),
+                )
+            }
+        }
+        if (downloaded) {
+            Box(
+                Modifier.align(Alignment.TopStart).padding(4.dp)
+                    .background(Color.Black.copy(alpha = 0.55f), CircleShape).padding(2.dp),
+            ) {
+                Icon(
+                    OnyxIcons.Downloaded,
+                    contentDescription = "Downloaded",
+                    tint = Color.White,
+                    modifier = Modifier.size(13.dp),
                 )
             }
         }
