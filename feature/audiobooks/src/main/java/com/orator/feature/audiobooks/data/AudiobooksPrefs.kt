@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.orator.feature.audiobooks.BookSortMode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -12,6 +13,7 @@ import javax.inject.Singleton
 
 private val Context.audiobooksDataStore by preferencesDataStore(name = "audiobooks")
 private val KEY_TREE_URI = stringPreferencesKey("tree_uri")
+private val KEY_SORT_MODE = stringPreferencesKey("book_sort_mode")
 
 /** Remembers which folder the user granted us. */
 @Singleton
@@ -22,5 +24,15 @@ class AudiobooksPrefs @Inject constructor(
 
     suspend fun setTreeUri(uri: String) {
         context.audiobooksDataStore.edit { it[KEY_TREE_URI] = uri }
+    }
+
+    val sortMode: Flow<BookSortMode> = context.audiobooksDataStore.data.map { prefs ->
+        prefs[KEY_SORT_MODE]
+            ?.let { runCatching { BookSortMode.valueOf(it) }.getOrNull() }
+            ?: BookSortMode.RECENT
+    }
+
+    suspend fun setSortMode(mode: BookSortMode) {
+        context.audiobooksDataStore.edit { it[KEY_SORT_MODE] = mode.name }
     }
 }
