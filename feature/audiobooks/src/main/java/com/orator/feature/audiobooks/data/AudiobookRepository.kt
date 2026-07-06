@@ -9,6 +9,7 @@ import com.orator.core.database.BookmarkDao
 import com.orator.core.database.BookmarkEntity
 import com.orator.core.database.ChapterDao
 import com.orator.core.database.ChapterEntity
+import com.orator.feature.audiobooks.BookSortMode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +29,8 @@ class AudiobookRepository @Inject constructor(
     private val prefs: AudiobooksPrefs,
 ) {
     val treeUri: Flow<String?> = prefs.treeUri
+    val sortMode: Flow<BookSortMode> = prefs.sortMode
+    suspend fun setSortMode(mode: BookSortMode) = prefs.setSortMode(mode)
 
     fun observeBooks(): Flow<List<BookEntity>> = bookDao.observeAll()
     fun observeBook(id: String): Flow<BookEntity?> = bookDao.observeById(id)
