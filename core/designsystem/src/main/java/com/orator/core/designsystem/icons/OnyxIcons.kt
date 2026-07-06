@@ -158,6 +158,20 @@ object OnyxIcons {
         }
     }
 
+    /** Sort: three lines of decreasing width (material "sort"). Hand-drawn. */
+    val Sort: ImageVector by lazy {
+        materialIcon(name = "Onyx.Sort") {
+            materialPath {
+                moveTo(3.0f, 18.0f); horizontalLineTo(9.0f); verticalLineTo(16.0f)
+                horizontalLineTo(3.0f); close()
+                moveTo(3.0f, 6.0f); verticalLineTo(8.0f); horizontalLineTo(21.0f)
+                verticalLineTo(6.0f); close()
+                moveTo(3.0f, 13.0f); horizontalLineTo(15.0f); verticalLineTo(11.0f)
+                horizontalLineTo(3.0f); close()
+            }
+        }
+    }
+
     /** Material "download_done": check mark over a baseline. Hand-drawn; tweak on device. */
     val Downloaded: ImageVector by lazy {
         materialIcon(name = "Onyx.Downloaded") {
