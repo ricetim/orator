@@ -21,6 +21,7 @@ class AudiobooksFeatureEntry @Inject constructor() : FeatureEntry {
                         CommonRoutes.addToPlaylist(MediaType.AUDIOBOOK.name, bookId),
                     )
                 },
+                onOpenSearch = {}, // wired to the real search route in Chunk 5
             )
         }
         navGraphBuilder.composable(AudiobookDetailRoutePattern) {
