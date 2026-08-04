@@ -42,7 +42,8 @@ class ShellViewModel @Inject constructor(
 
     data class LibraryCounts(val podcasts: Int = 0, val books: Int = 0)
 
-    /** Artwork model for the loaded item: book cover File or show artwork URL. */
+    /** Artwork for the loaded item: a book cover (File when local, URL when ABS) or a show
+     *  artwork URL. */
     private val artwork = playbackConnection.state
         .map { it.mediaId }
         .distinctUntilChanged()

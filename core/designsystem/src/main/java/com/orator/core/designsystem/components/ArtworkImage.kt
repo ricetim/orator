@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +35,12 @@ import coil3.request.ImageRequest
  * Built on [rememberAsyncImagePainter] rather than SubcomposeAsyncImage on purpose: this is the
  * single artwork funnel for every cover grid and list row in the app, and Coil's own docs say to
  * avoid subcomposition in lazy layouts.
+ *
+ * Treated as decorative for accessibility — every caller pairs it with a caption carrying the
+ * title, and labelling it too would announce the title twice.
+ *
+ * [modifier] MUST carry a bounded size. Size resolution is the whole point of this component, and
+ * an unbounded axis resolves to the image's original dimensions.
  */
 @Composable
 fun ArtworkImage(
@@ -49,31 +56,41 @@ fun ArtworkImage(
         return
     }
 
-    // rememberAsyncImagePainter does NOT resolve display size on its own. Without this it decodes
-    // at the image's original dimensions, which for a wall of book covers would cost more than the
-    // subcomposition it replaces.
+    // rememberAsyncImagePainter does NOT resolve display size on its own. Without an explicit
+    // resolver Coil falls back to Size.ORIGINAL and decodes covers at full resolution, which would
+    // cost more than the subcomposition this replaces.
+    val context = LocalPlatformContext.current
     val sizeResolver = rememberConstraintsSizeResolver()
+    val request = remember(context, model, sizeResolver) {
+        ImageRequest.Builder(context).data(model).size(sizeResolver).build()
+    }
     val painter = rememberAsyncImagePainter(
-        model = ImageRequest.Builder(LocalPlatformContext.current)
-            .data(model)
-            .size(sizeResolver)
-            .build(),
+        model = request,
+        // Load-bearing beyond draw-time cropping: this also sets Scale.FILL on the decode. Drop it
+        // and the decoder returns a FIT-sized bitmap that Crop then upscales.
         contentScale = ContentScale.Crop,
     )
-    val state by painter.state.collectAsState()
 
     Box(shaped) {
-        // Underlay rather than a swap: the loaded image is cropped to fill and covers this
-        // completely, so nothing has to re-lay-out when the load lands.
-        if (state !is AsyncImagePainter.State.Success) {
-            FallbackArt(title, Modifier.fillMaxSize(), initialsSize)
-        }
+        ArtworkUnderlay(painter, title, initialsSize)
         Image(
             painter = painter,
-            contentDescription = title,
+            contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize().then(sizeResolver),
         )
+    }
+}
+
+/**
+ * The fallback, drawn under the image until it loads. Reads the load state in its own scope so a
+ * finished load invalidates only this, leaving the image's measurement untouched.
+ */
+@Composable
+private fun ArtworkUnderlay(painter: AsyncImagePainter, title: String, initialsSize: TextUnit) {
+    val state by painter.state.collectAsState()
+    if (state !is AsyncImagePainter.State.Success) {
+        FallbackArt(title, Modifier.fillMaxSize(), initialsSize)
     }
 }
 
@@ -81,8 +98,6 @@ fun ArtworkImage(
 private fun FallbackArt(title: String, modifier: Modifier, initialsSize: TextUnit) {
     val (start, end) = ArtworkFallback.gradientFor(title)
     Box(
-        // The initials are decorative: the real label is the caption beside this artwork, and while
-        // the fallback sits under a loading image both would otherwise be announced.
         modifier = modifier
             .clearAndSetSemantics {}
             .background(Brush.linearGradient(listOf(start, end))),

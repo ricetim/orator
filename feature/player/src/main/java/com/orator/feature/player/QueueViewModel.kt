@@ -59,7 +59,8 @@ class QueueViewModel @Inject constructor(
             }
         }
 
-    /** Book cover File or show artwork URL for the loaded item (same lookup as the mini player). */
+    /** Artwork for the loaded item: a book cover (File when local, URL when ABS) or a show artwork
+     *  URL. Same lookup as the mini player. */
     private val artwork = playbackConnection.state
         .map { it.mediaId }
         .distinctUntilChanged()
