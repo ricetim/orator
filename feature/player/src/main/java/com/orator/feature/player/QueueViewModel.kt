@@ -6,6 +6,7 @@ import com.orator.core.database.BookDao
 import com.orator.core.database.ChapterDao
 import com.orator.core.database.EpisodeDao
 import com.orator.core.database.PodcastDao
+import com.orator.core.database.artworkModel
 import com.orator.core.playback.PlaybackConnection
 import com.orator.core.playback.ids.AudiobookMediaId
 import com.orator.core.playback.ids.PodcastMediaId
@@ -19,7 +20,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import java.io.File
 import javax.inject.Inject
 
 /** Read-only view of the live playback queue (full mixed queue arrives with Phase 5). */
@@ -59,7 +59,8 @@ class QueueViewModel @Inject constructor(
             }
         }
 
-    /** Book cover File or show artwork URL for the loaded item (same lookup as the mini player). */
+    /** Artwork for the loaded item: a book cover (File when local, URL when ABS) or a show artwork
+     *  URL. Same lookup as the mini player. */
     private val artwork = playbackConnection.state
         .map { it.mediaId }
         .distinctUntilChanged()
@@ -75,7 +76,7 @@ class QueueViewModel @Inject constructor(
     private suspend fun resolveArtwork(mediaId: String?): Any? {
         mediaId ?: return null
         AudiobookMediaId.parse(mediaId)?.let { parsed ->
-            return bookDao.getById(parsed.bookId)?.coverPath?.let(::File)
+            return bookDao.getById(parsed.bookId)?.artworkModel
         }
         PodcastMediaId.parse(mediaId)?.let { episodeId ->
             val episode = episodeDao.getById(episodeId) ?: return null
