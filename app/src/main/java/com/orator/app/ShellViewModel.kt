@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.orator.core.database.BookDao
 import com.orator.core.database.EpisodeDao
 import com.orator.core.database.PodcastDao
+import com.orator.core.database.artworkModel
 import com.orator.core.designsystem.text.TimeFormats
 import com.orator.core.playback.PlaybackConnection
 import com.orator.core.playback.PlayerPreferences
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import java.io.File
 import javax.inject.Inject
 
 /** Backs the app shell: mini-player state and the drawer's library counts. */
@@ -74,7 +74,7 @@ class ShellViewModel @Inject constructor(
     private suspend fun resolveArtwork(mediaId: String?): Any? {
         mediaId ?: return null
         AudiobookMediaId.parse(mediaId)?.let { parsed ->
-            return bookDao.getById(parsed.bookId)?.coverPath?.let(::File)
+            return bookDao.getById(parsed.bookId)?.artworkModel
         }
         PodcastMediaId.parse(mediaId)?.let { episodeId ->
             val episode = episodeDao.getById(episodeId) ?: return null
