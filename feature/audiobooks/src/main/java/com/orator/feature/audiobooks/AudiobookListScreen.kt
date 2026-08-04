@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
@@ -27,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,6 +55,11 @@ import com.orator.core.model.BookOrigin
 import com.orator.core.model.DownloadState
 import java.io.File
 
+// Distinct contentTypes keep headers and tiles in separate reuse pools; without them a recycled
+// header slot can be handed to a tile and forces a full recomposition.
+private const val BOOK_TILE = "book"
+private const val SECTION_HEADER = "header"
+
 @Composable
 fun AudiobookListScreen(
     onOpenBook: (bookId: String) -> Unit,
@@ -58,12 +67,23 @@ fun AudiobookListScreen(
     onOpenSearch: () -> Unit,
     viewModel: AudiobookListViewModel = hiltViewModel(),
 ) {
-    val books by viewModel.books.collectAsStateWithLifecycle()
     val hasFolder by viewModel.hasFolder.collectAsStateWithLifecycle()
     val view by viewModel.view.collectAsStateWithLifecycle()
     val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
     val shell = LocalShellControls.current
     val context = LocalContext.current
+
+    // Emptiness is read off the same value the grid renders, so the empty state and the content
+    // can never disagree about whether there are books.
+    val isEmpty = when (val v = view) {
+        is LibraryView.Flat -> v.books.isEmpty()
+        is LibraryView.Sectioned -> v.sections.isEmpty()
+    }
+
+    // Book keys survive a re-sort, so without this the grid re-anchors on whatever book was
+    // first visible and strands the user mid-library after switching modes.
+    val gridState = rememberLazyGridState()
+    LaunchedEffect(sortMode) { gridState.scrollToItem(0) }
 
     val pickFolder = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree(),
@@ -84,7 +104,7 @@ fun AudiobookListScreen(
             leadingIcon = Icons.Filled.Menu,
             onLeadingClick = shell.openDrawer,
             trailing = {
-                if (books.isNotEmpty()) {
+                if (!isEmpty) {
                     Row {
                         SortMenu(current = sortMode, onSelect = viewModel::onSortSelected)
                         IconButton(onClick = onOpenSearch) {
@@ -100,25 +120,36 @@ fun AudiobookListScreen(
                 buttonLabel = "Choose folder",
                 onButton = { pickFolder.launch(null) },
             )
-            books.isEmpty() -> BooksEmptyState(
+            isEmpty -> BooksEmptyState(
                 text = "No books found in the library folder yet",
                 buttonLabel = "Rescan",
                 onButton = viewModel::onRescan,
             )
             else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
+                state = gridState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = OnyxTokens.OverlayBottomPadding),
             ) {
                 when (val v = view) {
-                    is LibraryView.Flat -> items(v.books, key = { it.id }) { book ->
-                        BookGridTile(book, onOpenBook, onAddToPlaylist)
-                    }
-                    is LibraryView.Sectioned -> v.sections.forEach { section ->
-                        item(span = { GridItemSpan(maxLineSpan) }, key = "h:${section.header}") {
-                            SectionHeader(section.header)
+                    is LibraryView.Flat ->
+                        items(v.books, key = { it.id }, contentType = { BOOK_TILE }) { book ->
+                            BookGridTile(book, onOpenBook, onAddToPlaylist)
                         }
-                        items(section.books, key = { it.id }) { book ->
+                    // Indexed: section headers are not unique on their own, because the
+                    // "Unknown author"/"Standalone" buckets BookExplore appends can collide with a
+                    // real author or series of that name, and duplicate lazy keys throw.
+                    is LibraryView.Sectioned -> v.sections.forEachIndexed { index, section ->
+                        if (section.header.isNotBlank()) {
+                            item(
+                                span = { GridItemSpan(maxLineSpan) },
+                                key = "h:$index:${section.header}",
+                                contentType = SECTION_HEADER,
+                            ) {
+                                SectionHeader(section.header)
+                            }
+                        }
+                        items(section.books, key = { it.id }, contentType = { BOOK_TILE }) { book ->
                             BookGridTile(book, onOpenBook, onAddToPlaylist)
                         }
                     }
@@ -137,12 +168,18 @@ private fun BookGridTile(
     CoverTile(
         // ABS covers are remote URLs (Coil fetches them, authed); local covers
         // are file paths. Wrapping a URL in File would make Coil fail.
-        artworkModel = if (book.origin == BookOrigin.ABS) book.coverPath
-        else book.coverPath?.let(::File),
+        artworkModel = if (book.origin == BookOrigin.ABS) {
+            book.coverPath
+        } else {
+            book.coverPath?.let(::File)
+        },
         title = book.title,
         // Time-left only once started; no "not started" label (it lives on the detail screen).
-        subLine = if (book.positionMs > 0)
-            TimeFormats.timeLeft((book.durationMs - book.positionMs).coerceAtLeast(0)) else null,
+        subLine = if (book.positionMs > 0) {
+            TimeFormats.timeLeft((book.durationMs - book.positionMs).coerceAtLeast(0))
+        } else {
+            null
+        },
         progress = if (book.durationMs > 0) book.positionMs.toFloat() / book.durationMs else null,
         onClick = { onOpenBook(book.id) },
         onLongClick = { onAddToPlaylist(book.id) },
@@ -166,27 +203,37 @@ private fun SectionHeader(text: String) {
 @Composable
 private fun SortMenu(current: BookSortMode, onSelect: (BookSortMode) -> Unit) {
     var open by remember { mutableStateOf(false) }
+    val pick: (BookSortMode) -> Unit = {
+        onSelect(it)
+        open = false
+    }
     Box {
         IconButton(onClick = { open = true }) {
             Icon(OnyxIcons.Sort, "Sort", tint = OnyxTokens.TextDim)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            SortChoice("Recently added", BookSortMode.RECENT, current) { onSelect(it); open = false }
-            SortChoice("Title", BookSortMode.TITLE, current) { onSelect(it); open = false }
-            SortChoice("Author", BookSortMode.AUTHOR, current) { onSelect(it); open = false }
-            SortChoice("Series", BookSortMode.SERIES, current) { onSelect(it); open = false }
+            SortChoice("Recently added", BookSortMode.RECENT, current, pick)
+            SortChoice("Title", BookSortMode.TITLE, current, pick)
+            SortChoice("Author", BookSortMode.AUTHOR, current, pick)
+            SortChoice("Series", BookSortMode.SERIES, current, pick)
         }
     }
 }
 
 @Composable
 private fun SortChoice(
-    label: String, mode: BookSortMode, current: BookSortMode, onPick: (BookSortMode) -> Unit,
+    label: String,
+    mode: BookSortMode,
+    current: BookSortMode,
+    onPick: (BookSortMode) -> Unit,
 ) {
+    val chosen = mode == current
     DropdownMenuItem(
         text = { Text(label) },
         onClick = { onPick(mode) },
-        leadingIcon = { if (mode == current) Icon(Icons.Filled.Check, null, tint = OnyxTokens.Accent) },
+        // The check mark is decorative; the selected state is what TalkBack announces.
+        modifier = Modifier.semantics { selected = chosen },
+        leadingIcon = { if (chosen) Icon(Icons.Filled.Check, null, tint = OnyxTokens.Accent) },
     )
 }
 

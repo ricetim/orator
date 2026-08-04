@@ -24,9 +24,6 @@ class AudiobookListViewModel @Inject constructor(
     private val repository: AudiobookRepository,
 ) : ViewModel() {
 
-    val books: StateFlow<List<BookEntity>> = repository.observeBooks()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
     val hasFolder: StateFlow<Boolean> = repository.treeUri
         .map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
@@ -34,8 +31,12 @@ class AudiobookListViewModel @Inject constructor(
     val sortMode: StateFlow<BookSortMode> = repository.sortMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BookSortMode.RECENT)
 
+    // Combined against the sortMode StateFlow rather than repository.sortMode: the StateFlow
+    // already has a value, so `view` emits as soon as Room does instead of waiting on a DataStore
+    // disk read. That keeps the screen's empty-state check (which reads `view`) honest on cold
+    // start, at the cost of one frame in RECENT order before a persisted mode loads.
     val view: StateFlow<LibraryView> =
-        combine(repository.observeBooks(), repository.sortMode) { books, mode ->
+        combine(repository.observeBooks(), sortMode) { books, mode ->
             when (mode) {
                 BookSortMode.RECENT, BookSortMode.TITLE -> LibraryView.Flat(BookExplore.sort(books, mode))
                 BookSortMode.AUTHOR, BookSortMode.SERIES -> LibraryView.Sectioned(BookExplore.group(books, mode))
