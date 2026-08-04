@@ -33,8 +33,8 @@ class AudiobooksFeatureEntry @Inject constructor() : FeatureEntry {
         navGraphBuilder.composable(AudiobookSearchRoute) {
             AudiobookSearchScreen(
                 onOpenBook = { navController.navigate(audiobookDetailRoute(it)) },
-                onOpenSeries = { navController.navigate(audiobookFilterRoute("series", it)) },
-                onOpenAuthor = { navController.navigate(audiobookFilterRoute("author", it)) },
+                onOpenSeries = { navController.navigate(audiobookFilterRoute(FilterBySeries, it)) },
+                onOpenAuthor = { navController.navigate(audiobookFilterRoute(FilterByAuthor, it)) },
                 onBack = { navController.popBackStack() },
             )
         }

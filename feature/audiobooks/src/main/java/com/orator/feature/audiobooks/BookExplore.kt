@@ -17,7 +17,13 @@ data class SearchResults(
     val books: List<BookEntity>,
     val series: List<NamedHit>,
     val authors: List<NamedHit>,
-)
+) {
+    val isEmpty: Boolean get() = books.isEmpty() && series.isEmpty() && authors.isEmpty()
+
+    companion object {
+        val Empty = SearchResults(emptyList(), emptyList(), emptyList())
+    }
+}
 
 /** Pure, Android-free library exploration over BookEntity. Single source of sort/group/search. */
 object BookExplore {
@@ -67,7 +73,7 @@ object BookExplore {
 
     fun search(books: List<BookEntity>, term: String): SearchResults {
         val q = term.trim()
-        if (q.isEmpty()) return SearchResults(emptyList(), emptyList(), emptyList())
+        if (q.isEmpty()) return SearchResults.Empty
 
         val titleHits = books.filter { it.title.contains(q, ignoreCase = true) }
             .sortedWith(compareBy(NaturalOrder) { it.title })

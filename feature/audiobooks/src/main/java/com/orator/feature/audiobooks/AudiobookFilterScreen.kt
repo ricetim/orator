@@ -28,7 +28,7 @@ fun AudiobookFilterScreen(
 
     Column(Modifier.fillMaxSize().background(OnyxTokens.Background)) {
         OnyxTopBar(
-            title = viewModel.value,
+            title = viewModel.filterName,
             leadingIcon = Icons.AutoMirrored.Filled.ArrowBack,
             onLeadingClick = onBack,
         )

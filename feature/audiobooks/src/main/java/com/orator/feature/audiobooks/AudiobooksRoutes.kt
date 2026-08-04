@@ -13,5 +13,11 @@ internal fun audiobookDetailRoute(bookId: String) = "audiobooks/" + Uri.encode(b
 // wildcard (same pitfall the podcast code documents). Value is Uri.encode'd like the detail route.
 internal const val AudiobookSearchRoute = "audiobook-search"
 internal const val AudiobookFilterRoutePattern = "audiobook-filter/{type}/{value}"
+
+// The {type} segment is produced here and read in AudiobookFilterViewModel; shared constants keep
+// a typo at either end from silently resolving to the other filter.
+internal const val FilterBySeries = "series"
+internal const val FilterByAuthor = "author"
+
 internal fun audiobookFilterRoute(type: String, value: String) =
     "audiobook-filter/$type/" + Uri.encode(value)
