@@ -21,12 +21,29 @@ class AudiobooksFeatureEntry @Inject constructor() : FeatureEntry {
                         CommonRoutes.addToPlaylist(MediaType.AUDIOBOOK.name, bookId),
                     )
                 },
-                onOpenSearch = {}, // wired to the real search route in Chunk 5
+                onOpenSearch = { navController.navigate(AudiobookSearchRoute) },
             )
         }
         navGraphBuilder.composable(AudiobookDetailRoutePattern) {
             AudiobookDetailScreen(
                 onOpenPlayer = { navController.navigate(CommonRoutes.Player) },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        navGraphBuilder.composable(AudiobookSearchRoute) {
+            AudiobookSearchScreen(
+                onOpenBook = { navController.navigate(audiobookDetailRoute(it)) },
+                onOpenSeries = { navController.navigate(audiobookFilterRoute("series", it)) },
+                onOpenAuthor = { navController.navigate(audiobookFilterRoute("author", it)) },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        navGraphBuilder.composable(AudiobookFilterRoutePattern) {
+            AudiobookFilterScreen(
+                onOpenBook = { navController.navigate(audiobookDetailRoute(it)) },
+                onAddToPlaylist = { bookId ->
+                    navController.navigate(CommonRoutes.addToPlaylist(MediaType.AUDIOBOOK.name, bookId))
+                },
                 onBack = { navController.popBackStack() },
             )
         }
