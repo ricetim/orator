@@ -98,7 +98,9 @@ fun AudiobookListScreen(
             leadingIcon = Icons.Filled.Menu,
             onLeadingClick = shell.openDrawer,
             trailing = {
-                if (!isEmpty) {
+                // Both actions are inert without a library behind them, and the no-folder state
+                // is reachable with books already showing, so gate on the same thing the body does.
+                if (hasFolder && !isEmpty) {
                     Row {
                         SortMenu(current = sortMode, onSelect = viewModel::onSortSelected)
                         IconButton(onClick = onOpenSearch) {

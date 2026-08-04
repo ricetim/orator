@@ -39,12 +39,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.orator.core.database.SourceKind
+import com.orator.core.database.artworkModel
 import com.orator.core.designsystem.components.BarSpec
 import com.orator.core.designsystem.components.DualProgressBars
 import com.orator.core.designsystem.components.PagerDots
 import com.orator.core.designsystem.icons.OnyxIcons
 import com.orator.core.designsystem.text.TimeFormats
-import com.orator.core.database.artworkModel
 import com.orator.core.designsystem.theme.OnyxTokens
 import com.orator.core.playback.PlaybackUiState
 import com.orator.core.playback.SleepTimerState

@@ -66,4 +66,31 @@ class AbsBookDetailResolverTest {
         assertEquals("blurb", row.description)
         assertEquals("Foundation #2", row.series)
     }
+
+    /**
+     * Catalog sync also writes description/series (from the minified payload), so the expanded
+     * item omitting them must not erase what sync already established.
+     */
+    @Test fun `ensureDetails keeps synced description and series when the detail omits them`() = runBlocking {
+        val synced = absBook("abs:li1", sourceUri = "")
+            .copy(description = "from sync", series = "Foundation #2")
+        val books = FakeBookDao().apply { upsert(listOf(synced)) }
+        val r = AbsBookDetailResolver(
+            detail = { _, _ ->
+                AbsItemDetailMapper.map(
+                    AbsLibraryItem("li1", AbsMedia(
+                        // No metadata block at all: the expanded item carries neither field.
+                        audioFiles = listOf(AbsAudioFile("100", 1, 60.0)),
+                        chapters = listOf(AbsChapter(start = 0.0, end = 60.0, title = "Ch1")),
+                    )),
+                    "https://abs.example.com",
+                )
+            },
+            store = connectedStore(), bookDao = books, chapterDao = FakeChapterDao(),
+        )
+        r.ensureDetails("abs:li1")
+        val row = books.getById("abs:li1")!!
+        assertEquals("from sync", row.description)
+        assertEquals("Foundation #2", row.series)
+    }
 }

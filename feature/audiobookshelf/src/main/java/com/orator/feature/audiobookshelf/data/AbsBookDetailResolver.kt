@@ -28,7 +28,10 @@ class AbsBookDetailResolver(
         chapterDao.replaceForBook(bookId, d.chapters)
         bookDao.upsert(listOf(book.copy(
             sourceKind = d.sourceKind, sourceUri = d.sourceUri,
-            description = d.description, series = d.series,
+            // Catalog sync writes these too, so only overwrite when the expanded item actually
+            // carries a value — same rule AbsCatalogReconciler applies from the other direction.
+            description = d.description ?: book.description,
+            series = d.series ?: book.series,
         )))
     }
 }
