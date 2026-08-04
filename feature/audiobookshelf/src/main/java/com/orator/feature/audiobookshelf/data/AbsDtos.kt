@@ -14,6 +14,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class AbsLibraryItem(
     val id: String,
     val media: AbsMedia = AbsMedia(),
+    val addedAt: Long? = null,              // epoch-ms; item-level, present in minified payload
 )
 
 @Serializable data class AbsMedia(
@@ -29,6 +30,7 @@ import kotlinx.serialization.Serializable
     @SerialName("authorName") val authorName: String? = null,
     val description: String? = null,
     val series: List<AbsSeries> = emptyList(),
+    @SerialName("seriesName") val seriesName: String? = null,  // minified flat string, e.g. "Foundation #2"
 )
 
 @Serializable data class AbsSeries(

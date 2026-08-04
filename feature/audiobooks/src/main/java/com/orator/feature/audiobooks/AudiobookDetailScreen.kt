@@ -28,12 +28,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.orator.core.database.BookEntity
+import com.orator.core.database.artworkModel
 import com.orator.core.designsystem.components.ArtworkImage
 import com.orator.core.designsystem.components.OnyxTopBar
 import com.orator.core.designsystem.text.TimeFormats
 import com.orator.core.designsystem.theme.OnyxTokens
-import com.orator.core.model.BookOrigin
-import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.TextStyle
@@ -64,7 +63,7 @@ fun AudiobookDetailScreen(
         ) {
             item {
                 ArtworkImage(
-                    model = artworkModel(b),
+                    model = b.artworkModel,
                     title = b.title,
                     modifier = Modifier.size(180.dp),
                     cornerRadius = 16.dp,
@@ -117,10 +116,6 @@ fun AudiobookDetailScreen(
         }
     }
 }
-
-/** ABS covers are remote URLs (Coil loads them directly); local covers are file paths. */
-private fun artworkModel(b: BookEntity): Any? =
-    if (b.origin == BookOrigin.ABS) b.coverPath else b.coverPath?.let(::File)
 
 private fun progressLine(b: BookEntity): String {
     if (b.positionMs <= 0 || b.durationMs <= 0) return "Not started"

@@ -1,8 +1,10 @@
 package com.orator.feature.audiobooks.data
 
 /**
- * Filename comparator where digit runs compare as numbers ("Track 2" < "Track 10")
- * and letters compare case-insensitively. Used to order an mp3 collection into chapters.
+ * Comparator where digit runs compare as numbers ("Track 2" < "Track 10") and letters compare
+ * case-insensitively. Orders mp3 filenames into chapters, and titles/authors/section headers
+ * in BookExplore. Distinct strings can compare equal ("Zadie"/"zadie"), so don't use it as a
+ * uniqueness key (e.g. in a TreeMap/toSortedMap).
  */
 object NaturalOrder : Comparator<String> {
     override fun compare(a: String, b: String): Int {

@@ -39,20 +39,19 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.orator.core.database.SourceKind
+import com.orator.core.database.artworkModel
 import com.orator.core.designsystem.components.BarSpec
 import com.orator.core.designsystem.components.DualProgressBars
 import com.orator.core.designsystem.components.PagerDots
 import com.orator.core.designsystem.icons.OnyxIcons
 import com.orator.core.designsystem.text.TimeFormats
 import com.orator.core.designsystem.theme.OnyxTokens
-import com.orator.core.model.BookOrigin
 import com.orator.core.playback.PlaybackUiState
 import com.orator.core.playback.SleepTimerState
 import com.orator.feature.player.pages.BookmarksPage
 import com.orator.feature.player.pages.ChaptersPage
 import com.orator.feature.player.pages.CoverPage
 import com.orator.feature.player.pages.NotesPage
-import java.io.File
 import kotlinx.coroutines.launch
 
 /** The unified Onyx player: one layout for books and podcasts (mockup #pplayer/#bplayer). */
@@ -193,13 +192,7 @@ private fun PlayerPager(
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth().height(348.dp)) { page ->
             when (content) {
                 is NowPlayingContent.Book -> when (page) {
-                    0 -> CoverPage(
-                        // ABS covers are URLs (Coil loads them directly); local covers are file paths.
-                        content.book.coverPath?.let {
-                            if (content.book.origin == BookOrigin.ABS) it else File(it)
-                        },
-                        content.book.title,
-                    )
+                    0 -> CoverPage(content.book.artworkModel, content.book.title)
                     // Order: cover -> chapters -> bookmarks. With no chapters, pageCount is 2,
                     // so page 1 must be Bookmarks (otherwise an empty Chapters page shows).
                     1 -> if (content.chapters.isEmpty()) {

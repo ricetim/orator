@@ -157,4 +157,30 @@ object OnyxIcons {
             }
         }
     }
+
+    /** Sort: three lines of decreasing width (material "sort"). Hand-drawn. */
+    val Sort: ImageVector by lazy {
+        materialIcon(name = "Onyx.Sort") {
+            materialPath {
+                moveTo(3.0f, 18.0f); horizontalLineTo(9.0f); verticalLineTo(16.0f)
+                horizontalLineTo(3.0f); close()
+                moveTo(3.0f, 6.0f); verticalLineTo(8.0f); horizontalLineTo(21.0f)
+                verticalLineTo(6.0f); close()
+                moveTo(3.0f, 13.0f); horizontalLineTo(15.0f); verticalLineTo(11.0f)
+                horizontalLineTo(3.0f); close()
+            }
+        }
+    }
+
+    /** Material "download_done": check mark over a baseline. Hand-drawn; tweak on device. */
+    val Downloaded: ImageVector by lazy {
+        materialIcon(name = "Onyx.Downloaded") {
+            materialPath {
+                moveTo(18.0f, 19.0f); horizontalLineTo(6.0f); verticalLineTo(21.0f)
+                horizontalLineTo(18.0f); close()
+                moveTo(10.0f, 15.17f); lineTo(5.83f, 11.0f); lineTo(4.41f, 12.41f)
+                lineTo(10.0f, 18.0f); lineTo(20.0f, 8.0f); lineTo(18.59f, 6.59f); close()
+            }
+        }
+    }
 }
