@@ -44,16 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.orator.core.database.BookEntity
-import com.orator.core.designsystem.components.CoverTile
 import com.orator.core.designsystem.components.OnyxTopBar
 import com.orator.core.designsystem.icons.OnyxIcons
 import com.orator.core.designsystem.shell.LocalShellControls
-import com.orator.core.designsystem.text.TimeFormats
 import com.orator.core.designsystem.theme.OnyxTokens
-import com.orator.core.model.BookOrigin
-import com.orator.core.model.DownloadState
-import java.io.File
 
 // Distinct contentTypes keep headers and tiles in separate reuse pools; without them a recycled
 // header slot can be handed to a tile and forces a full recomposition.
@@ -157,34 +151,6 @@ fun AudiobookListScreen(
             }
         }
     }
-}
-
-@Composable
-private fun BookGridTile(
-    book: BookEntity,
-    onOpenBook: (String) -> Unit,
-    onAddToPlaylist: (String) -> Unit,
-) {
-    CoverTile(
-        // ABS covers are remote URLs (Coil fetches them, authed); local covers
-        // are file paths. Wrapping a URL in File would make Coil fail.
-        artworkModel = if (book.origin == BookOrigin.ABS) {
-            book.coverPath
-        } else {
-            book.coverPath?.let(::File)
-        },
-        title = book.title,
-        // Time-left only once started; no "not started" label (it lives on the detail screen).
-        subLine = if (book.positionMs > 0) {
-            TimeFormats.timeLeft((book.durationMs - book.positionMs).coerceAtLeast(0))
-        } else {
-            null
-        },
-        progress = if (book.durationMs > 0) book.positionMs.toFloat() / book.durationMs else null,
-        onClick = { onOpenBook(book.id) },
-        onLongClick = { onAddToPlaylist(book.id) },
-        downloaded = book.downloadState == DownloadState.DOWNLOADED,
-    )
 }
 
 @Composable
