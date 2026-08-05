@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.orator.core.model.AutoInsertRule
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -95,5 +96,17 @@ class PodcastDaoTest {
             assertNull(it.autoInsertPlaylistId)
             assertNull(it.autoInsertRule)
         }
+    }
+
+    @Test
+    fun `observeCount tracks inserts and deletes`() = runBlocking {
+        assertEquals(0, dao.observeCount().first())
+
+        dao.insertIgnore(podcast("p1"))
+        dao.insertIgnore(podcast("p2"))
+        assertEquals(2, dao.observeCount().first())
+
+        dao.delete("p1")
+        assertEquals(1, dao.observeCount().first())
     }
 }

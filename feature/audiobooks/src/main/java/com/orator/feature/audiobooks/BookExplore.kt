@@ -30,6 +30,9 @@ object BookExplore {
     private const val UNKNOWN_AUTHOR = "Unknown author"
     private const val STANDALONE = "Standalone"
 
+    /** A book with its series string already split, so sorting doesn't re-parse per comparison. */
+    private data class Parsed(val name: String, val seq: Double?, val book: BookEntity)
+
     /**
      * "Foundation #2" -> ("Foundation", 2.0); "Name" -> ("Name", null). The marker is the
      * LAST " #"; if what follows it isn't numeric the whole string is the name (null sequence).
@@ -59,12 +62,14 @@ object BookExplore {
         }
         BookSortMode.SERIES -> {
             val (inSeries, standalone) = books.partition { !it.series.isNullOrBlank() }
-            // Parse once per book rather than once per comparison.
-            val parsed = inSeries.map { parseSeries(it.series!!) to it }
-            val sections = parsed.groupBy({ it.first.first }, { it })
+            val parsed = inSeries.map { book ->
+                val (name, seq) = parseSeries(book.series!!)
+                Parsed(name, seq, book)
+            }
+            val sections = parsed.groupBy { it.name }
                 .entries.sortedWith(compareBy(NaturalOrder) { it.key })
                 .map { (name, group) ->
-                    Section(name, group.sortedWith(compareBy(nullsLast()) { it.first.second }).map { it.second })
+                    Section(name, group.sortedWith(compareBy(nullsLast()) { it.seq }).map { it.book })
                 }
             if (standalone.isEmpty()) sections
             else sections + Section(STANDALONE, standalone.sortedWith(compareBy(NaturalOrder) { it.title }))
@@ -95,10 +100,14 @@ object BookExplore {
     }
 
     fun filterSeries(books: List<BookEntity>, name: String): List<BookEntity> =
-        books.mapNotNull { book -> book.series?.let { parseSeries(it) to book } }
-            .filter { it.first.first == name }
-            .sortedWith(compareBy(nullsLast()) { it.first.second })
-            .map { it.second }
+        books.mapNotNull { book ->
+            book.series?.let {
+                val (seriesName, seq) = parseSeries(it)
+                if (seriesName == name) Parsed(seriesName, seq, book) else null
+            }
+        }
+            .sortedWith(compareBy(nullsLast()) { it.seq })
+            .map { it.book }
 
     fun filterAuthor(books: List<BookEntity>, name: String): List<BookEntity> =
         books.filter { it.author?.trim() == name }

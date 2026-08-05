@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.orator.core.database.BookEntity
 import com.orator.feature.audiobooks.data.AudiobookRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -41,7 +43,11 @@ class AudiobookListViewModel @Inject constructor(
                 BookSortMode.RECENT, BookSortMode.TITLE -> LibraryView.Flat(BookExplore.sort(books, mode))
                 BookSortMode.AUTHOR, BookSortMode.SERIES -> LibraryView.Sectioned(BookExplore.group(books, mode))
             }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryView.Flat(emptyList()))
+        }
+            // Sorting and grouping the whole library has no business running between the emission
+            // and the frame; viewModelScope would otherwise put it on Main.immediate.
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryView.Flat(emptyList()))
 
     fun onSortSelected(mode: BookSortMode) {
         viewModelScope.launch { repository.setSortMode(mode) }

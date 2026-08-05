@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -153,6 +154,25 @@ class EpisodeDaoTest {
         assertEquals(-1L, secondRun[0])          // e1 already existed
         assertTrue(secondRun[1] != -1L)          // e3 is new
         assertEquals("Renamed", dao.getById("e1")!!.title)
+    }
+
+    /**
+     * The point of @Transaction on insertThenRefresh. Without this, the two tests above still pass
+     * with the annotation deleted, and the regression is invisible: episodes stay inserted but are
+     * never reported as new, so auto-insert silently skips them forever.
+     */
+    @Test
+    fun `insertThenRefresh rolls the insert back when a later update fails`() = runBlocking {
+        db.openHelper.writableDatabase.execSQL(
+            "CREATE TRIGGER boom BEFORE UPDATE ON episodes " +
+                "WHEN NEW.title = 'BOOM' BEGIN SELECT RAISE(ABORT, 'boom'); END",
+        )
+
+        runCatching {
+            dao.insertThenRefresh(listOf(episode("e1"), episode("e2").copy(title = "BOOM")))
+        }
+
+        assertNull(dao.getById("e1")) // e1's own insert+update succeeded; e2's abort must unwind it
     }
 
     @Test
