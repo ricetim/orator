@@ -175,19 +175,7 @@ class PodcastRepository @Inject constructor(
                 transcriptType = item.transcriptType,
             )
         }
-        val rowIds = episodeDao.insertIgnore(entities)
-        entities.forEach { e ->
-            episodeDao.updateMetadata(
-                id = e.id,
-                title = e.title,
-                pubDateUtc = e.pubDateUtc,
-                enclosureUrl = e.enclosureUrl,
-                showNotesHtml = e.showNotesHtml,
-                transcriptUrl = e.transcriptUrl,
-                transcriptType = e.transcriptType,
-                durationMs = e.durationMs,
-            )
-        }
+        val rowIds = episodeDao.insertThenRefresh(entities)
         return NewEpisodeIds.from(entities, rowIds)
     }
 

@@ -140,4 +140,32 @@ class EpisodeDaoTest {
         assertEquals(listOf("e2", "e3", "e1"), observed.map { it.id })
         assertEquals(listOf("e2", "e3"), dao.latestForPodcast("p1", 2).map { it.id })
     }
+
+    @Test
+    fun `insertThenRefresh reports only new rows and refreshes the rest`() = runBlocking {
+        val firstRun = dao.insertThenRefresh(listOf(episode("e1"), episode("e2")))
+        assertTrue(firstRun.all { it != -1L })
+
+        // e1 comes back with a changed title, e3 is brand new.
+        val secondRun = dao.insertThenRefresh(
+            listOf(episode("e1").copy(title = "Renamed"), episode("e3")),
+        )
+        assertEquals(-1L, secondRun[0])          // e1 already existed
+        assertTrue(secondRun[1] != -1L)          // e3 is new
+        assertEquals("Renamed", dao.getById("e1")!!.title)
+    }
+
+    @Test
+    fun `insertThenRefresh preserves listener state on existing rows`() = runBlocking {
+        dao.insertThenRefresh(listOf(episode("e1")))
+        dao.updateProgress("e1", positionMs = 42_000, lastPlayedAtMs = 99)
+        dao.updateAudioPath("e1", "content://downloads/e1.mp3")
+
+        dao.insertThenRefresh(listOf(episode("e1").copy(title = "Renamed")))
+
+        val row = dao.getById("e1")!!
+        assertEquals("Renamed", row.title)
+        assertEquals(42_000L, row.positionMs)
+        assertEquals("content://downloads/e1.mp3", row.audioPath)
+    }
 }

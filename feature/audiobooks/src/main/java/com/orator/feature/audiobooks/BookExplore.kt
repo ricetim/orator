@@ -59,12 +59,13 @@ object BookExplore {
         }
         BookSortMode.SERIES -> {
             val (inSeries, standalone) = books.partition { !it.series.isNullOrBlank() }
-            val byName = inSeries.groupBy { parseSeries(it.series!!).first }
-            val sections = byName.entries.sortedWith(compareBy(NaturalOrder) { it.key }).map { (name, group) ->
-                Section(name, group.sortedWith(
-                    compareBy(nullsLast()) { parseSeries(it.series!!).second },
-                ))
-            }
+            // Parse once per book rather than once per comparison.
+            val parsed = inSeries.map { parseSeries(it.series!!) to it }
+            val sections = parsed.groupBy({ it.first.first }, { it })
+                .entries.sortedWith(compareBy(NaturalOrder) { it.key })
+                .map { (name, group) ->
+                    Section(name, group.sortedWith(compareBy(nullsLast()) { it.first.second }).map { it.second })
+                }
             if (standalone.isEmpty()) sections
             else sections + Section(STANDALONE, standalone.sortedWith(compareBy(NaturalOrder) { it.title }))
         }
@@ -94,8 +95,10 @@ object BookExplore {
     }
 
     fun filterSeries(books: List<BookEntity>, name: String): List<BookEntity> =
-        books.filter { it.series != null && parseSeries(it.series!!).first == name }
-            .sortedWith(compareBy(nullsLast()) { parseSeries(it.series!!).second })
+        books.mapNotNull { book -> book.series?.let { parseSeries(it) to book } }
+            .filter { it.first.first == name }
+            .sortedWith(compareBy(nullsLast()) { it.first.second })
+            .map { it.second }
 
     fun filterAuthor(books: List<BookEntity>, name: String): List<BookEntity> =
         books.filter { it.author?.trim() == name }

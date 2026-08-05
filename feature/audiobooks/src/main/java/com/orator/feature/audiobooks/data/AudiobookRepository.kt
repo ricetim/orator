@@ -34,6 +34,7 @@ class AudiobookRepository @Inject constructor(
 
     fun observeBooks(): Flow<List<BookEntity>> = bookDao.observeAll()
     fun observeBook(id: String): Flow<BookEntity?> = bookDao.observeById(id)
+    suspend fun getBook(id: String): BookEntity? = bookDao.getById(id)
     fun observeChapters(bookId: String): Flow<List<ChapterEntity>> = chapterDao.observeForBook(bookId)
     fun observeBookmarks(bookId: String): Flow<List<BookmarkEntity>> = bookmarkDao.observeForBook(bookId)
 

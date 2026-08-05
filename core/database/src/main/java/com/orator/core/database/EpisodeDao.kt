@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -38,6 +39,31 @@ interface EpisodeDao {
         transcriptType: String?,
         durationMs: Long,
     )
+
+    /**
+     * Insert new rows, then refresh metadata on all of them, as ONE transaction. The refresh is
+     * necessarily a statement per episode, and outside a transaction each one commits separately —
+     * a 300-episode feed then costs 300 commits every refresh, for every subscription.
+     *
+     * Returns [insertIgnore]'s rowids so callers can still tell which episodes were new.
+     */
+    @Transaction
+    suspend fun insertThenRefresh(episodes: List<EpisodeEntity>): List<Long> {
+        val rowIds = insertIgnore(episodes)
+        episodes.forEach { e ->
+            updateMetadata(
+                id = e.id,
+                title = e.title,
+                pubDateUtc = e.pubDateUtc,
+                enclosureUrl = e.enclosureUrl,
+                showNotesHtml = e.showNotesHtml,
+                transcriptUrl = e.transcriptUrl,
+                transcriptType = e.transcriptType,
+                durationMs = e.durationMs,
+            )
+        }
+        return rowIds
+    }
 
     @Query("UPDATE episodes SET transcriptPath = :path WHERE id = :id")
     suspend fun updateTranscriptPath(id: String, path: String?)

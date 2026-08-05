@@ -16,6 +16,10 @@ interface PodcastDao {
     @Query("SELECT * FROM podcasts ORDER BY title")
     fun observeAll(): Flow<List<PodcastEntity>>
 
+    /** For callers that only need the size — observeAll() would deserialize every row. */
+    @Query("SELECT COUNT(*) FROM podcasts")
+    fun observeCount(): Flow<Int>
+
     @Query("SELECT * FROM podcasts WHERE id = :id")
     fun observeById(id: String): Flow<PodcastEntity?>
 
