@@ -64,10 +64,12 @@ class ShellViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MiniPlayerUi())
 
+    // COUNT queries, not observeAll(): the drawer needs two integers, and the shell is composed on
+    // every screen, so loading both tables in full on every write was pure waste.
     val counts: StateFlow<LibraryCounts> = combine(
-        podcastDao.observeAll(),
-        bookDao.observeAll(),
-    ) { pods, books -> LibraryCounts(pods.size, books.size) }
+        podcastDao.observeCount(),
+        bookDao.observeCount(),
+    ) { pods, books -> LibraryCounts(pods, books) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryCounts())
 
     fun onPlayPause() = playbackConnection.playPause()

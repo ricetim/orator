@@ -47,7 +47,9 @@ class AudiobookDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val b = repository.observeBook(bookId).first()
+            // One-shot read: opening a Room Flow just to take its first value sets up an observer
+            // we immediately cancel.
+            val b = repository.getBook(bookId)
             if (b != null) detailResolvers.firstOrNull { it.handles(b.origin) }?.ensureDetails(bookId)
             _resolving.value = false
         }

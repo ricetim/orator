@@ -14,6 +14,7 @@ class FakeBookDao : BookDao {
     }
 
     override fun observeAll(): Flow<List<BookEntity>> = throw NotImplementedError()
+    override fun observeCount(): Flow<Int> = throw NotImplementedError()
     override fun observeById(id: String): Flow<BookEntity?> = throw NotImplementedError()
     override suspend fun getById(id: String): BookEntity? = books[id]
     override suspend fun getAllIds(): List<String> = books.keys.toList()

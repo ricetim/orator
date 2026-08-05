@@ -14,6 +14,10 @@ interface BookDao {
     @Query("SELECT * FROM books ORDER BY title")
     fun observeAll(): Flow<List<BookEntity>>
 
+    /** For callers that only need the size — observeAll() would deserialize the whole library. */
+    @Query("SELECT COUNT(*) FROM books")
+    fun observeCount(): Flow<Int>
+
     @Query("SELECT * FROM books WHERE id = :id")
     fun observeById(id: String): Flow<BookEntity?>
 

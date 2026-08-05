@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.orator.core.model.BookOrigin
 import com.orator.core.model.DownloadState
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -47,6 +48,16 @@ class BookDaoOriginTest {
         val row = dao.getById("abs:9")!!
         assertEquals("A focused life.", row.description)
         assertEquals("Foundation #2", row.series)
+    }
+
+    @Test fun `observeCount tracks inserts and deletes`() = runBlocking {
+        assertEquals(0, dao.observeCount().first())
+
+        dao.upsert(listOf(book("a", BookOrigin.LOCAL), book("b", BookOrigin.ABS)))
+        assertEquals(2, dao.observeCount().first())
+
+        dao.deleteByIds(listOf("a"))
+        assertEquals(1, dao.observeCount().first())
     }
 
     @Test fun `defaults are LOCAL and NONE`() = runBlocking {

@@ -7,6 +7,20 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BookExploreTest {
+    @Test
+    fun `SERIES sections order naturally across several series`() {
+        val sections = BookExplore.group(
+            listOf(
+                book("a", "A", series = "Series 10 #1"),
+                book("b", "B", series = "Series 2 #1"),
+                book("c", "C", series = "Alpha #1"),
+                book("d", "D", series = null),
+            ),
+            BookSortMode.SERIES,
+        )
+        assertEquals(listOf("Alpha", "Series 2", "Series 10", "Standalone"), sections.map { it.header })
+    }
+
     private fun book(
         id: String, title: String, author: String? = null, series: String? = null,
         added: Long = 0,
