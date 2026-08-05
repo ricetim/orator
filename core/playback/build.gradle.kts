@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.orator.core.playback"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26

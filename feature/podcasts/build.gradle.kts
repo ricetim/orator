@@ -17,7 +17,7 @@ val localProps = Properties().apply {
 
 android {
     namespace = "com.orator.feature.podcasts"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26

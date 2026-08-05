@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.orator.feature.audiobookshelf"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig { minSdk = 26 }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
